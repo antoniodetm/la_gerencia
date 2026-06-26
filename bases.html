@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración - Niveles y Bonos (Bases)</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            text-align: center;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin: 0 15px;
+            color: #555;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .nav-link:hover {
+            background-color: #f0ede5;
+            color: #000;
+        }
+
+        .nav-active {
+            background-color: #d35400;
+            color: white !important;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+            height: fit-content;
+        }
+
+        h2,
+        h3 {
+            color: #d35400;
+            border-bottom: 2px solid #d4c5b9;
+            padding-bottom: 8px;
+            margin-top: 0;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #d35400;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #ba4a00;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        th {
+            background-color: #d35400;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .btn-delete {
+            background-color: #c0392b;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            width: auto;
+            margin-top: 0;
+        }
+
+        .btn-delete:hover {
+            background-color: #a33226;
+        }
+
+        .no-records {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
+        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
+        <a href="clases.html" class="nav-link">📅 Clases</a>
+        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
+        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
+        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
+        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
+        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
+        <a href="bases.html" class="nav-link nav-active">🏆 Bases</a>
+    </div>
+
+    <div class="main-layout">
+
+        <!-- COLUMNA 1: NIVELES DE ALUMNOS -->
+        <div class="column">
+            <div class="container">
+                <h2>👤 Niveles de Alumnos</h2>
+                <form id="nivelForm">
+                    <div class="form-group">
+                        <label for="nombreNivel">Nuevo Nivel de Alumno:</label>
+                        <input type="text" id="nombreNivel" required placeholder="Ej. Iniciación, Intermedio...">
+                    </div>
+                    <button type="submit">Añadir Nivel</button>
+                </form>
+            </div>
+
+            <div class="container">
+                <h3>📋 Lista de Niveles</h3>
+                <table id="tablaNiveles">
+                    <thead>
+                        <tr>
+                            <th>Nivel</th>
+                            <th style="width: 80px; text-align: center;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- COLUMNA 2: TIPOS DE CLASES -->
+        <div class="column">
+            <div class="container" style="border-top: 5px solid #2e4a62;">
+                <h2 style="color: #2e4a62; border-bottom: 2px solid #aec6cf;">📅 Tipos de Clases</h2>
+                <form id="tipoClaseForm">
+                    <div class="form-group">
+                        <label for="nombreTipoClase">Nuevo Tipo/Nivel de Clase:</label>
+                        <input type="text" id="nombreTipoClase" required
+                            placeholder="Ej. Clase Particular, Salida al Campo...">
+                    </div>
+                    <button type="submit" style="background-color: #2e4a62;">Añadir Tipo</button>
+                </form>
+            </div>
+
+            <div class="container">
+                <h3 style="color: #2e4a62; border-bottom: 2px solid #aec6cf;">📋 Lista de Tipos</h3>
+                <table id="tablaTiposClases">
+                    <thead>
+                        <tr>
+                            <th style="background-color: #2e4a62;">Tipo de Clase</th>
+                            <th style="width: 80px; text-align: center; background-color: #2e4a62;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- COLUMNA 3: PRODUCTOS Y SERVICIOS -->
+        <div class="column">
+            <div class="container" style="border-top: 5px solid #27ae60;">
+                <h2 style="color: #27ae60; border-bottom: 2px solid #a2e8c4;">🛍️ Productos y Servicios</h2>
+                <form id="productoForm">
+                    <div class="form-group">
+                        <label for="nombreProducto">Nombre del Producto/Servicio:</label>
+                        <input type="text" id="nombreProducto" required
+                            placeholder="Ej. Bono 10 Clases, Clase Suelta...">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tipoProducto">Tipo de Producto:</label>
+                            <select id="tipoProducto">
+                                <option value="Otro">Otro (Material, etc.)</option>
+                                <option value="Bono">Bono de Clases</option>
+                                <option value="Clase Suelta">Clase Suelta</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="numClasesContainer" style="display: none;">
+                            <label for="numClases">Número de Clases:</label>
+                            <input type="number" id="numClases" min="1" placeholder="Ej. 10">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="precioProducto">Precio (€):</label>
+                            <input type="number" id="precioProducto" required min="0" step="0.01" placeholder="Ej. 150">
+                        </div>
+                    </div>
+                    <button type="submit" style="background-color: #27ae60;">Añadir Producto</button>
+                </form>
+            </div>
+
+            <div class="container">
+                <h3 style="color: #27ae60; border-bottom: 2px solid #a2e8c4;">📋 Lista de Productos</h3>
+                <table id="tablaProductos">
+                    <thead>
+                        <tr>
+                            <th style="background-color: #27ae60;">Producto/Servicio</th>
+                            <th style="background-color: #27ae60; width: 80px; text-align: center;">Clases</th>
+                            <th style="background-color: #27ae60; width: 80px; text-align: right;">Precio (€)</th>
+                            <th style="width: 70px; text-align: center; background-color: #27ae60;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Alumnos
+        const formNivel = document.getElementById('nivelForm');
+        const nombreNivelInput = document.getElementById('nombreNivel');
+        const tablaNiveles = document.getElementById('tablaNiveles').getElementsByTagName('tbody')[0];
+
+        // Clases
+        const formTipoClase = document.getElementById('tipoClaseForm');
+        const nombreTipoClaseInput = document.getElementById('nombreTipoClase');
+        const tablaTiposClases = document.getElementById('tablaTiposClases').getElementsByTagName('tbody')[0];
+
+        // Bonos
+        const formProducto = document.getElementById('productoForm');
+        const nombreProductoInput = document.getElementById('nombreProducto');
+        const tipoProductoSelect = document.getElementById('tipoProducto');
+        const numClasesContainer = document.getElementById('numClasesContainer');
+        const numClasesInput = document.getElementById('numClases');
+        const precioProductoInput = document.getElementById('precioProducto');
+        const tablaProductos = document.getElementById('tablaProductos').getElementsByTagName('tbody')[0];
+
+        let ultimaDataNiveles = JSON.stringify([]);
+        let ultimaDataTiposClases = JSON.stringify([]);
+        let ultimaDataProductos = JSON.stringify([]);
+
+        tipoProductoSelect.addEventListener('change', () => {
+            if (tipoProductoSelect.value === 'Bono') {
+                numClasesContainer.style.display = 'block';
+                numClasesInput.required = true;
+            } else {
+                numClasesContainer.style.display = 'none';
+                numClasesInput.required = false;
+            }
+        });
+
+        window.onload = async function () {
+            let intentos = 0;
+            while (!dataManager.initialized && intentos < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                intentos++;
+            }
+
+            console.log('DataManager inicializado');
+
+            // Primero, intentar mostrar los datos existentes
+            await mostrarNiveles();
+            await mostrarTiposClases();
+            await mostrarProductos();
+
+            // Inicializar niveles
+            let niveles = await dataManager.get('nivelesEscuela') || [];
+            if (niveles.length === 0) {
+                niveles = [
+                    { id: 1, nombre: 'Iniciación' },
+                    { id: 2, nombre: 'Intermedio' },
+                    { id: 3, nombre: 'Avanzado' }
+                ];
+                await dataManager.set('nivelesEscuela', niveles);
+                await mostrarNiveles(); // Volver a mostrar después de crear
+            }
+
+            // Inicializar tipos de clases
+            let tiposClases = await dataManager.get('tiposClasesEscuela') || [];
+            if (tiposClases.length === 0) {
+                tiposClases = [
+                    { id: 1, nombre: 'Iniciación' },
+                    { id: 2, nombre: 'Intermedio' },
+                    { id: 3, nombre: 'Avanzado / Competición' },
+                    { id: 4, nombre: 'Clase Particular' },
+                    { id: 5, nombre: 'Salida al Campo' }
+                ];
+                await dataManager.set('tiposClasesEscuela', tiposClases);
+                await mostrarTiposClases(); // Volver a mostrar después de crear
+            }
+
+            // Inicializar productos
+            let productos = await dataManager.get('productosEscuela') || [];
+            if (productos.length === 0) {
+                productos = [
+                    { id: 1, nombre: 'Bono 10 Clases Grupales', tipo: 'Bono', numClases: 10, precio: '150.00' },
+                    { id: 2, nombre: 'Bono 5 Clases Grupales', tipo: 'Bono', numClases: 5, precio: '85.00' },
+                    { id: 3, nombre: 'Clase Suelta', tipo: 'Clase Suelta', numClases: 1, precio: '20.00' }
+                ];
+                await dataManager.set('productosEscuela', productos);
+                await mostrarProductos(); // Volver a mostrar después de crear
+            }
+
+            // Listeners para sincronización en tiempo real
+            if (dataManager.useFirebase) {
+                dataManager.onSnapshot('nivelesEscuela', (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataNiveles) {
+                        ultimaDataNiveles = dataActual;
+                        mostrarNiveles();
+                    }
+                });
+
+                dataManager.onSnapshot('tiposClasesEscuela', (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataTiposClases) {
+                        ultimaDataTiposClases = dataActual;
+                        mostrarTiposClases();
+                    }
+                });
+
+                dataManager.onSnapshot('productosEscuela', (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataProductos) {
+                        ultimaDataProductos = dataActual;
+                        mostrarProductos();
+                    }
+                });
+            } else {
+                setInterval(async function () {
+                    const dataNiveles = JSON.stringify(await dataManager.get('nivelesEscuela') || []);
+                    if (dataNiveles !== ultimaDataNiveles) {
+                        ultimaDataNiveles = dataNiveles;
+                        mostrarNiveles();
+                    }
+
+                    const dataTipos = JSON.stringify(await dataManager.get('tiposClasesEscuela') || []);
+                    if (dataTipos !== ultimaDataTiposClases) {
+                        ultimaDataTipos = dataTipos;
+                        mostrarTiposClases();
+                    }
+
+                    const dataProductos = JSON.stringify(await dataManager.get('productosEscuela') || []);
+                    if (dataProductos !== ultimaDataProductos) {
+                        ultimaDataProductos = dataProductos;
+                        mostrarProductos();
+                    }
+                }, 500);
+            }
+        };
+
+        // Formulario Alumno
+        formNivel.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const nombre = nombreNivelInput.value.trim();
+            if (!nombre) return;
+
+            let niveles = await dataManager.get('nivelesEscuela') || [];
+            const existe = niveles.some(n => n.nombre.toLowerCase() === nombre.toLowerCase());
+            if (existe) { alert('Este nivel ya existe.'); return; }
+
+            niveles.push({ id: Date.now(), nombre: nombre });
+            await dataManager.set('nivelesEscuela', niveles);
+            nombreNivelInput.value = '';
+            mostrarNiveles();
+        });
+
+        // Formulario Tipo Clase
+        formTipoClase.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const nombre = nombreTipoClaseInput.value.trim();
+            if (!nombre) return;
+
+            let tiposClases = await dataManager.get('tiposClasesEscuela') || [];
+            const existe = tiposClases.some(t => t.nombre.toLowerCase() === nombre.toLowerCase());
+            if (existe) { alert('Este tipo de clase ya existe.'); return; }
+
+            tiposClases.push({ id: Date.now(), nombre: nombre });
+            await dataManager.set('tiposClasesEscuela', tiposClases);
+            nombreTipoClaseInput.value = '';
+            mostrarTiposClases();
+        });
+
+        // Formulario Producto
+        formProducto.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const nombre = nombreProductoInput.value.trim();
+            const tipo = tipoProductoSelect.value;
+            const numClases = (tipo === 'Bono') ? parseInt(numClasesInput.value) : (tipo === 'Clase Suelta' ? 1 : null);
+            const precio = parseFloat(precioProductoInput.value).toFixed(2);
+            if (!nombre || isNaN(precio)) return;
+            if (tipo === 'Bono' && (!numClases || numClases < 1)) {
+                alert('Por favor, especifica un número de clases válido para el bono.');
+                return;
+            }
+
+            let productos = await dataManager.get('productosEscuela') || [];
+            const existe = productos.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
+            if (existe) { alert('Este producto ya existe.'); return; }
+
+            productos.push({ id: Date.now(), nombre, tipo, numClases, precio });
+            await dataManager.set('productosEscuela', productos);
+            formProducto.reset();
+            numClasesContainer.style.display = 'none';
+            mostrarProductos();
+        });
+
+        async function mostrarNiveles() {
+            const niveles = await dataManager.get('nivelesEscuela') || [];
+            tablaNiveles.innerHTML = '';
+            if (niveles.length === 0) {
+                tablaNiveles.innerHTML = `<tr><td colspan="2" class="no-records">No hay niveles registrados.</td></tr>`;
+                return;
+            }
+            niveles.forEach(n => {
+                const fila = tablaNiveles.insertRow();
+                fila.innerHTML = `<td><b>${n.nombre}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarNivel(${n.id})">Eliminar</button></td>`;
+            });
+        }
+
+        async function mostrarTiposClases() {
+            const tiposClases = await dataManager.get('tiposClasesEscuela') || [];
+            tablaTiposClases.innerHTML = '';
+            if (tiposClases.length === 0) {
+                tablaTiposClases.innerHTML = `<tr><td colspan="2" class="no-records">No hay tipos de clase.</td></tr>`;
+                return;
+            }
+            tiposClases.forEach(t => {
+                const fila = tablaTiposClases.insertRow();
+                fila.innerHTML = `<td><b>${t.nombre}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarTipoClase(${t.id})">Eliminar</button></td>`;
+            });
+        }
+
+        async function mostrarProductos() {
+            const productos = await dataManager.get('productosEscuela') || [];
+            tablaProductos.innerHTML = '';
+            if (productos.length === 0) {
+                tablaProductos.innerHTML = `<tr><td colspan="4" class="no-records">No hay productos registrados.</td></tr>`;
+                return;
+            }
+            productos.forEach(p => {
+                const fila = tablaProductos.insertRow();
+                const clasesStr = p.numClases ? p.numClases : 'N/A';
+                fila.innerHTML = `
+                <td><b>${p.nombre}</b></td>
+                <td style="text-align:center;">${clasesStr}</td>
+                <td style="text-align:right;">${p.precio} €</td>
+                <td style="text-align:center;"><button class="btn-delete" onclick="eliminarProducto(${p.id})">Eliminar</button></td>
+            `;
+            });
+        }
+
+        async function eliminarNivel(id) {
+            if (confirm('¿Deseas eliminar este nivel de alumno?')) {
+                let niveles = await dataManager.get('nivelesEscuela') || [];
+                niveles = niveles.filter(n => n.id !== id);
+                await dataManager.set('nivelesEscuela', niveles);
+                mostrarNiveles();
+            }
+        }
+
+        async function eliminarTipoClase(id) {
+            if (confirm('¿Deseas eliminar este tipo de clase?')) {
+                let tiposClases = await dataManager.get('tiposClasesEscuela') || [];
+                tiposClases = tiposClases.filter(t => t.id !== id);
+                await dataManager.set('tiposClasesEscuela', tiposClases);
+                mostrarTiposClases();
+            }
+        }
+
+        async function eliminarProducto(id) {
+            if (confirm('¿Deseas eliminar este producto?')) {
+                let productos = await dataManager.get('productosEscuela') || [];
+                productos = productos.filter(p => p.id !== id);
+                await dataManager.set('productosEscuela', productos);
+                mostrarProductos();
+            }
+        }
+    </script>
+
+    <!-- Scripts de Firebase -->
+    <script src="data-manager.js"></script>
+
+</body>
+
+</html>

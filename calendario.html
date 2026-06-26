@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario - Escuela Ecuestre</title>
+
+    <!-- FullCalendar CSS -->
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+    <!-- FullCalendar JS -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            text-align: center;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin: 0 15px;
+            color: #555;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .nav-link:hover {
+            background-color: #f0ede5;
+            color: #000;
+        }
+
+        .nav-active {
+            background-color: #34495e;
+            color: white !important;
+        }
+
+        .container {
+            max-width: 98%;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 0 auto;
+        }
+
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #d4c5b9;
+            padding-bottom: 8px;
+        }
+
+        #calendar {
+            margin-top: 20px;
+            min-height: 600px;
+        }
+
+        /* Asegura que los saltos de línea funcionen en todas las vistas (Mes, Semana y Día) */
+        .fc-event-main,
+        .fc-event-title {
+            white-space: pre-wrap !important;
+            font-size: 0.9em !important;
+            line-height: 1.4 !important;
+            padding: 5px !important;
+        }
+
+        .fc-timegrid-event {
+            min-height: fit-content !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
+        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
+        <a href="clases.html" class="nav-link">📅 Clases</a>
+        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
+        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
+        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
+        <a href="calendario.html" class="nav-link nav-active">🗓️ Calendario</a>
+        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
+        <a href="bases.html" class="nav-link">🏆 Bases</a>
+    </div>
+
+    <div class="container">
+        <h2>🗓️ Calendario de Clases Programadas</h2>
+        <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">Visualización de las sesiones proyectadas según
+            el número de clases configurado por curso.</p>
+        <div id='calendar'></div>
+    </div>
+
+    <script src="data-manager.js"></script>
+    <script>
+        const ordenDias = { "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6 };
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            let intentos = 0;
+            while (!dataManager.initialized && intentos < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                intentos++;
+            }
+
+            const calendarEl = document.getElementById('calendar');
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                locale: 'es',
+                firstDay: 1,
+                slotMinTime: '08:00:00',
+                slotMaxTime: '22:00:00',
+                allDaySlot: false,
+                events: await generarEventos(),
+                eventContent: function (arg) {
+                    let text = arg.event.title;
+                    // Solo añadimos los alumnos si la vista es la de día (Día/Today)
+                    if (arg.view.type === 'timeGridDay') {
+                        text += '\n' + (arg.event.extendedProps.listaAlumnos || '');
+                    }
+                    return { domNodes: [document.createTextNode(text)] };
+                },
+                eventClick: function (info) {
+                    // Si no estamos en la vista de día, cambia a la vista de día para la fecha del evento
+                    if (info.view.type !== 'timeGridDay') {
+                        calendar.changeView('timeGridDay', info.event.start);
+                    }
+                }
+            });
+
+            calendar.render();
+
+            if (dataManager.useFirebase) {
+                dataManager.onSnapshot('clasesEscuela', async () => {
+                    calendar.setOption('events', await generarEventos());
+                });
+            }
+        });
+
+        function calcularHoraFin(horaStr, duracion) {
+            if (!horaStr) return '12:00';
+            const [hh, mm] = horaStr.split(':').map(Number);
+            let minTotales = hh * 60 + mm;
+            if (duracion.includes('45')) minTotales += 45;
+            else if (duracion.includes('1 hora y media')) minTotales += 90;
+            else if (duracion.includes('1 hora')) minTotales += 60;
+            else if (duracion.includes('2 horas')) minTotales += 120;
+            else minTotales += 60; // 1 hora por defecto
+
+            const finH = Math.floor(minTotales / 60) % 24;
+            const finM = minTotales % 60;
+            return `${String(finH).padStart(2, '0')}:${String(finM).padStart(2, '0')}`;
+        }
+
+        async function generarEventos() {
+            const clases = await dataManager.get('clasesEscuela') || [];
+            const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+            const eventos = [];
+
+            clases.forEach(c => {
+                // Obtener los nombres de los alumnos y sus caballos asignados
+                const listaAlumnos = asignaciones
+                    .filter(a => a.claseId == c.id).map(a => `• ${a.alumno}`).join('\n');
+
+                if (c.tipo === 'unDia') {
+                    const diaNum = ordenDias[c.diaSemana];
+                    eventos.push({
+                        title: c.nivel.toUpperCase(),
+                        daysOfWeek: [diaNum],
+                        startTime: c.hora,
+                        endTime: calcularHoraFin(c.hora, c.duracion),
+                        extendedProps: {
+                            listaAlumnos: listaAlumnos || '(Sin alumnos asignados)',
+                            claseId: c.id
+                        },
+                        backgroundColor: c.nivel.includes('Iniciación') ? '#27ae60' : c.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db'
+                    });
+                } else if (c.tipo === 'variosDialas' && c.horarios) {
+                    Object.entries(c.horarios).forEach(([dia, hora]) => {
+                        const diaNum = ordenDias[dia];
+                        eventos.push({
+                            title: c.nivel.toUpperCase(),
+                            daysOfWeek: [diaNum],
+                            startTime: hora,
+                            endTime: calcularHoraFin(hora, c.duracion),
+                            extendedProps: {
+                                listaAlumnos: listaAlumnos || '(Sin alumnos asignados)',
+                                claseId: c.id
+                            },
+                            backgroundColor: c.nivel.includes('Iniciación') ? '#27ae60' : c.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db'
+                        });
+                    });
+                }
+            });
+            return eventos;
+        }
+
+    </script>
+</body>
+
+</html>
