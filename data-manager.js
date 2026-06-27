@@ -29,8 +29,14 @@ class DataManager {
             // Habilitar persistencia offline
             try {
                 await this.db.enablePersistence();
+                console.log('Persistencia offline habilitada.');
             } catch (err) {
-                if (err.code !== 'failed-precondition' && err.code !== 'unimplemented') {
+                if (err.code === 'failed-precondition') {
+                    console.warn('Persistencia offline falló: Múltiples pestañas abiertas. Los datos se sincronizarán desde el servidor.');
+                    // Forzar la obtención de datos desde el servidor en lugar de la caché.
+                    await this.db.terminate(); // Termina la instancia actual de Firestore
+                    this.db = firebase.firestore(); // y la reinicia sin persistencia para esta pestaña.
+                } else if (err.code !== 'unimplemented') {
                     console.warn('Persistencia offline no disponible:', err);
                 }
             }
