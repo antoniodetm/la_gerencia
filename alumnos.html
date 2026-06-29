@@ -511,6 +511,19 @@
                 // Añadir listeners para pagos y asistencia para que el seguimiento se actualice
                 dataManager.onSnapshot('pagosAlumnosEscuela', () => { });
                 dataManager.onSnapshot('attendanceEscuela', () => { });
+            } else {
+                setInterval(async function () {
+                    const dataAlumnos = JSON.stringify(await dataManager.get('alumnosEscuela') || []);
+                    if (dataAlumnos !== ultimaDataAlumnos) {
+                        ultimaDataAlumnos = dataAlumnos;
+                        mostrarAlumnos();
+                    }
+                    const dataNiveles = JSON.stringify(await dataManager.get('nivelesEscuela') || []);
+                    if (dataNiveles !== ultimaDataNiveles) {
+                        ultimaDataNiveles = dataNiveles;
+                        poblarNiveles();
+                    }
+                }, 500);
             }
         };
 
@@ -749,11 +762,15 @@
 
             const nombreCompleto = `${a.nombre} ${a.apellido}`;
             const asistencia = await dataManager.get('attendanceEscuela') || [];
+            const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+            const clases = await dataManager.get('clasesEscuela') || [];
             const pagos = await dataManager.get('pagosAlumnosEscuela') || [];
             const misPagos = pagos.filter(p => p.alumnoId == id);
 
             let html = `<p><strong>Alumno:</strong> ${nombreCompleto}</p>`;
             html += `<hr style="border:0; border-top:1px solid #eee; margin:15px 0;">`;
+
+            const ordenDias = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6, "Domingo": 7 };
 
             // 1. Progreso de Bonos y Clases Sueltas
             html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">📈 Progreso de Bonos</h4>`;
@@ -786,7 +803,43 @@
                 html += `</tbody></table>`;
             }
 
-            // 2. Historial de Asistencia
+            // 2. Clases pendientes de pago (asistencias sin bono)
+            const misAsistencias = asistencia.filter(att => att.alumnoId == id && att.asistio);
+            const totalClasesCompradas = bonosYClases.reduce((acc, p) => acc + (p.totalClases || 0), 0);
+            const clasesPendientesDePago = Math.max(0, misAsistencias.length - totalClasesCompradas);
+
+            html += `<h4 style="color:#e74c3c; margin-top: 25px; margin-bottom: 10px;">💸 Clases Pendientes de Pago</h4>`;
+            if (clasesPendientesDePago > 0) {
+                html += `<p style="background: #fadbd8; color: #c0392b; padding: 10px; border-radius: 4px; font-weight: bold;">
+                    Este alumno tiene ${clasesPendientesDePago} clase(s) suelta(s) pendiente(s) de abonar.
+                </p>`;
+            } else {
+                html += `<p style="color:#888; font-style:italic; text-align:center;">El alumno está al día con sus pagos de clases.</p>`;
+            }
+
+            // 3. Clases Reservadas (Asignaciones)
+            const misAsignaciones = asignaciones.filter(asig => asig.alumno === nombreCompleto)
+                .map(asig => {
+                    const claseInfo = clases.find(c => c.id === asig.claseId);
+                    return { ...asig, claseInfo };
+                })
+                .filter(asig => asig.claseInfo) // Filtrar por si una clase fue eliminada
+                .sort((a, b) => ordenDias[a.dia] - ordenDias[b.dia]);
+
+            html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">🗓️ Clases Reservadas</h4>`;
+            if (misAsignaciones.length > 0) {
+                html += misAsignaciones.map(asig => {
+                    const clase = asig.claseInfo;
+                    const hora = (clase.tipo === 'unDia') ? clase.hora : (clase.horarios ? clase.horarios[asig.dia] : 'N/A');
+                    return `<span style="display:inline-block; background:#eaf2f8; padding:3px 8px; margin:3px; border-radius:3px; font-size:0.9em; border:1px solid #aed6f1;">
+                        <b>${asig.dia}</b> a las ${hora}hs <small style="color:#5499c7;">(${clase.nivel})</small>
+                    </span>`;
+                }).join('');
+            } else {
+                html += `<p style="color:#888; font-style:italic; text-align:center;">Este alumno no está apuntado a ninguna clase fija.</p>`;
+            }
+
+            // 4. Historial de Asistencia
             const misAsistencias = asistencia.filter(att => att.alumnoId == id && att.asistio).sort((x, y) => new Date(y.fechaClase) - new Date(x.fechaClase));
             html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">✔️ Historial de Asistencia (${misAsistencias.length} clases)</h4>`;
             if (misAsistencias.length > 0) {
@@ -872,6 +925,7 @@
     </script>
 
     <!-- Scripts de Firebase -->
+    <script src="firebase-config.js"></script>
     <script src="data-manager.js?v=1.5"></script>
 
 

@@ -9,19 +9,10 @@ class DataManager {
 
     async initializeFirebase() {
         try {
-            // Configuración de Firebase directamente en el código
-            const config = {
-                apiKey: "AIzaSyCEtMPhIhuDH2GDMo0HDs8bs9o1EGBOfYM",
-                authDomain: "la-gerencia-51fdf.firebaseapp.com",
-                projectId: "la-gerencia-51fdf",
-                storageBucket: "la-gerencia-51fdf.appspot.com",
-                messagingSenderId: "331472649600",
-                appId: "1:331472649600:web:10030d6a03d1215f1d5565"
-            };
-
             // Inicializar Firebase
             if (!firebase.apps.length) {
-                firebase.initializeApp(config);
+                // La variable firebaseConfig viene del fichero firebase-config.js
+                firebase.initializeApp(firebaseConfig);
             }
 
             this.db = firebase.firestore();

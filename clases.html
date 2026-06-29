@@ -623,7 +623,7 @@
                     if (radioUnDia) radioUnDia.click();
                     document.getElementById('diaSemana').value = c.diaSemana;
                     document.getElementById('hora').value = c.hora;
-                } else if (c.tipo === 'variosDialas') {
+                } else if (c.tipo === 'variosDias') {
                     const radioVarios = document.querySelector('input[value="variosDialas"]');
                     if (radioVarios) radioVarios.click();
 
@@ -680,6 +680,7 @@
     </script>
 
     <!-- Scripts de Firebase -->
+    <script src="firebase-config.js"></script>
     <script src="data-manager.js?v=1.5"></script>
 
 </body>
