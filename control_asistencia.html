@@ -445,6 +445,9 @@
             const isChecked = asistenciaPrevia ? 'checked disabled' : '';
             const isSelectDisabled = asistenciaPrevia ? 'disabled' : '';
             const caballoSeleccionado = asistenciaPrevia ? asistenciaPrevia.caballo : '';
+            const deleteButtonHtml = asistenciaPrevia
+                ? `<button class="btn-quitar-inline" style="margin-left: 10px; background-color: #c0392b;" onclick="eliminarAsistencia('${asistenciaPrevia.id}')">Borrar</button>`
+                : '';
 
             div.innerHTML = `
                 <input type="checkbox" class="att-check" ${isChecked}>
@@ -453,6 +456,7 @@
                     <option value="">-- Caballo --</option>
                     ${todosLosCaballos.map(c => `<option value="${c.nombre}" ${c.nombre === caballoSeleccionado ? 'selected' : ''}>${c.nombre}</option>`).join('')}
                 </select>
+                ${deleteButtonHtml}
             `;
             return div;
         }
@@ -562,6 +566,38 @@
                 `Resumen de la operación:\n\n${mensajesAlerta.join('\n')}` :
                 'No se marcaron asistencias.';
             alert(mensajeFinal);
+            cerrarModal();
+        }
+
+        async function eliminarAsistencia(asistenciaId) {
+            if (!confirm('¿Eliminar este registro de asistencia? La clase se devolverá al bono del alumno si corresponde.')) return;
+
+            const asistenciaAEliminar = todaLaAsistencia.find(att => att.id == asistenciaId);
+            if (!asistenciaAEliminar) {
+                alert('Error: No se encontró el registro de asistencia.');
+                return;
+            }
+
+            // 1. Devolver la clase al bono correspondiente
+            // Buscamos el bono que se usó para esta asistencia. La lógica es encontrar el primer bono que se usó después de la fecha de la clase.
+            // Esta es una aproximación, asumiendo que el sistema siempre usa el bono más antiguo primero.
+            const bonosDelAlumno = todosLosPagos
+                .filter(p => p.alumnoId === asistenciaAEliminar.alumnoId && (p.tipo === 'Bono' || p.tipo === 'Clase Suelta') && (p.clasesUsadas || 0) > 0)
+                .sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra));
+
+            if (bonosDelAlumno.length > 0) {
+                const bonoOriginal = todosLosPagos.find(p => p.id === bonosDelAlumno[0].id);
+                if (bonoOriginal) {
+                    bonoOriginal.clasesUsadas = Math.max(0, (bonoOriginal.clasesUsadas || 0) - 1);
+                    await dataManager.set('pagosAlumnosEscuela', todosLosPagos);
+                }
+            }
+
+            // 2. Eliminar el registro de asistencia
+            todaLaAsistencia = todaLaAsistencia.filter(att => att.id != asistenciaId);
+            await dataManager.set('attendanceEscuela', todaLaAsistencia);
+
+            alert('Asistencia eliminada correctamente.');
             cerrarModal();
         }
 

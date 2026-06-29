@@ -804,7 +804,7 @@
             }
 
             // 2. Clases pendientes de pago (asistencias sin bono)
-            const misAsistencias = asistencia.filter(att => att.alumnoId == id && att.asistio);
+            let misAsistencias = asistencia.filter(att => att.alumnoId == id && att.asistio);
             const totalClasesCompradas = bonosYClases.reduce((acc, p) => acc + (p.totalClases || 0), 0);
             const clasesPendientesDePago = Math.max(0, misAsistencias.length - totalClasesCompradas);
 
@@ -840,7 +840,7 @@
             }
 
             // 4. Historial de Asistencia
-            const misAsistencias = asistencia.filter(att => att.alumnoId == id && att.asistio).sort((x, y) => new Date(y.fechaClase) - new Date(x.fechaClase));
+            misAsistencias = misAsistencias.sort((x, y) => new Date(y.fechaClase) - new Date(x.fechaClase));
             html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">✔️ Historial de Asistencia (${misAsistencias.length} clases)</h4>`;
             if (misAsistencias.length > 0) {
                 html += misAsistencias.map(att => `<span style="display:inline-block; background:#f0f0f0; padding:2px 5px; margin:2px; border-radius:3px; font-size:0.9em; border:1px solid #ddd;">${new Date(att.fechaClase + 'T12:00:00').toLocaleDateString('es-ES')} <small style="color:#d35400;">(🐴 ${att.caballo || '?'})</small></span>`).join('');
@@ -911,6 +911,7 @@
                 let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
                 pagos = pagos.filter(p => p.id !== pagoId);
                 await dataManager.set('pagosAlumnosEscuela', pagos);
+                await verSeguimiento(alumnoId); // <-- AÑADIDO: Refresca el modal de seguimiento
                 await mostrarProductosDeAlumno(alumnoId);
             }
         }

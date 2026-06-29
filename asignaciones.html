@@ -415,18 +415,23 @@
             const clasesDisponibles = await dataManager.get('clasesEscuela') || [];
             listaGrupos.innerHTML = '';
 
-            if (clasesDisponibles.length === 0) {
-                listaGrupos.innerHTML = `<div class="no-records">No hay horarios configurados en la pestaña "Clases".</div>`;
+            // Filtrar para mostrar solo clases que tienen al menos una asignación
+            const clasesConAlumnos = clasesDisponibles.filter(clase =>
+                asignaciones.some(asignacion => asignacion.claseId === clase.id)
+            );
+
+            if (clasesConAlumnos.length === 0) {
+                listaGrupos.innerHTML = `<div class="no-records">No hay alumnos apuntados a ninguna clase.</div>`;
                 return;
             }
 
-            clasesDisponibles.sort((a, b) => {
+            clasesConAlumnos.sort((a, b) => {
                 const getDia1 = a.tipo === 'unDia' ? a.diaSemana : Object.keys(a.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
                 const getDia2 = b.tipo === 'unDia' ? b.diaSemana : Object.keys(b.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
                 return ordenDias[getDia1] - ordenDias[getDia2];
             });
 
-            clasesDisponibles.forEach(c => {
+            clasesConAlumnos.forEach(c => {
                 const card = document.createElement('div');
                 card.className = 'clase-card';
 
@@ -453,12 +458,14 @@
 
                 diasDeLaClase.forEach(dia => {
                     const alumnosEnEsteDia = asignaciones.filter(a => a.claseId === c.id && a.dia === dia);
-                    if (c.tipo === 'variosDias') {
-                        htmlContenido += `<h5 style="margin: 15px 0 5px 0; color: #555; border-bottom: 1px solid #eee; padding-bottom: 3px;">${dia}</h5>`;
+
+                    // Solo mostrar el día si hay alumnos apuntados para ese día
+                    if (alumnosEnEsteDia.length === 0) {
+                        return; // No mostrar nada para este día si no hay alumnos
                     }
 
-                    if (alumnosEnEsteDia.length === 0) {
-                        htmlContenido += `<p style="color:#999; margin:5px 0; font-style:italic; font-size:14px;">Sin alumnos apuntados.</p>`;
+                    if (c.tipo === 'variosDias' && diasDeLaClase.length > 1) {
+                        htmlContenido += `<h5 style="margin: 15px 0 5px 0; color: #555; border-bottom: 1px solid #eee; padding-bottom: 3px;">${dia}</h5>`;
                     } else {
                         alumnosEnEsteDia.forEach(a => {
                             htmlContenido += `
@@ -485,9 +492,24 @@
 
         async function eliminarAsignacion(id) {
             if (confirm('¿Deseas quitar a este alumno de la clase?')) {
-                let asignaciones = await dataManager.get('asignacionesEscuela') || [];
-                asignaciones = asignaciones.filter(a => a.id !== id);
-                await dataManager.set('asignacionesEscuela', asignaciones);
+                const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+                const asignacionAEliminar = asignaciones.find(a => a.id === id);
+
+                if (asignacionAEliminar) {
+                    // 1. Eliminar la asignación
+                    const asignacionesActualizadas = asignaciones.filter(a => a.id !== id);
+                    await dataManager.set('asignacionesEscuela', asignacionesActualizadas);
+
+                    // 2. Eliminar registros de asistencia futuros para esta asignación
+                    const alumnos = await dataManager.get('alumnosEscuela') || [];
+                    const alumno = alumnos.find(al => `${al.nombre} ${al.apellido}` === asignacionAEliminar.alumno);
+                    if (alumno) {
+                        let asistencias = await dataManager.get('attendanceEscuela') || [];
+                        // Filtra y mantiene solo las asistencias que NO coinciden con el alumno y la clase de la asignación eliminada.
+                        const asistenciasActualizadas = asistencias.filter(att => !(att.alumnoId === alumno.id && att.claseId === asignacionAEliminar.claseId));
+                        await dataManager.set('attendanceEscuela', asistenciasActualizadas);
+                    }
+                }
                 await mostrarAsignacionesGrupales();
             }
         }
