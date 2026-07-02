@@ -90,6 +90,17 @@
             box-sizing: border-box;
         }
 
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
         button {
             background-color: #8c7853;
             color: white;
@@ -170,6 +181,14 @@
         }
 
         .btn-seguimiento:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-view {
+            background-color: #3498db;
+        }
+
+        .btn-view:hover {
             background-color: #2980b9;
         }
 
@@ -254,6 +273,16 @@
                     </select>
                 </div>
             </div>
+            <div class="form-group">
+                <label for="notaMedica">Nota Médica / Herrajes / Veterinario:</label>
+                <textarea id="notaMedica"
+                    placeholder="Indica aquí cualquier condición médica, alergias, información de herrajes o citas veterinarias..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="notaAlimentaria">Nota Alimentaria / Pienso:</label>
+                <textarea id="notaAlimentaria"
+                    placeholder="Indica aquí tipo de pienso, suplementos, intolerancias o necesidades alimentarias..."></textarea>
+            </div>
             <button type="submit" id="submitBtn">Registrar Caballo</button>
         </form>
     </div>
@@ -272,6 +301,17 @@
             </thead>
             <tbody></tbody>
         </table>
+    </div>
+
+    <!-- Modal para ver Ficha -->
+    <div id="modalFicha" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarFicha()">&times;</span>
+            <h3 style="margin-top:0; color:#5c4033;">📄 Ficha del Caballo</h3>
+            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
+            <div id="fichaDetalles" style="text-align: left;"></div>
+            <button onclick="cerrarFicha()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
+        </div>
     </div>
 
     <!-- Modal para Seguimiento -->
@@ -334,15 +374,17 @@
             const capa = document.getElementById('capa').value.trim();
             const estado = document.getElementById('estado').value;
             const categoria = document.getElementById('categoria').value;
+            const notaMedica = document.getElementById('notaMedica').value.trim();
+            const notaAlimentaria = document.getElementById('notaAlimentaria').value.trim();
 
             let caballos = await dataManager.get('caballosEscuela') || [];
 
             if (id) {
-                caballos = caballos.map(c => c.id === parseInt(id) ? { id: c.id, nombre, capa, estado, categoria } : c);
+                caballos = caballos.map(c => c.id === parseInt(id) ? { id: c.id, nombre, capa, estado, categoria, notaMedica, notaAlimentaria } : c);
 
                 alert("¡Caballo actualizado!");
             } else {
-                caballos.push({ id: Date.now(), nombre, capa, estado, categoria });
+                caballos.push({ id: Date.now(), nombre, capa, estado, categoria, notaMedica, notaAlimentaria });
                 alert("¡Caballo registrado!");
             }
 
@@ -363,6 +405,7 @@
                 fila.innerHTML = `
                 <td><b>${c.nombre}</b></td><td>${c.capa}</td><td>${c.estado}</td><td>${c.categoria || 'De tanda'}</td>
                 <td class="actions-cell">
+                    <button class="actions-btn btn-view" onclick="verFicha(${c.id})">Ver Ficha</button>
                     <button class="actions-btn btn-seguimiento" onclick="verSeguimiento(${c.id})">Seguimiento</button>
                     <button class="actions-btn btn-edit" onclick="cargarCaballoParaEditar(${c.id})">Editar</button>
                     <button class="actions-btn btn-delete" onclick="eliminarCaballo(${c.id})">Eliminar</button>
@@ -380,6 +423,8 @@
                 document.getElementById('capa').value = c.capa;
                 document.getElementById('estado').value = c.estado;
                 document.getElementById('categoria').value = c.categoria || 'De tanda';
+                document.getElementById('notaMedica').value = c.notaMedica || '';
+                document.getElementById('notaAlimentaria').value = c.notaAlimentaria || '';
                 submitBtn.textContent = 'Actualizar Caballo';
                 submitBtn.classList.add('btn-update');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -402,6 +447,26 @@
             caballoIdInput.value = '';
             submitBtn.textContent = 'Registrar Caballo';
             submitBtn.classList.remove('btn-update');
+        }
+
+        async function verFicha(id) {
+            const caballos = await dataManager.get('caballosEscuela') || [];
+            const c = caballos.find(item => item.id === id);
+            if (c) {
+                document.getElementById('fichaDetalles').innerHTML = `
+                <p><strong>Nombre:</strong> ${c.nombre}</p>
+                <p><strong>Capa:</strong> ${c.capa}</p>
+                <p><strong>Estado:</strong> ${c.estado}</p>
+                <p><strong>Categoría:</strong> ${c.categoria || 'De tanda'}</p>
+                <p><strong>Nota Médica/Herrajes:</strong> ${c.notaMedica || '-'}</p>
+                <p><strong>Nota Alimentaria/Pienso:</strong> ${c.notaAlimentaria || '-'}</p>
+            `;
+                document.getElementById('modalFicha').style.display = 'block';
+            }
+        }
+
+        function cerrarFicha() {
+            document.getElementById('modalFicha').style.display = 'none';
         }
 
         async function verSeguimiento(id) {
