@@ -760,11 +760,15 @@
             const a = alumnos.find(item => item.id === id);
             if (!a) return;
 
+            // Forzar la recarga de los datos más recientes para asegurar consistencia
+            const [asistencia, asignaciones, clases, pagos] = await Promise.all([
+                dataManager.get('attendanceEscuela'),
+                dataManager.get('asignacionesEscuela'),
+                dataManager.get('clasesEscuela'),
+                dataManager.get('pagosAlumnosEscuela')
+            ]);
+
             const nombreCompleto = `${a.nombre} ${a.apellido}`;
-            const asistencia = await dataManager.get('attendanceEscuela') || [];
-            const asignaciones = await dataManager.get('asignacionesEscuela') || [];
-            const clases = await dataManager.get('clasesEscuela') || [];
-            const pagos = await dataManager.get('pagosAlumnosEscuela') || [];
             const misPagos = pagos.filter(p => p.alumnoId == id);
 
             let html = `<p><strong>Alumno:</strong> ${nombreCompleto}</p>`;
@@ -790,7 +794,7 @@
 
                 bonosOrdenados.forEach(pago => {
                     const totalClases = pago.totalClases || 0;
-                    const clasesUsadas = pago.clasesUsadas || 0; // Usar el valor guardado en la base de datos
+                    const clasesUsadas = pago.clasesUsadas || 0;
                     const clasesRestantes = totalClases - clasesUsadas;
                     const statusColor = clasesRestantes > 0 ? '#27ae60' : '#c0392b';
                     const progresoHtml = `<b>Usadas: ${clasesUsadas}</b> / <b style="color:${statusColor};">Restantes: ${clasesRestantes}</b>`;
@@ -805,11 +809,17 @@
 
             // 2. Clases pendientes de pago (asistencias sin bono)
             let misAsistencias = asistencia.filter(att => att.alumnoId == id && att.asistio);
-            const totalClasesCompradas = bonosYClases.reduce((acc, p) => acc + (p.totalClases || 0), 0);
-            const clasesPendientesDePago = Math.max(0, misAsistencias.length - totalClasesCompradas);
+            const asistenciasSinBonoAsociado = misAsistencias.filter(att => !att.pagoId).length;
+
+            // Las clases pendientes de pago son aquellas asistencias que no tienen un bono asociado.
+            const clasesPendientesDePago = asistenciasSinBonoAsociado;
+
 
             html += `<h4 style="color:#e74c3c; margin-top: 25px; margin-bottom: 10px;">💸 Clases Pendientes de Pago</h4>`;
-            if (clasesPendientesDePago > 0) {
+            // Mostramos el aviso si hay clases pendientes de pago Y el alumno no tiene bonos activos con clases restantes
+            // para cubrir esas clases.
+            const tieneBonosActivos = bonosYClases.some(p => (p.totalClases - (p.clasesUsadas || 0)) > 0);
+            if (clasesPendientesDePago > 0 && !tieneBonosActivos) {
                 html += `<p style="background: #fadbd8; color: #c0392b; padding: 10px; border-radius: 4px; font-weight: bold;">
                     Este alumno tiene ${clasesPendientesDePago} clase(s) suelta(s) pendiente(s) de abonar.
                 </p>`;
@@ -818,21 +828,40 @@
             }
 
             // 3. Clases Reservadas (Asignaciones)
-            const misAsignaciones = asignaciones.filter(asig => asig.alumno === nombreCompleto)
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+
+            // Obtener las fechas de las clases a las que el alumno ha asistido
+            const fechasAsistidas = new Set(
+                misAsistencias.map(att => att.fechaClase)
+            );
+
+            const misAsignacionesFuturas = asignaciones
+                .filter(asig => {
+                    if (asig.alumno !== nombreCompleto) return false;
+
+                    // Ahora 'asig.fecha' viene de 'asignaciones.html' con el formato 'YYYY-MM-DD'
+                    if (!asig.fecha) return false; // Ignorar asignaciones antiguas sin fecha
+                    const fechaAsignacion = new Date(asig.fecha + 'T12:00:00'); // Asumiendo que 'asig.fecha' existe y es 'YYYY-MM-DD'
+
+                    // No mostrar si la fecha ya pasó O si ya asistió a una clase en esa fecha.
+                    return fechaAsignacion >= hoy && !fechasAsistidas.has(asig.fecha);
+                })
                 .map(asig => {
                     const claseInfo = clases.find(c => c.id === asig.claseId);
                     return { ...asig, claseInfo };
                 })
                 .filter(asig => asig.claseInfo) // Filtrar por si una clase fue eliminada
-                .sort((a, b) => ordenDias[a.dia] - ordenDias[b.dia]);
+                .sort((a, b) => new Date(a.fecha) - new Date(b.fecha)); // Ordenar por fecha
 
             html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">🗓️ Clases Reservadas</h4>`;
-            if (misAsignaciones.length > 0) {
-                html += misAsignaciones.map(asig => {
+            if (misAsignacionesFuturas.length > 0) {
+                html += misAsignacionesFuturas.map(asig => {
                     const clase = asig.claseInfo;
                     const hora = (clase.tipo === 'unDia') ? clase.hora : (clase.horarios ? clase.horarios[asig.dia] : 'N/A');
+                    const fechaClaseStr = new Date(asig.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
                     return `<span style="display:inline-block; background:#eaf2f8; padding:3px 8px; margin:3px; border-radius:3px; font-size:0.9em; border:1px solid #aed6f1;">
-                        <b>${asig.dia}</b> a las ${hora}hs <small style="color:#5499c7;">(${clase.nivel})</small>
+                        <b>${fechaClaseStr}</b> a las ${hora}hs <small style="color:#5499c7;">(${clase.nivel})</small>
                     </span>`;
                 }).join('');
             } else {
@@ -911,7 +940,10 @@
                 let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
                 pagos = pagos.filter(p => p.id !== pagoId);
                 await dataManager.set('pagosAlumnosEscuela', pagos);
-                await verSeguimiento(alumnoId); // <-- AÑADIDO: Refresca el modal de seguimiento
+                // Si el modal de seguimiento está abierto para este alumno, lo refresca.
+                if (document.getElementById('modalSeguimiento').style.display === 'block' && document.getElementById('productoAlumnoId').value == alumnoId) {
+                    await verSeguimiento(alumnoId);
+                }
                 await mostrarProductosDeAlumno(alumnoId);
             }
         }
@@ -927,7 +959,7 @@
 
     <!-- Scripts de Firebase -->
     <script src="firebase-config.js"></script>
-    <script src="data-manager.js?v=1.5"></script>
+    <script src="data-manager.js?v=1.8"></script>
 
 
 </body>

@@ -146,6 +146,18 @@
             background: #219150;
         }
 
+        .btn-edit-inline {
+            background: #f39c12;
+            padding: 3px 8px;
+            font-size: 11px;
+            width: auto;
+            margin: 0 5px 0 0;
+        }
+
+        .btn-edit-inline:hover {
+            background: #d68910;
+        }
+
         .btn-remove-inline {
             background: #c0392b;
             padding: 3px 8px;
@@ -216,7 +228,7 @@
         const fechaClaseGroup = document.getElementById('fechaClaseGroup');
         const diaClaseSelect = document.getElementById('diaClaseSelect');
 
-        const ordenDias = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6, "Domingo": 7 };
+        const ordenDias = { "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6 };
 
         let ultimaDataAsignaciones = JSON.stringify([]);
         let ultimaDataClases = JSON.stringify([]);
@@ -282,30 +294,35 @@
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
+            const asignacionId = document.getElementById('asignacionForm').dataset.editingId;
             const claseId = parseInt(claseSelect.value);
             const alumnoName = alumnoSelect.value; // Esto es el nombre completo
-            const diaSeleccionado = diaClaseSelect.value;
+            const fechaSeleccionada = diaClaseSelect.value; // Esto es la fecha 'YYYY-MM-DD'
 
             const clases = await dataManager.get('clasesEscuela') || [];
             const clase = clases.find(c => c.id === claseId);
 
             if (!clase) {
-                alert('Clase no encontrada.');
+                alert('Error: Clase no encontrada.');
                 return;
             }
 
             // El valor de diaSeleccionado ahora es la fecha 'YYYY-MM-DD'
-            if (!diaSeleccionado) {
+            if (!fechaSeleccionada) {
                 alert('Por favor, selecciona una fecha para la clase.');
                 return;
             }
 
             // El 'dia' de la semana se puede extraer de la fecha seleccionada
             const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-            const fechaObj = new Date(diaSeleccionado + 'T12:00:00');
+            const fechaObj = new Date(fechaSeleccionada + 'T12:00:00');
             const diaSemanaNombre = dias[fechaObj.getDay()];
 
-            await agregarAsignacion(claseId, alumnoName, diaSemanaNombre);
+            if (asignacionId) {
+                await actualizarAsignacion(parseInt(asignacionId), claseId, alumnoName, diaSemanaNombre, fechaSeleccionada);
+            } else {
+                await agregarAsignacion(claseId, alumnoName, diaSemanaNombre, fechaSeleccionada);
+            }
         });
 
         async function actualizarSelectorDeFecha() {
@@ -323,7 +340,11 @@
 
                 while (fechasFuturas.length < 8) { // Generar las próximas 8 fechas
                     if (diasClaseNum.includes(fechaActual.getDay())) {
-                        const fechaISO = fechaActual.toISOString().split('T')[0];
+                        // Usar un método que no dependa de la zona horaria para obtener 'YYYY-MM-DD'
+                        const anio = fechaActual.getFullYear();
+                        const mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
+                        const dia = String(fechaActual.getDate()).padStart(2, '0');
+                        const fechaISO = `${anio}-${mes}-${dia}`;
                         const diaSemanaNombre = fechaActual.toLocaleDateString('es-ES', { weekday: 'long' });
                         const hora = (clase.tipo === 'unDia') ? clase.hora : clase.horarios[diaSemanaNombre];
 
@@ -385,29 +406,63 @@
 
         }
 
-        async function agregarAsignacion(claseId, alumnoName, dia) {
-            if (!claseId || !alumnoName || !dia) return;
+        async function agregarAsignacion(claseId, alumnoName, dia, fecha) {
+            if (!claseId || !alumnoName || !dia || !fecha) return;
 
             const clases = await dataManager.get('clasesEscuela') || [];
             const claseSeleccionada = clases.find(c => c.id === claseId);
 
             if (!claseSeleccionada) {
-                alert('Por favor selecciona una clase válida');
+                alert('Error: Por favor selecciona una clase válida');
                 return;
             }
 
             let asignaciones = await dataManager.get('asignacionesEscuela') || [];
 
-            // Ahora la comprobación incluye el día
-            if (asignaciones.some(a => a.claseId === claseId && a.alumno === alumnoName && a.dia === dia)) {
-                alert(`⚠️ Este alumno ya está apuntado a la clase del ${dia}.`);
+            // La comprobación ahora es por alumno y fecha
+            if (asignaciones.some(a => a.alumno === alumnoName && a.fecha === fecha)) {
+                alert(`⚠️ Este alumno ya está apuntado a una clase en la fecha ${new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES')}.`);
                 return;
             }
 
-            asignaciones.push({ id: Date.now(), claseId: claseId, alumno: alumnoName, dia: dia });
+            asignaciones.push({ id: Date.now(), claseId: claseId, alumno: alumnoName, dia: dia, fecha: fecha });
             await dataManager.set('asignacionesEscuela', asignaciones);
             form.reset();
+            fechaClaseGroup.style.display = 'none';
             await mostrarAsignacionesGrupales();
+        }
+
+        async function actualizarAsignacion(id, claseId, alumnoName, dia, fecha) {
+            let asignaciones = await dataManager.get('asignacionesEscuela') || [];
+
+            // Verificar si la nueva asignación (alumno + fecha) ya existe en otra entrada
+            const existeDuplicado = asignaciones.some(a => a.id !== id && a.alumno === alumnoName && a.fecha === fecha);
+            if (existeDuplicado) {
+                alert(`⚠️ Este alumno ya está apuntado a otra clase en la fecha ${new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES')}.`);
+                return;
+            }
+
+            const asignacionesActualizadas = asignaciones.map(a => {
+                if (a.id === id) {
+                    return { ...a, claseId, alumno: alumnoName, dia, fecha };
+                }
+                return a;
+            });
+
+            await dataManager.set('asignacionesEscuela', asignacionesActualizadas);
+            alert('¡Asignación actualizada correctamente!');
+            resetearFormulario();
+        }
+
+        function resetearFormulario() {
+            form.reset();
+            delete form.dataset.editingId;
+            document.getElementById('submitBtn').textContent = 'Añadir Alumno a la Clase';
+            document.getElementById('submitBtn').style.backgroundColor = '#e67e22'; // Color original
+            fechaClaseGroup.style.display = 'none';
+            // Habilitar campos que podrían estar deshabilitados
+            claseSelect.disabled = false;
+            alumnoSelect.disabled = false;
         }
 
         async function mostrarAsignacionesGrupales() {
@@ -435,6 +490,9 @@
                 const card = document.createElement('div');
                 card.className = 'clase-card';
 
+                const alumnosEnEstaClase = asignaciones.filter(a => a.claseId === c.id);
+                const numAlumnos = alumnosEnEstaClase.length;
+
                 let etiquetaClase = '';
 
                 if (c.tipo === 'unDia') {
@@ -449,33 +507,38 @@
                 let htmlContenido = `
                 <div class="clase-header">
                     <h4 class="clase-title">${etiquetaClase}</h4>
-                    <button class="btn-add-inline" onclick="enfocarClase('${c.id}')">＋ Añadir alumno</button>
+                    <div>
+                        <span style="font-size: 0.9em; color: #555; margin-right: 15px;"><b>${numAlumnos}</b> de <b>${c.maxAlumnos || '?'}</b> alumnos</span>
+                        <button class="btn-add-inline" onclick="enfocarClase('${c.id}')">＋ Añadir alumno</button>
+                    </div>
                 </div>
                 <div class="clase-body">
             `;
 
                 const diasDeLaClase = (c.tipo === 'unDia') ? [c.diaSemana] : Object.keys(c.horarios || {}).sort((a, b) => ordenDias[a] - ordenDias[b]);
 
-                diasDeLaClase.forEach(dia => {
-                    const alumnosEnEsteDia = asignaciones.filter(a => a.claseId === c.id && a.dia === dia);
+                // Agrupar alumnos por fecha
+                const alumnosPorFecha = alumnosEnEstaClase
+                    .reduce((acc, asig) => {
+                        const fecha = asig.fecha || 'Sin fecha'; // Agrupar las antiguas si las hubiera
+                        if (!acc[fecha]) acc[fecha] = [];
+                        acc[fecha].push(asig);
+                        return acc;
+                    }, {});
 
-                    // Solo mostrar el día si hay alumnos apuntados para ese día
-                    if (alumnosEnEsteDia.length === 0) {
-                        return; // No mostrar nada para este día si no hay alumnos
-                    }
-
-                    if (c.tipo === 'variosDias' && diasDeLaClase.length > 1) {
-                        htmlContenido += `<h5 style="margin: 15px 0 5px 0; color: #555; border-bottom: 1px solid #eee; padding-bottom: 3px;">${dia}</h5>`;
-                    } else {
-                        alumnosEnEsteDia.forEach(a => {
-                            htmlContenido += `
+                // Ordenar fechas y mostrar
+                Object.keys(alumnosPorFecha).sort().forEach(fecha => {
+                    const fechaStr = new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                    htmlContenido += `<h5 style="margin: 15px 0 5px 0; color: #555; border-bottom: 1px solid #eee; padding-bottom: 3px;">${fechaStr}</h5>`;
+                    alumnosPorFecha[fecha].forEach(a => {
+                        htmlContenido += `
                             <div class="alumno-item">
                                 <span>👤 <b>${a.alumno}</b></span>
-                                <button class="btn-remove-inline" onclick="eliminarAsignacion(${a.id})">Quitar</button>
+                                <div><button class="btn-edit-inline" onclick="cargarAsignacionParaEditar(${a.id})">✏️ Editar</button>
+                                <button class="btn-remove-inline" onclick="eliminarAsignacion(${a.id})">Quitar</button></div>
                             </div>
                         `;
-                        });
-                    }
+                    });
                 });
 
                 htmlContenido += `</div>`;
@@ -486,7 +549,29 @@
 
         function enfocarClase(claseId) {
             claseSelect.value = claseId;
-            actualizarSelectorDeFecha(); // Para que aparezca el selector de día si es necesario
+            resetearFormulario();
+            claseSelect.value = claseId;
+            actualizarSelectorDeFecha();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function cargarAsignacionParaEditar(id) {
+            const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+            const asignacion = asignaciones.find(a => a.id === id);
+            if (!asignacion) return;
+
+            form.dataset.editingId = id;
+
+            claseSelect.value = asignacion.claseId;
+            claseSelect.disabled = true; // No permitir cambiar la clase, solo la fecha
+            await actualizarSelectorDeFecha();
+
+            diaClaseSelect.value = asignacion.fecha;
+            alumnoSelect.value = asignacion.alumno;
+            alumnoSelect.disabled = true; // No permitir cambiar el alumno
+
+            document.getElementById('submitBtn').textContent = 'Actualizar Asignación';
+            document.getElementById('submitBtn').style.backgroundColor = '#f39c12';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -517,7 +602,7 @@
 
     <!-- Scripts de Firebase -->
     <script src="firebase-config.js"></script>
-    <script src="data-manager.js?v=1.5"></script>
+    <script src="data-manager.js?v=1.8"></script>
 
 </body>
 

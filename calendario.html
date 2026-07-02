@@ -111,7 +111,7 @@
     </div>
 
     <script src="firebase-config.js"></script>
-    <script src="data-manager.js?v=1.5"></script>
+    <script src="data-manager.js?v=1.9"></script>
     <script>
         const ordenDias = { "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6 };
 
@@ -138,8 +138,7 @@
                 events: await generarEventos(),
                 eventContent: function (arg) {
                     let text = arg.event.title;
-                    // Solo añadimos los alumnos si la vista es la de día (Día/Today)
-                    if (arg.view.type === 'timeGridDay') {
+                    if (arg.view.type.includes('timeGrid')) {
                         text += '\n' + (arg.event.extendedProps.listaAlumnos || '');
                     }
                     return { domNodes: [document.createTextNode(text)] };
@@ -156,6 +155,9 @@
 
             if (dataManager.useFirebase) {
                 dataManager.onSnapshot('clasesEscuela', async () => {
+                    calendar.setOption('events', await generarEventos());
+                });
+                dataManager.onSnapshot('asignacionesEscuela', async () => {
                     calendar.setOption('events', await generarEventos());
                 });
             }
@@ -180,43 +182,61 @@
             const clases = await dataManager.get('clasesEscuela') || [];
             const asignaciones = await dataManager.get('asignacionesEscuela') || [];
             const eventos = [];
+            const eventosUnicos = new Map(); // Para evitar duplicados de clase/fecha
 
-            clases.forEach(c => {
-                // Obtener los nombres de los alumnos y sus caballos asignados
-                const listaAlumnos = asignaciones
-                    .filter(a => a.claseId == c.id).map(a => `• ${a.alumno}`).join('\n');
+            // Generar eventos a partir de las asignaciones, que ya tienen fecha
+            asignaciones.forEach(asig => {
+                const clase = clases.find(c => c.id === asig.claseId);
+                if (!clase) return;
 
-                if (c.tipo === 'unDia') {
-                    const diaNum = ordenDias[c.diaSemana];
-                    eventos.push({
-                        title: c.nivel.toUpperCase(),
-                        daysOfWeek: [diaNum],
-                        startTime: c.hora,
-                        endTime: calcularHoraFin(c.hora, c.duracion),
+                // Evitar duplicados si varios alumnos están en la misma clase/fecha
+                const hora = (clase.tipo === 'unDia') ? clase.hora : (clase.horarios ? clase.horarios[asig.dia] : '12:00');
+                const fechaInicio = `${asig.fecha}T${hora}`;
+                const fechaFin = `${asig.fecha}T${calcularHoraFin(hora, clase.duracion)}`;
+                const claveUnica = `${asig.claseId}-${asig.fecha}`;
+
+                if (eventosUnicos.has(claveUnica)) {
+                    const eventoExistente = eventosUnicos.get(claveUnica);
+                    eventoExistente.extendedProps.listaAlumnos += `\n• ${asig.alumno}`;
+                    eventoExistente.title = `${clase.nivel.toUpperCase()} (${eventoExistente.extendedProps.listaAlumnos.split('\n').length} alumnos)`;
+                } else {
+                    eventosUnicos.set(claveUnica, {
+                        title: `${clase.nivel.toUpperCase()} (1 alumno)`,
+                        start: fechaInicio,
+                        end: fechaFin,
                         extendedProps: {
-                            listaAlumnos: listaAlumnos || '(Sin alumnos asignados)',
-                            claseId: c.id
+                            listaAlumnos: `• ${asig.alumno}`,
+                            claseId: clase.id
                         },
-                        backgroundColor: c.nivel.includes('Iniciación') ? '#27ae60' : c.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db'
-                    });
-                } else if (c.tipo === 'variosDialas' && c.horarios) {
-                    Object.entries(c.horarios).forEach(([dia, hora]) => {
-                        const diaNum = ordenDias[dia];
-                        eventos.push({
-                            title: c.nivel.toUpperCase(),
-                            daysOfWeek: [diaNum],
-                            startTime: hora,
-                            endTime: calcularHoraFin(hora, c.duracion),
-                            extendedProps: {
-                                listaAlumnos: listaAlumnos || '(Sin alumnos asignados)',
-                                claseId: c.id
-                            },
-                            backgroundColor: c.nivel.includes('Iniciación') ? '#27ae60' : c.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db'
-                        });
+                        backgroundColor: clase.nivel.includes('Iniciación') ? '#27ae60' : clase.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db',
+                        borderColor: clase.nivel.includes('Iniciación') ? '#27ae60' : clase.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db'
                     });
                 }
             });
-            return eventos;
+
+            // Generar eventos recurrentes para clases sin alumnos asignados aún
+            clases.forEach(clase => {
+                const diasClase = (clase.tipo === 'unDia') ? { [clase.diaSemana]: clase.hora } : (clase.horarios || {});
+
+                Object.entries(diasClase).forEach(([dia, hora]) => {
+                    const claveUnicaRecurrente = `${clase.id}-${dia}`; // Clave para el evento recurrente
+
+                    eventos.push({
+                        title: `${clase.nivel.toUpperCase()} (Vacía)`,
+                        startTime: hora,
+                        endTime: calcularHoraFin(hora, clase.duracion),
+                        daysOfWeek: [ordenDias[dia]],
+                        extendedProps: {
+                            listaAlumnos: '(Sin alumnos asignados)',
+                            claseId: clase.id
+                        },
+                        backgroundColor: '#6c757d', // Color gris para clases vacías
+                        borderColor: '#6c757d'
+                    });
+                });
+            });
+
+            return [...eventosUnicos.values(), ...eventos];
         }
 
     </script>

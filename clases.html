@@ -343,14 +343,6 @@
                     <input type="number" id="maxAlumnos" min="1" placeholder="Ej. 6" required>
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="nivel">Tipo/Nivel de Clase:</label>
-                    <select id="nivel" required>
-                        <option value="">Cargando tipos...</option>
-                    </select>
-                </div>
-            </div>
             <button type="submit" id="submitBtn">Agendar Clase</button>
         </form>
     </div>
@@ -363,7 +355,6 @@
                     <th>Día / Hora</th>
                     <th>Duración</th>
                     <th>Nº Alumnos</th>
-                    <th>Tipo de Clase</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -379,29 +370,6 @@
         const ordenDias = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6, "Domingo": 7 };
 
         let ultimaDataClases = JSON.stringify([]);
-        let ultimaDataTipos = JSON.stringify([]);
-
-        async function poblarTiposClases() {
-            const selectNivel = document.getElementById('nivel');
-            const valorActual = selectNivel.value;
-
-            let tipos = await dataManager.get('tiposClasesEscuela') || [];
-            if (tipos.length === 0) {
-                tipos = [
-                    { id: 1, nombre: 'Iniciación' },
-                    { id: 2, nombre: 'Intermedio' },
-                    { id: 3, nombre: 'Avanzado / Competición' },
-                    { id: 4, nombre: 'Clase Particular' },
-                    { id: 5, nombre: 'Salida al Campo' }
-                ];
-                await dataManager.set('tiposClasesEscuela', tipos);
-            }
-
-            selectNivel.innerHTML = '<option value="">-- Elige tipo --</option>' + tipos.map(t => `<option value="${t.nombre}">${t.nombre}</option>`).join('');
-            if (valorActual && tipos.some(t => t.nombre === valorActual)) {
-                selectNivel.value = valorActual;
-            }
-        }
 
         window.onload = async function () {
             let intentos = 0;
@@ -412,7 +380,6 @@
 
             console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
 
-            await poblarTiposClases();
             setupEventListeners();
             await mostrarClases();
 
@@ -424,24 +391,12 @@
                         await mostrarClases();
                     }
                 });
-                dataManager.onSnapshot('tiposClasesEscuela', async (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataTipos) {
-                        ultimaDataTipos = dataActual;
-                        await poblarTiposClases();
-                    }
-                });
             } else {
                 setInterval(async function () {
                     const dataActual = JSON.stringify(await dataManager.get('clasesEscuela') || []);
                     if (dataActual !== ultimaDataClases) {
                         ultimaDataClases = dataActual;
                         await mostrarClases();
-                    }
-                    const dataTipos = JSON.stringify(await dataManager.get('tiposClasesEscuela') || []);
-                    if (dataTipos !== ultimaDataTipos) {
-                        ultimaDataTipos = dataTipos;
-                        await poblarTiposClases();
                     }
                 }, 500);
             }
@@ -508,11 +463,10 @@
 
             const tipoClase = tipoClaseRadio.value;
             const duracion = document.getElementById('duracion').value;
-            const nivel = document.getElementById('nivel').value;
             const maxAlumnos = document.getElementById('maxAlumnos').value;
 
-            if (!duracion || !nivel || !maxAlumnos) {
-                alert('Por favor completa la duración, el número de alumnos y el tipo de clase');
+            if (!duracion || !maxAlumnos) {
+                alert('Por favor completa la duración y el número de alumnos.');
                 return;
             }
 
@@ -528,10 +482,10 @@
                 }
 
                 if (id) {
-                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos, nivel } : c);
+                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos } : c);
                     alert("¡Horario modificado!");
                 } else {
-                    clases.push({ id: Date.now(), tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos, nivel });
+                    clases.push({ id: Date.now(), tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos });
                     alert("¡Clase agendada!");
                 }
             } else {
@@ -548,10 +502,10 @@
                 }
 
                 if (id) {
-                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'variosDias', horarios, duracion, maxAlumnos, nivel } : c);
+                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'variosDias', horarios, duracion, maxAlumnos } : c);
                     alert("¡Horario modificado!");
                 } else {
-                    clases.push({ id: Date.now(), tipo: 'variosDias', horarios, duracion, maxAlumnos, nivel });
+                    clases.push({ id: Date.now(), tipo: 'variosDias', horarios, duracion, maxAlumnos });
                     alert("¡Clase agendada!");
                 }
             }
@@ -565,7 +519,7 @@
             const clases = await dataManager.get('clasesEscuela') || [];
             tabla.innerHTML = '';
             if (clases.length === 0) {
-                tabla.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">No hay horarios programados.</td></tr>`;
+                tabla.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">No hay horarios programados.</td></tr>`;
                 return;
             }
 
@@ -584,7 +538,6 @@
                     <td><b>🗓️ ${c.diaSemana}</b> a las ⏰ ${c.hora} hs</td>
                     <td>⏱️ ${c.duracion}</td>
                     <td>👥 ${c.maxAlumnos || '-'} alumnos</td>
-                    <td><b>${c.nivel}</b></td>
                 `;
                 } else if (c.tipo === 'variosDias' && c.horarios) {
                     const diasHoras = Object.entries(c.horarios).sort((a, b) => ordenDias[a[0]] - ordenDias[b[0]])
@@ -594,7 +547,6 @@
                     <td><b>🗓️</b> ${diasHoras}</td>
                     <td>⏱️ ${c.duracion}</td>
                     <td>👥 ${c.maxAlumnos || '-'} alumnos</td>
-                    <td><b>${c.nivel}</b></td>
                 `;
                 } else {
                     return; // Saltar clases con formato inválido
@@ -615,7 +567,6 @@
             if (c) {
                 claseIdInput.value = c.id;
                 document.getElementById('duracion').value = c.duracion;
-                document.getElementById('nivel').value = c.nivel;
                 document.getElementById('maxAlumnos').value = c.maxAlumnos || '';
 
                 if (c.tipo === 'unDia') {
@@ -681,7 +632,7 @@
 
     <!-- Scripts de Firebase -->
     <script src="firebase-config.js"></script>
-    <script src="data-manager.js?v=1.5"></script>
+    <script src="data-manager.js?v=1.9"></script>
 
 </body>
 

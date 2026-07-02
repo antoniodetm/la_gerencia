@@ -164,6 +164,49 @@
         .btn-delete:hover {
             background-color: #a33226;
         }
+
+        .btn-seguimiento {
+            background-color: #3498db;
+        }
+
+        .btn-seguimiento:hover {
+            background-color: #2980b9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 25px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .close:hover {
+            color: #000;
+        }
     </style>
 </head>
 
@@ -231,6 +274,18 @@
         </table>
     </div>
 
+    <!-- Modal para Seguimiento -->
+    <div id="modalSeguimiento" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarSeguimiento()">&times;</span>
+            <h3 style="margin-top:0; color:#5c4033;">🐴 Seguimiento de Trabajo de <span
+                    id="nombreCaballoSeguimiento"></span></h3>
+            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
+            <div id="seguimientoDetalles" style="text-align: left; max-height: 400px; overflow-y: auto;"></div>
+            <button onclick="cerrarSeguimiento()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
+        </div>
+    </div>
+
     <script>
         const form = document.getElementById('caballoForm');
         const tabla = document.getElementById('tablaCaballos').getElementsByTagName('tbody')[0];
@@ -257,6 +312,9 @@
                         ultimaDataCaballos = dataActual;
                         await mostrarCaballos();
                     }
+                });
+                dataManager.onSnapshot('attendanceEscuela', () => {
+                    // Para que el modal de seguimiento se actualice si está abierto
                 });
             } else {
                 setInterval(async function () {
@@ -305,6 +363,7 @@
                 fila.innerHTML = `
                 <td><b>${c.nombre}</b></td><td>${c.capa}</td><td>${c.estado}</td><td>${c.categoria || 'De tanda'}</td>
                 <td class="actions-cell">
+                    <button class="actions-btn btn-seguimiento" onclick="verSeguimiento(${c.id})">Seguimiento</button>
                     <button class="actions-btn btn-edit" onclick="cargarCaballoParaEditar(${c.id})">Editar</button>
                     <button class="actions-btn btn-delete" onclick="eliminarCaballo(${c.id})">Eliminar</button>
                 </td>
@@ -344,11 +403,54 @@
             submitBtn.textContent = 'Registrar Caballo';
             submitBtn.classList.remove('btn-update');
         }
+
+        async function verSeguimiento(id) {
+            const caballos = await dataManager.get('caballosEscuela') || [];
+            const caballo = caballos.find(c => c.id === id);
+            if (!caballo) return;
+
+            document.getElementById('nombreCaballoSeguimiento').textContent = caballo.nombre;
+
+            const asistencias = await dataManager.get('attendanceEscuela') || [];
+            const historialCaballo = asistencias
+                .filter(att => att.caballo === caballo.nombre && att.asistio)
+                .sort((a, b) => new Date(b.fechaClase) - new Date(a.fechaClase));
+
+            const detallesDiv = document.getElementById('seguimientoDetalles');
+            if (historialCaballo.length === 0) {
+                detallesDiv.innerHTML = `<p style="text-align:center; color:#888;">Este caballo no tiene registros de trabajo.</p>`;
+            } else {
+                let html = `<table style="width:100%; font-size:0.9em;">
+                                <thead>
+                                    <tr style="background-color:#f0f0f0;">
+                                        <th style="padding:8px; background-color:#5c4033; color:white;">Fecha</th>
+                                        <th style="padding:8px; background-color:#5c4033; color:white;">Tipo de Clase</th>
+                                        <th style="padding:8px; background-color:#5c4033; color:white;">Alumno</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                historialCaballo.forEach(att => {
+                    html += `<tr>
+                                <td style="padding:8px; border-bottom:1px solid #eee;">${new Date(att.fechaClase + 'T12:00:00').toLocaleDateString('es-ES')}</td>
+                                <td style="padding:8px; border-bottom:1px solid #eee;"><b>${att.tipoClase || 'No especificado'}</b></td>
+                                <td style="padding:8px; border-bottom:1px solid #eee;">${att.alumno || 'N/A'}</td>
+                             </tr>`;
+                });
+                html += `</tbody></table>`;
+                detallesDiv.innerHTML = html;
+            }
+
+            document.getElementById('modalSeguimiento').style.display = 'block';
+        }
+
+        function cerrarSeguimiento() {
+            document.getElementById('modalSeguimiento').style.display = 'none';
+        }
     </script>
 
     <!-- Scripts de Firebase -->
     <script src="firebase-config.js"></script>
-    <script src="data-manager.js?v=1.5"></script>
+    <script src="data-manager.js?v=1.9"></script>
 
 </body>
 
