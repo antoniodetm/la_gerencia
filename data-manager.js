@@ -54,11 +54,10 @@ class DataManager {
     async set(collection, data) {
         if (this.useFirebase && this.db) {
             try {
-                // Guardar directamente el array como campo 'data'
-                const docRef = this.db.collection(collection).doc('_data');
-                await docRef.set({ items: data });
-                console.log(`✅ Guardado en Firebase: ${collection}`);
-                return;
+                // En lugar de guardar un array, guardamos cada objeto como un documento.
+                // Esta función ahora se usará para añadir/actualizar un solo documento.
+                await this.db.collection(collection).doc(String(data.id)).set(data);
+                console.log(`✅ Guardado en Firebase: ${collection}/${data.id}`);
             } catch (error) {
                 console.error(`❌ Error guardando en Firebase (${collection}):`, error);
             }
@@ -72,13 +71,10 @@ class DataManager {
     async get(collection) {
         if (this.useFirebase && this.db) {
             try {
-                const docRef = this.db.collection(collection).doc('_data');
-                const doc = await docRef.get();
-                if (doc.exists) {
-                    const data = doc.data();
-                    return Array.isArray(data.items) ? data.items : [];
-                }
-                return [];
+                const snapshot = await this.db.collection(collection).get();
+                const items = [];
+                snapshot.forEach(doc => items.push(doc.data()));
+                return items;
             } catch (error) {
                 console.error(`❌ Error obteniendo de Firebase (${collection}):`, error);
             }
@@ -92,14 +88,9 @@ class DataManager {
     onSnapshot(collection, callback) {
         if (this.useFirebase && this.db) {
             try {
-                return this.db.collection(collection).doc('_data').onSnapshot((doc) => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        const items = Array.isArray(data.items) ? data.items : [];
-                        callback(items);
-                    } else {
-                        callback([]);
-                    }
+                return this.db.collection(collection).onSnapshot((snapshot) => {
+                    const items = snapshot.docs.map(doc => doc.data());
+                    callback(items);
                 });
             } catch (error) {
                 console.error(`❌ Error en listener de Firebase (${collection}):`, error);
@@ -112,17 +103,8 @@ class DataManager {
     async delete(collection, itemId) {
         if (this.useFirebase && this.db) {
             try {
-                const docRef = this.db.collection(collection).doc('_data');
-                const doc = await docRef.get();
-                if (doc.exists) {
-                    const data = doc.data();
-                    // Filtrar el item según la colección
-                    if (Array.isArray(data.items)) {
-                        data.items = data.items.filter(item => item.id !== itemId);
-                    }
-                    await docRef.set(data);
-                }
-                return;
+                await this.db.collection(collection).doc(String(itemId)).delete();
+                console.log(`✅ Borrado en Firebase: ${collection}/${itemId}`);
             } catch (error) {
                 console.error('Error borrando en Firebase:', error);
             }
