@@ -327,6 +327,14 @@
                 <div id="horariosContainer" class="horarios-container"></div>
             </div>
 
+            <!-- NIVEL DE LA CLASE -->
+            <div class="form-group">
+                <label for="nivelClase">Nivel de la Clase:</label>
+                <select id="nivelClase" required>
+                    <option value="">-- Elige un nivel --</option>
+                </select>
+            </div>
+
             <!-- DURACIÓN Y TIPO (común a ambos) -->
             <div class="form-row">
                 <div class="form-group">
@@ -368,6 +376,7 @@
         const submitBtn = document.getElementById('submitBtn');
         const claseIdInput = document.getElementById('claseId');
         const ordenDias = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6, "Domingo": 7 };
+        let todosLosNiveles = [];
 
         let ultimaDataClases = JSON.stringify([]);
 
@@ -382,6 +391,7 @@
 
             setupEventListeners();
             await mostrarClases();
+            await poblarNiveles();
 
             if (dataManager.useFirebase) {
                 dataManager.onSnapshot('clasesEscuela', async (data) => {
@@ -390,6 +400,9 @@
                         ultimaDataClases = dataActual;
                         await mostrarClases();
                     }
+                });
+                dataManager.onSnapshot('nivelesEscuela', async (data) => {
+                    await poblarNiveles(data);
                 });
             } else {
                 setInterval(async function () {
@@ -401,6 +414,17 @@
                 }, 500);
             }
         };
+
+        async function poblarNiveles(data = null) {
+            todosLosNiveles = data || await dataManager.get('nivelesEscuela') || [];
+            const selectNivel = document.getElementById('nivelClase');
+            const valorActual = selectNivel.value;
+            selectNivel.innerHTML = '<option value="">-- Elige un nivel --</option>';
+            todosLosNiveles.forEach(n => {
+                selectNivel.innerHTML += `<option value="${n.nombre}">${n.nombre}</option>`;
+            });
+            if (valorActual) selectNivel.value = valorActual;
+        }
 
         function setupEventListeners() {
             // Radio buttons para cambiar entre un día y varios días
@@ -464,13 +488,12 @@
             const tipoClase = tipoClaseRadio.value;
             const duracion = document.getElementById('duracion').value;
             const maxAlumnos = document.getElementById('maxAlumnos').value;
+            const nivel = document.getElementById('nivelClase').value;
 
-            if (!duracion || !maxAlumnos) {
-                alert('Por favor completa la duración y el número de alumnos.');
+            if (!duracion || !maxAlumnos || !nivel) {
+                alert('Por favor completa la duración, el número de alumnos y el nivel de la clase.');
                 return;
             }
-
-            let clases = await dataManager.get('clasesEscuela') || [];
 
             if (tipoClase === 'unDia') {
                 const diaSemana = document.getElementById('diaSemana').value;
@@ -482,10 +505,12 @@
                 }
 
                 if (id) {
-                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos } : c);
+                    const claseActualizada = { id: parseInt(id), tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos, nivel };
+                    await dataManager.set('clasesEscuela', claseActualizada);
                     alert("¡Horario modificado!");
                 } else {
-                    clases.push({ id: Date.now(), tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos });
+                    const nuevaClase = { id: Date.now(), tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos, nivel };
+                    await dataManager.set('clasesEscuela', nuevaClase);
                     alert("¡Clase agendada!");
                 }
             } else {
@@ -502,15 +527,16 @@
                 }
 
                 if (id) {
-                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'variosDias', horarios, duracion, maxAlumnos } : c);
+                    const claseActualizada = { id: parseInt(id), tipo: 'variosDias', horarios, duracion, maxAlumnos, nivel };
+                    await dataManager.set('clasesEscuela', claseActualizada);
                     alert("¡Horario modificado!");
                 } else {
-                    clases.push({ id: Date.now(), tipo: 'variosDias', horarios, duracion, maxAlumnos });
+                    const nuevaClase = { id: Date.now(), tipo: 'variosDias', horarios, duracion, maxAlumnos, nivel };
+                    await dataManager.set('clasesEscuela', nuevaClase);
                     alert("¡Clase agendada!");
                 }
             }
 
-            await dataManager.set('clasesEscuela', clases);
             restablecerFormulario();
             await mostrarClases();
         });
@@ -535,7 +561,7 @@
 
                 if (c.tipo === 'unDia') {
                     contenidoFila = `
-                    <td><b>🗓️ ${c.diaSemana}</b> a las ⏰ ${c.hora} hs</td>
+                    <td><b>🗓️ ${c.diaSemana}</b> a las ⏰ ${c.hora} hs <br><small style="color:#555; font-weight:bold;">Nivel: ${c.nivel || 'N/A'}</small></td>
                     <td>⏱️ ${c.duracion}</td>
                     <td>👥 ${c.maxAlumnos || '-'} alumnos</td>
                 `;
@@ -544,7 +570,7 @@
                         .map(([dia, hora]) => `${dia} ${hora}`)
                         .join(', ');
                     contenidoFila = `
-                    <td><b>🗓️</b> ${diasHoras}</td>
+                    <td><b>🗓️</b> ${diasHoras} <br><small style="color:#555; font-weight:bold;">Nivel: ${c.nivel || 'N/A'}</small></td>
                     <td>⏱️ ${c.duracion}</td>
                     <td>👥 ${c.maxAlumnos || '-'} alumnos</td>
                 `;
@@ -568,6 +594,7 @@
                 claseIdInput.value = c.id;
                 document.getElementById('duracion').value = c.duracion;
                 document.getElementById('maxAlumnos').value = c.maxAlumnos || '';
+                document.getElementById('nivelClase').value = c.nivel || '';
 
                 if (c.tipo === 'unDia') {
                     const radioUnDia = document.querySelector('input[value="unDia"]');
@@ -602,13 +629,12 @@
 
         async function eliminarClase(id) {
             if (confirm('¿Seguro que deseas eliminar este horario?')) {
-                let clases = await dataManager.get('clasesEscuela') || [];
-                clases = clases.filter(c => c.id !== id);
-                await dataManager.set('clasesEscuela', clases);
+                await dataManager.delete('clasesEscuela', id);
 
                 let asignaciones = await dataManager.get('asignacionesEscuela') || [];
-                asignaciones = asignaciones.filter(a => a.claseId != id);
-                await dataManager.set('asignacionesEscuela', asignaciones);
+                for (const asig of asignaciones.filter(a => a.claseId == id)) {
+                    await dataManager.delete('asignacionesEscuela', asig.id);
+                }
 
                 if (claseIdInput.value == id) restablecerFormulario();
                 await mostrarClases();

@@ -276,27 +276,29 @@
             const especialidad = document.getElementById('especialidad').value;
             const nombreCompleto = `${nombre} ${apellido}`;
 
-            let profesores = await dataManager.get('profesoresEscuela') || [];
-
             if (id) {
+                let profesores = await dataManager.get('profesoresEscuela') || [];
                 const profesorAnterior = profesores.find(p => p.id === parseInt(id));
                 const nombreAnterior = `${profesorAnterior.nombre} ${profesorAnterior.apellido}`;
 
-                profesores = profesores.map(p => p.id === parseInt(id) ? { id: p.id, nombre, apellido, telefono, especialidad } : p);
+                const profesorActualizado = { id: parseInt(id), nombre, apellido, telefono, especialidad };
+                await dataManager.set('profesoresEscuela', profesorActualizado);
 
                 if (nombreAnterior !== nombreCompleto) {
                     let clases = await dataManager.get('clasesEscuela') || [];
-                    clases = clases.map(c => c.profesor === nombreAnterior ? { ...c, profesor: nombreCompleto } : c);
-                    await dataManager.set('clasesEscuela', clases);
+                    const clasesAfectadas = clases.filter(c => c.profesor === nombreAnterior);
+                    for (const clase of clasesAfectadas) {
+                        await dataManager.set('clasesEscuela', { ...clase, profesor: nombreCompleto });
+                    }
                 }
 
                 alert("¡Profesor actualizado!");
             } else {
-                profesores.push({ id: Date.now(), nombre, apellido, telefono, especialidad });
+                const nuevoProfesor = { id: Date.now(), nombre, apellido, telefono, especialidad };
+                await dataManager.set('profesoresEscuela', nuevoProfesor);
                 alert("¡Profesor registrado!");
             }
 
-            await dataManager.set('profesoresEscuela', profesores);
             restablecerFormulario();
             await mostrarProfesores();
         });
@@ -339,15 +341,15 @@
         async function eliminarProfesor(id) {
             if (confirm('¿Borrar profesor?')) {
                 let profesores = await dataManager.get('profesoresEscuela') || [];
-                const profesorAEliminar = profesores.find(p => p.id === id);
-                const nombreCompleto = `${profesorAEliminar.nombre} ${profesorAEliminar.apellido}`;
-
-                profesores = profesores.filter(p => p.id !== id);
-                await dataManager.set('profesoresEscuela', profesores);
-
-                let clases = await dataManager.get('clasesEscuela') || [];
-                clases = clases.map(c => c.profesor === nombreCompleto ? { ...c, profesor: null } : c);
-                await dataManager.set('clasesEscuela', clases);
+                const profesor = profesores.find(p => p.id === id);
+                if (profesor) {
+                    const nombreCompleto = `${profesor.nombre} ${profesor.apellido}`;
+                    await dataManager.delete('profesoresEscuela', id);
+                    const clases = await dataManager.get('clasesEscuela') || [];
+                    for (const clase of clases.filter(c => c.profesor === nombreCompleto)) {
+                        await dataManager.set('clasesEscuela', { ...clase, profesor: '' });
+                    }
+                }
 
                 if (profesorIdInput.value == id) restablecerFormulario();
                 await mostrarProfesores();

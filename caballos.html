@@ -377,18 +377,16 @@
             const notaMedica = document.getElementById('notaMedica').value.trim();
             const notaAlimentaria = document.getElementById('notaAlimentaria').value.trim();
 
-            let caballos = await dataManager.get('caballosEscuela') || [];
-
             if (id) {
-                caballos = caballos.map(c => c.id === parseInt(id) ? { id: c.id, nombre, capa, estado, categoria, notaMedica, notaAlimentaria } : c);
-
+                const caballoActualizado = { id: parseInt(id), nombre, capa, estado, categoria, notaMedica, notaAlimentaria };
+                await dataManager.set('caballosEscuela', caballoActualizado);
                 alert("¡Caballo actualizado!");
             } else {
-                caballos.push({ id: Date.now(), nombre, capa, estado, categoria, notaMedica, notaAlimentaria });
+                const nuevoCaballo = { id: Date.now(), nombre, capa, estado, categoria, notaMedica, notaAlimentaria };
+                await dataManager.set('caballosEscuela', nuevoCaballo);
                 alert("¡Caballo registrado!");
             }
 
-            await dataManager.set('caballosEscuela', caballos);
             restablecerFormulario();
             await mostrarCaballos();
         });
@@ -433,9 +431,7 @@
 
         async function eliminarCaballo(id) {
             if (confirm('¿Borrar caballo?')) {
-                let caballos = await dataManager.get('caballosEscuela') || [];
-                caballos = caballos.filter(c => c.id !== id);
-                await dataManager.set('caballosEscuela', caballos);
+                await dataManager.delete('caballosEscuela', id);
 
                 if (caballoIdInput.value == id) restablecerFormulario();
                 await mostrarCaballos();

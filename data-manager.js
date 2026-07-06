@@ -54,10 +54,12 @@ class DataManager {
     async set(collection, data) {
         if (this.useFirebase && this.db) {
             try {
-                // En lugar de guardar un array, guardamos cada objeto como un documento.
-                // Esta función ahora se usará para añadir/actualizar un solo documento.
+                // La función ahora siempre espera un solo objeto.
+                // El ID del documento en Firebase será el ID del objeto.
+                // El método .set() crea el documento si no existe, o lo sobrescribe si ya existe.
                 await this.db.collection(collection).doc(String(data.id)).set(data);
                 console.log(`✅ Guardado en Firebase: ${collection}/${data.id}`);
+
             } catch (error) {
                 console.error(`❌ Error guardando en Firebase (${collection}):`, error);
             }
