@@ -470,7 +470,9 @@
                     { id: 2, nombre: 'Intermedio' },
                     { id: 3, nombre: 'Avanzado' }
                 ];
-                await dataManager.set('nivelesEscuela', niveles);
+                for (const nivel of niveles) {
+                    await dataManager.set('nivelesEscuela', nivel);
+                }
             }
 
             selectNivel.innerHTML = niveles.map(n => `<option value="${n.nombre}">${n.nombre}</option>`).join('');
@@ -542,28 +544,29 @@
             const tutorNombre = (edad < 18) ? tutorNombreInput.value.trim() : '';
             const nombreCompleto = `${nombre} ${apellido}`;
 
-            let alumnos = await dataManager.get('alumnosEscuela') || [];
-
             if (id) {
+                let alumnos = await dataManager.get('alumnosEscuela') || [];
                 const alumnoAnterior = alumnos.find(a => a.id === parseInt(id));
                 const nombreAnterior = `${alumnoAnterior.nombre} ${alumnoAnterior.apellido}`;
 
-                alumnos = alumnos.map(a => a.id === parseInt(id) ? { id: a.id, dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre } : a);
+                const alumnoActualizado = { id: parseInt(id), dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre };
+                await dataManager.set('alumnosEscuela', alumnoActualizado);
 
                 // Actualizar referencias en asignaciones
                 if (nombreAnterior !== nombreCompleto) {
                     let asignaciones = await dataManager.get('asignacionesEscuela') || [];
-                    asignaciones = asignaciones.map(a => a.alumno === nombreAnterior ? { ...a, alumno: nombreCompleto } : a);
-                    await dataManager.set('asignacionesEscuela', asignaciones);
+                    const asignacionesAfectadas = asignaciones.filter(a => a.alumno === nombreAnterior);
+                    for (const asig of asignacionesAfectadas) {
+                        await dataManager.set('asignacionesEscuela', { ...asig, alumno: nombreCompleto });
+                    }
                 }
-
                 alert("¡Alumno actualizado!");
             } else {
-                alumnos.push({ id: Date.now(), dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre });
+                const nuevoAlumno = { id: Date.now(), dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre };
+                await dataManager.set('alumnosEscuela', nuevoAlumno);
                 alert("¡Alumno guardado!");
             }
 
-            await dataManager.set('alumnosEscuela', alumnos);
             restablecerFormulario();
             mostrarAlumnos();
         });
@@ -592,12 +595,11 @@
                 clasesUsadas: 0
             };
 
-            let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
-            pagos.push(nuevoPago);
-            await dataManager.set('pagosAlumnosEscuela', pagos);
+            await dataManager.set('pagosAlumnosEscuela', nuevoPago);
 
             // Recargar la tabla de productos del modal
             await mostrarProductosDeAlumno(alumnoId);
+            formAddProductoAlumno.reset();
         });
 
         async function mostrarAlumnos() {
@@ -664,17 +666,16 @@
 
         async function eliminarAlumno(id) {
             if (confirm('¿Borrar alumno?')) {
-                let alumnos = await dataManager.get('alumnosEscuela') || [];
-                const alumnoAEliminar = alumnos.find(a => a.id === id);
-                const nombreCompleto = `${alumnoAEliminar.nombre} ${alumnoAEliminar.apellido}`;
-
-                alumnos = alumnos.filter(a => a.id !== id);
-                await dataManager.set('alumnosEscuela', alumnos);
-
-                // Eliminar referencias en asignaciones
-                let asignaciones = await dataManager.get('asignacionesEscuela') || [];
-                asignaciones = asignaciones.filter(a => a.alumno !== nombreCompleto);
-                await dataManager.set('asignacionesEscuela', asignaciones);
+                const alumnos = await dataManager.get('alumnosEscuela') || [];
+                const alumno = alumnos.find(a => a.id === id);
+                if (alumno) {
+                    const nombreCompleto = `${alumno.nombre} ${alumno.apellido}`;
+                    await dataManager.delete('alumnosEscuela', id);
+                    const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+                    for (const asig of asignaciones.filter(a => a.alumno === nombreCompleto)) {
+                        await dataManager.delete('asignacionesEscuela', asig.id);
+                    }
+                }
 
                 if (alumnoIdInput.value == id) restablecerFormulario();
                 mostrarAlumnos();
@@ -861,7 +862,7 @@
                     const hora = (clase.tipo === 'unDia') ? clase.hora : (clase.horarios ? clase.horarios[asig.dia] : 'N/A');
                     const fechaClaseStr = new Date(asig.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
                     return `<span style="display:inline-block; background:#eaf2f8; padding:3px 8px; margin:3px; border-radius:3px; font-size:0.9em; border:1px solid #aed6f1;">
-                        <b>${fechaClaseStr}</b> a las ${hora}hs <small style="color:#5499c7;">(${clase.nivel})</small>
+                        <b>${fechaClaseStr}</b> a las ${hora}hs <small style="color:#5499c7;">(${clase.nivel || 'N/A'})</small>
                     </span>`;
                 }).join('');
             } else {
@@ -937,9 +938,7 @@
 
         async function eliminarPago(pagoId, alumnoId) {
             if (confirm('¿Eliminar este registro de compra?')) {
-                let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
-                pagos = pagos.filter(p => p.id !== pagoId);
-                await dataManager.set('pagosAlumnosEscuela', pagos);
+                await dataManager.delete('pagosAlumnosEscuela', pagoId);
                 // Si el modal de seguimiento está abierto para este alumno, lo refresca.
                 if (document.getElementById('modalSeguimiento').style.display === 'block' && document.getElementById('productoAlumnoId').value == alumnoId) {
                     await verSeguimiento(alumnoId);
@@ -959,7 +958,7 @@
 
     <!-- Scripts de Firebase -->
     <script src="firebase-config.js"></script>
-    <script src="data-manager.js?v=1.8"></script>
+    <script src="data-manager.js?v=1.9"></script>
 
 
 </body>

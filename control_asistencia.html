@@ -315,8 +315,7 @@
                 await new Promise(r => setTimeout(r, 100));
                 intentos++;
             }
-            fechaControlInput.value = new Date().toISOString().split('T')[0];
-            fechaControlInput.addEventListener('change', cargarClasesDelDia);
+            fechaControlInput.addEventListener('change', () => cargarClasesParaFecha(fechaControlInput.value, listaClasesDiariasDiv, true));
 
             // Cargar todos los datos una vez y luego escuchar cambios
             [
@@ -337,7 +336,7 @@
                 dataManager.get('tiposClasesEscuela')
             ]);
 
-            cargarClasesDelDia();
+            await cargarVistaInicial();
 
             // Listeners para actualizaciones en tiempo real
             dataManager.onSnapshot('alumnosEscuela', data => { todosLosAlumnos = data || []; });
@@ -346,15 +345,39 @@
             dataManager.onSnapshot('attendanceEscuela', data => { todaLaAsistencia = data || []; });
             dataManager.onSnapshot('tiposClasesEscuela', data => { todosLosTiposClase = data || []; });
 
-            dataManager.onSnapshot('clasesEscuela', data => { todasLasClases = data || []; cargarClasesDelDia(); });
-            dataManager.onSnapshot('asignacionesEscuela', data => { todasLasAsignaciones = data || []; cargarClasesDelDia(); });
-
-
-
+            dataManager.onSnapshot('clasesEscuela', data => { todasLasClases = data || []; refrescarVista(); });
+            dataManager.onSnapshot('asignacionesEscuela', data => { todasLasAsignaciones = data || []; refrescarVista(); });
         };
 
-        async function cargarClasesDelDia() {
-            const fecha = fechaControlInput.value;
+        function refrescarVista() {
+            // Si hay una fecha seleccionada, recarga solo esa. Si no, recarga la vista inicial de 3 días.
+            if (fechaControlInput.value) {
+                cargarClasesParaFecha(fechaControlInput.value, listaClasesDiariasDiv, true);
+            } else {
+                cargarVistaInicial();
+            }
+        }
+
+        async function cargarVistaInicial() {
+            fechaControlInput.value = ''; // Limpiar el selector de fecha
+            listaClasesDiariasDiv.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const fechaObj = new Date();
+                fechaObj.setDate(fechaObj.getDate() + i);
+                const fecha = fechaObj.toISOString().split('T')[0];
+
+                const header = document.createElement('h3');
+                header.textContent = fechaObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                header.style.color = '#2980b9';
+                header.style.borderBottom = '2px solid #aed6f1';
+                header.style.paddingBottom = '8px';
+                listaClasesDiariasDiv.appendChild(header);
+
+                await cargarClasesParaFecha(fecha, listaClasesDiariasDiv, false);
+            }
+        }
+
+        async function cargarClasesParaFecha(fecha, container, limpiarContenedor) {
             if (!fecha) return;
 
             const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -376,10 +399,14 @@
 
             // 3. Unir ambas listas y eliminar duplicados para obtener la lista final de clases del día.
             const clasesDelDia = [...new Map([...clasesProgramadasRegularmente, ...clasesConAlumnosHoy].map(item => [item['id'], item])).values()];
-            listaClasesDiariasDiv.innerHTML = '';
+
+            if (limpiarContenedor) {
+                container.innerHTML = '';
+            }
+
             if (clasesDelDia.length === 0) {
-                listaClasesDiariasDiv.innerHTML = '<p class="no-records">No hay clases programadas para este día.</p>';
-                return;
+                container.innerHTML += '<p class="no-records">No hay clases programadas para este día.</p>';
+                return; // No continuar si no hay clases
             }
 
             clasesDelDia.forEach(c => {
@@ -409,44 +436,44 @@
                             <h4>${hora}hs</h4>
                             <p>${numAsignados} de ${c.maxAlumnos} alumnos asignados</p>
                         </div>
-                        <button class="btn-checkin" onclick="abrirModal(${c.id})">Pasar Lista</button>
+                        <button class="btn-checkin" onclick="abrirModal(${c.id}, '${fecha}')">Pasar Lista</button>
                     </div>
                     ${alumnosHtml}
                 `;
-                listaClasesDiariasDiv.appendChild(card);
+                container.appendChild(card);
             });
         }
 
-        async function abrirModal(claseId) {
+        async function abrirModal(claseId, fechaClase) {
             claseActivaId = claseId;
             const clase = todasLasClases.find(c => c.id === claseId);
             if (!clase) return;
 
             // Poblar cabecera del modal
-            const fecha = fechaControlInput.value;
-            const fechaObj = new Date(fecha + 'T12:00:00');
+            const fechaObj = new Date(fechaClase + 'T12:00:00');
             const diaSemanaNombre = fechaObj.toLocaleDateString('es-ES', { weekday: 'long' });
             const hora = (clase.tipo === 'unDia') ? clase.hora : clase.horarios[diaSemanaNombre];
 
             document.getElementById('modalTituloClase').textContent = `Clase de las ${hora}hs`;
             document.getElementById('modalFechaClase').textContent = fechaObj.toLocaleDateString('es-ES', { dateStyle: 'full' });
+            document.getElementById('modalFechaClase').dataset.fecha = fechaClase; // Guardar la fecha en el modal
 
             // Poblar selector de tipo de clase
             const selectTipoClase = document.getElementById('modalTipoClase');
             selectTipoClase.innerHTML = '<option value="">-- Elige tipo de clase --</option>' + todosLosTiposClase.map(t => `<option value="${t.nombre}">${t.nombre}</option>`).join('');
             // Intentar pre-seleccionar un valor si ya existe para esta sesión
-            const asistenciaExistente = todaLaAsistencia.find(att => att.claseId === claseId && att.fechaClase === fecha);
+            const asistenciaExistente = todaLaAsistencia.find(att => att.claseId === claseId && att.fechaClase === fechaClase);
             if (asistenciaExistente && asistenciaExistente.tipoClase) selectTipoClase.value = asistenciaExistente.tipoClase;
 
             // Poblar lista de alumnos asignados
             // Filtrar por la fecha que se está controlando
-            const alumnosAsignados = todasLasAsignaciones.filter(a => a.claseId == claseId && a.fecha === fecha).map(a => a.alumno);
+            const alumnosAsignados = todasLasAsignaciones.filter(a => a.claseId == claseId && a.fecha === fechaClase).map(a => a.alumno);
 
             const modalListaAlumnos = document.getElementById('modalListaAlumnos');
             modalListaAlumnos.innerHTML = '';
             alumnosAsignados.forEach(nombreAlumno => {
                 const alumno = todosLosAlumnos.find(a => `${a.nombre} ${a.apellido}` === nombreAlumno);
-                const asistenciaPrevia = alumno ? todaLaAsistencia.find(att => att.alumnoId === alumno.id && att.claseId === claseId && att.fechaClase === fecha) : null;
+                const asistenciaPrevia = alumno ? todaLaAsistencia.find(att => att.alumnoId === alumno.id && att.claseId === claseId && att.fechaClase === fechaClase) : null;
 
                 modalListaAlumnos.appendChild(crearFilaAlumno(nombreAlumno, asistenciaPrevia));
             });
@@ -460,6 +487,7 @@
             });
 
             modal.style.display = 'block';
+            actualizarOpcionesCaballos(); // Llamada inicial para reflejar el estado actual
         }
 
         function crearFilaAlumno(nombreAlumno, asistenciaPrevia = null) {
@@ -479,13 +507,39 @@
             div.innerHTML = `
                 <input type="checkbox" class="att-check" ${isChecked}>
                 <span class="name">${nombreAlumno}</span>
-                <select class="select-caballo" ${isSelectDisabled}>
+                <select class="select-caballo" ${isSelectDisabled} onchange="actualizarOpcionesCaballos()">
                     <option value="">-- Caballo --</option>
                     ${todosLosCaballos.map(c => `<option value="${c.nombre}" ${c.nombre === caballoSeleccionado ? 'selected' : ''}>${c.nombre}</option>`).join('')}
                 </select>
                 ${deleteButtonHtml}
             `;
             return div;
+        }
+
+        function actualizarOpcionesCaballos() {
+            const modalListaAlumnos = document.getElementById('modalListaAlumnos');
+            if (!modalListaAlumnos) return;
+
+            const todosLosSelects = modalListaAlumnos.querySelectorAll('.select-caballo');
+
+            // 1. Obtener todos los caballos que ya han sido seleccionados en otros selects.
+            const caballosYaSeleccionados = new Set();
+            todosLosSelects.forEach(select => {
+                if (select.value) {
+                    caballosYaSeleccionados.add(select.value);
+                }
+            });
+
+            // 2. Iterar sobre cada select para actualizar sus opciones.
+            todosLosSelects.forEach(select => {
+                const valorActual = select.value;
+                const opciones = select.options;
+                for (let i = 0; i < opciones.length; i++) {
+                    const opcion = opciones[i];
+                    // Deshabilitar la opción si el caballo está en el set de seleccionados, PERO no es el valor actual de ESTE select.
+                    opcion.disabled = caballosYaSeleccionados.has(opcion.value) && opcion.value !== valorActual;
+                }
+            });
         }
 
         function anadirAlumnoExtraALista() {
@@ -511,16 +565,15 @@
         async function quitarAlumnoDeClase(asignacionId) {
             if (!confirm('¿Quitar a este alumno de la clase?')) return;
 
-            const asignacionesActualizadas = todasLasAsignaciones.filter(a => a.id !== asignacionId);
-            await dataManager.set('asignacionesEscuela', asignacionesActualizadas);
-            // La vista se actualizará automáticamente gracias al listener onSnapshot
-            alert('Alumno quitado de la clase.');
+            await dataManager.delete('asignacionesEscuela', asignacionId);
+            // La vista se actualizará automáticamente gracias al listener onSnapshot que escucha cambios en 'asignacionesEscuela'
+            alert('Alumno quitado de la clase. La lista se actualizará en breve.');
         }
 
         async function guardarAsistencia() {
             if (!claseActivaId) return;
 
-            const fecha = fechaControlInput.value;
+            const fecha = document.getElementById('modalFechaClase').dataset.fecha; // Usar la fecha guardada en el modal
             const tipoClaseSeleccionado = document.getElementById('modalTipoClase').value;
             if (!tipoClaseSeleccionado) {
                 alert('Por favor, selecciona el "Tipo de Clase" para esta sesión antes de guardar.');
@@ -528,12 +581,6 @@
             }
 
             const mensajesAlerta = [];
-
-            // Crear copias locales de los arrays para evitar modificar los originales durante el bucle
-            // y solo guardar al final si todo es correcto.
-            let asistenciaParaGuardar = [...todaLaAsistencia];
-            let pagosParaGuardar = JSON.parse(JSON.stringify(todosLosPagos)); // Copia profunda
-
 
             const filasAlumnos = document.querySelectorAll('#modalListaAlumnos .student-list-item');
 
@@ -561,15 +608,30 @@
                 }
 
                 // Doble verificación para evitar duplicados si algo falla en la UI
-                const yaAsistio = asistenciaParaGuardar.some(att => att.alumnoId === alumno.id && att.claseId === claseActivaId && att.fechaClase === fecha);
+                const yaAsistio = todaLaAsistencia.some(att => att.alumnoId === alumno.id && att.claseId === claseActivaId && att.fechaClase === fecha);
                 if (yaAsistio) {
                     console.warn(`Intento de registrar asistencia duplicada para ${nombreAlumno}. Omitido.`);
                     continue;
                 }
 
+                // --- INICIO DE LA CORRECCIÓN ---
+                // Si el alumno fue añadido como "extra", no tendrá una asignación previa.
+                // Aquí nos aseguramos de crearla para mantener la consistencia de los datos.
+                const existeAsignacion = todasLasAsignaciones.some(a =>
+                    a.alumno === nombreAlumno &&
+                    a.claseId === claseActivaId &&
+                    a.fecha === fecha
+                );
+
+                if (!existeAsignacion) {
+                    const nuevaAsignacion = { id: Date.now() + Math.floor(Math.random() * 100), claseId: claseActivaId, alumno: nombreAlumno, dia: new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long' }), fecha: fecha };
+                    await dataManager.set('asignacionesEscuela', nuevaAsignacion);
+                }
+                // --- FIN DE LA CORRECCIÓN ---
+
                 // 1. Registrar asistencia
                 const registroAsistencia = {
-                    id: `${Date.now()}-${alumno.id}`, // ID más único
+                    id: Date.now() + Math.floor(Math.random() * 1000), // ID único
                     alumno: nombreAlumno,
                     alumnoId: alumno.id,
                     fechaClase: fecha,
@@ -580,39 +642,33 @@
                 };
 
                 // 2. Descontar clase de un bono/clase suelta
-                const bonosActivos = pagosParaGuardar
+                const bonosActivos = todosLosPagos
                     .filter(p => p.alumnoId === alumno.id && (p.tipo === 'Bono' || p.tipo === 'Clase Suelta') && (p.totalClases - (p.clasesUsadas || 0)) > 0)
                     .sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra)); // Usar el más antiguo primero
 
                 if (bonosActivos.length > 0) {
                     const bonoIdADescontar = bonosActivos[0].id;
                     // Encontrar el bono original en el array principal para modificarlo
-                    const bonoOriginal = pagosParaGuardar.find(p => p.id === bonoIdADescontar);
+                    const bonoOriginal = todosLosPagos.find(p => p.id === bonoIdADescontar);
                     if (bonoOriginal) {
                         bonoOriginal.clasesUsadas = (bonoOriginal.clasesUsadas || 0) + 1;
                         registroAsistencia.pagoId = bonoIdADescontar; // Guardar la referencia al bono usado
+                        await dataManager.set('pagosAlumnosEscuela', bonoOriginal); // Guardar el bono actualizado
                         mensajesAlerta.push(`- ✅ ${nombreAlumno}: Asistencia OK. Se descuenta 1 clase de "${bonoOriginal.productoNombre}".`);
                     }
                 } else {
-                    mensajesAlerta.push(`- 🚫 ${nombreAlumno}: Asistencia OK, pero ¡SIN BONO ACTIVO! No se pudo descontar la clase.`);
+                    mensajesAlerta.push(`- ⚠️ ${nombreAlumno}: Asistencia OK. La clase queda registrada como PENDIENTE DE PAGO (sin bono activo).`);
                 }
 
-                asistenciaParaGuardar.push(registroAsistencia);
+                await dataManager.set('attendanceEscuela', registroAsistencia); // Guardar la nueva asistencia
             }
-
-            // Guardar los cambios en la base de datos
-            // Usar Promise.all para asegurar que ambas operaciones se completen
-            await Promise.all([
-                dataManager.set('attendanceEscuela', asistenciaParaGuardar),
-                dataManager.set('pagosAlumnosEscuela', pagosParaGuardar)
-            ]);
 
             const mensajeFinal = mensajesAlerta.length > 0 ?
                 `Resumen de la operación:\n\n${mensajesAlerta.join('\n')}` :
                 'No se marcaron asistencias.';
             alert(mensajeFinal);
             cerrarModal();
-            await cargarClasesDelDia(); // Forzar la recarga de la vista principal
+            refrescarVista(); // Forzar la recarga de la vista
         }
 
         async function eliminarAsistencia(asistenciaId) {
@@ -633,15 +689,13 @@
             }
 
             // 2. Eliminar el registro de asistencia y guardar ambos cambios
-            todaLaAsistencia = todaLaAsistencia.filter(att => att.id != asistenciaId);
-            await Promise.all([
-                dataManager.set('attendanceEscuela', todaLaAsistencia),
-                dataManager.set('pagosAlumnosEscuela', todosLosPagos)
-            ]);
-
+            await dataManager.delete('attendanceEscuela', asistenciaId);
+            if (asistenciaAEliminar.pagoId) {
+                await dataManager.set('pagosAlumnosEscuela', todosLosPagos.find(p => p.id === asistenciaAEliminar.pagoId));
+            }
             alert('Asistencia eliminada correctamente.');
             cerrarModal();
-            await cargarClasesDelDia(); // Forzar la recarga de la vista principal
+            refrescarVista(); // Forzar la recarga de la vista
         }
 
     </script>

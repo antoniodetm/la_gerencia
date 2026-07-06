@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inicio - Escuela Ecuestre</title>
     <style>
+        /* Estilos para el nuevo botón de datos de prueba */
+        .test-data-container {
+            text-align: center;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f1ea;
@@ -160,7 +165,111 @@
                 <p style="color: #fbeee6;">Configurar niveles de alumnos</p>
             </a>
         </div>
+        <div class="test-data-container"
+            style="margin-top: 40px; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <h3 style="color: #c0392b;">Zona de Pruebas</h3>
+            <p style="color: #666;">Si la aplicación está vacía, puedes usar este botón para cargar datos de ejemplo.
+            </p>
+            <button id="loadTestDataBtn" style="background-color: #c0392b; max-width: 300px;">Cargar Datos de
+                Prueba</button>
+        </div>
     </div>
+
+    <!-- Scripts de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="data-manager.js?v=1.9"></script>
+
+    <script>
+        document.getElementById('loadTestDataBtn').addEventListener('click', async () => {
+            if (!confirm('¿Deseas cargar un set de datos de prueba? Esto añadirá nuevos alumnos, caballos, profesores y clases. No borrará datos existentes.')) {
+                return;
+            }
+
+            alert('Iniciando carga de datos... Por favor, espera unos segundos.');
+
+            try {
+                // Datos de ejemplo
+                const nombres = ['Carlos', 'Lucía', 'Marcos', 'Sofía', 'Javier', 'Elena', 'Pablo', 'Ana'];
+                const apellidos = ['García', 'Rodríguez', 'González', 'Fernández', 'López', 'Martínez', 'Sánchez', 'Pérez'];
+                const capas = ['Tordo', 'Castaño', 'Alazán', 'Negro', 'Bayo', 'Pío'];
+                const nombresCaballos = ['Furia', 'Relámpago', 'Sultán', 'Estrella', 'Bucéfalo', 'Pegaso', 'Tornado'];
+                const especialidades = ['Iniciación / Poni Club', 'Doma Clásica', 'Salto de Obstáculos'];
+                const niveles = ['Iniciación', 'Intermedio', 'Avanzado'];
+
+                const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+                // --- Crear Profesores ---
+                const profesores = [];
+                for (let i = 0; i < 2; i++) {
+                    const prof = {
+                        id: Date.now() + i,
+                        nombre: getRandom(nombres),
+                        apellido: getRandom(apellidos),
+                        telefono: `6${Math.floor(10000000 + Math.random() * 90000000)}`,
+                        especialidad: getRandom(especialidades)
+                    };
+                    profesores.push(prof);
+                    await dataManager.set('profesoresEscuela', prof);
+                }
+
+                // --- Crear Caballos ---
+                const caballos = [];
+                for (let i = 0; i < 5; i++) {
+                    const caballo = {
+                        id: Date.now() + 100 + i,
+                        nombre: getRandom(nombresCaballos),
+                        capa: getRandom(capas),
+                        estado: 'Activo',
+                        categoria: Math.random() > 0.5 ? 'De tanda' : 'Particular',
+                        notaMedica: '',
+                        notaAlimentaria: ''
+                    };
+                    caballos.push(caballo);
+                    await dataManager.set('caballosEscuela', caballo);
+                }
+
+                // --- Crear Alumnos ---
+                const alumnos = [];
+                for (let i = 0; i < 8; i++) {
+                    const alumno = {
+                        id: Date.now() + 200 + i,
+                        dni: `${Math.floor(10000000 + Math.random() * 90000000)}A`,
+                        nombre: getRandom(nombres),
+                        apellido: getRandom(apellidos),
+                        edad: Math.floor(8 + Math.random() * 20),
+                        nivel: getRandom(niveles),
+                        estado: 'Activo',
+                        telefono: `6${Math.floor(10000000 + Math.random() * 90000000)}`,
+                        notaMedica: '',
+                        notaAlimentaria: '',
+                        tutorNombre: ''
+                    };
+                    alumnos.push(alumno);
+                    await dataManager.set('alumnosEscuela', alumno);
+                }
+
+                // --- Crear Clases ---
+                const clases = [
+                    { id: Date.now() + 300, tipo: 'unDia', diaSemana: 'Martes', hora: '17:00', duracion: '1 hora', maxAlumnos: 6, nivel: 'Iniciación' },
+                    { id: Date.now() + 301, tipo: 'unDia', diaSemana: 'Jueves', hora: '18:00', duracion: '1 hora', maxAlumnos: 6, nivel: 'Intermedio' },
+                    { id: Date.now() + 302, tipo: 'unDia', diaSemana: 'Sábado', hora: '11:00', duracion: '1 hora', maxAlumnos: 5, nivel: 'Avanzado' }
+                ];
+                for (const clase of clases) {
+                    await dataManager.set('clasesEscuela', clase);
+                }
+
+                alert('¡Datos de prueba cargados con éxito! Ya puedes navegar por las demás secciones para verlos.');
+
+            } catch (error) {
+                console.error("Error al cargar datos de prueba:", error);
+                alert('Hubo un error al cargar los datos de prueba. Revisa la consola para más detalles.');
+            }
+        });
+    </script>
+
 </body>
 
 </html>

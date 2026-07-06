@@ -135,7 +135,13 @@
                 slotMinTime: '08:00:00',
                 slotMaxTime: '22:00:00',
                 allDaySlot: false,
-                events: await generarEventos(),
+                events: async function (fetchInfo, successCallback, failureCallback) {
+                    try {
+                        successCallback(await generarEventos(fetchInfo.view));
+                    } catch (error) {
+                        failureCallback(error);
+                    }
+                },
                 eventContent: function (arg) {
                     let text = arg.event.title;
                     if (arg.view.type.includes('timeGrid')) {
@@ -155,10 +161,10 @@
 
             if (dataManager.useFirebase) {
                 dataManager.onSnapshot('clasesEscuela', async () => {
-                    calendar.setOption('events', await generarEventos());
+                    calendar.refetchEvents();
                 });
                 dataManager.onSnapshot('asignacionesEscuela', async () => {
-                    calendar.setOption('events', await generarEventos());
+                    calendar.refetchEvents();
                 });
             }
         });
@@ -178,68 +184,73 @@
             return `${String(finH).padStart(2, '0')}:${String(finM).padStart(2, '0')}`;
         }
 
-        async function generarEventos() {
+        async function generarEventos(view) {
             const clases = await dataManager.get('clasesEscuela') || [];
             const asignaciones = await dataManager.get('asignacionesEscuela') || [];
-            const eventos = [];
-            const eventosUnicos = new Map(); // Para evitar duplicados de clase/fecha
+            const eventosFinales = [];
+            const eventosPorFecha = new Map();
 
-            // Generar eventos a partir de las asignaciones, que ya tienen fecha
+            // 1. Crear eventos para clases con alumnos asignados
             asignaciones.forEach(asig => {
                 const clase = clases.find(c => c.id === asig.claseId);
                 if (!clase) return;
 
-                // Evitar duplicados si varios alumnos están en la misma clase/fecha
                 const hora = (clase.tipo === 'unDia') ? clase.hora : (clase.horarios ? clase.horarios[asig.dia] : '12:00');
-                const fechaInicio = `${asig.fecha}T${hora}`;
-                const fechaFin = `${asig.fecha}T${calcularHoraFin(hora, clase.duracion)}`;
-                const claveUnica = `${asig.claseId}-${asig.fecha}`;
+                const claveEvento = `${asig.claseId}-${asig.fecha}`;
 
-                if (eventosUnicos.has(claveUnica)) {
-                    const eventoExistente = eventosUnicos.get(claveUnica);
+                if (eventosPorFecha.has(claveEvento)) {
+                    const eventoExistente = eventosPorFecha.get(claveEvento);
                     eventoExistente.extendedProps.listaAlumnos += `\n• ${asig.alumno}`;
-                    eventoExistente.title = `${clase.nivel.toUpperCase()} (${eventoExistente.extendedProps.listaAlumnos.split('\n').length} alumnos)`;
+                    const numAlumnos = eventoExistente.extendedProps.listaAlumnos.split('\n').length;
+                    eventoExistente.title = `${(clase.nivel || 'Clase').toUpperCase()} (${numAlumnos} alumnos)`;
                 } else {
-                    eventosUnicos.set(claveUnica, {
-                        title: `${clase.nivel.toUpperCase()} (1 alumno)`,
-                        start: fechaInicio,
-                        end: fechaFin,
+                    eventosPorFecha.set(claveEvento, {
+                        id: claveEvento,
+                        title: `${(clase.nivel || 'Clase').toUpperCase()} (1 alumno)`,
+                        start: `${asig.fecha}T${hora}`,
+                        end: `${asig.fecha}T${calcularHoraFin(hora, clase.duracion)}`,
                         extendedProps: {
                             listaAlumnos: `• ${asig.alumno}`,
                             claseId: clase.id
                         },
-                        backgroundColor: clase.nivel.includes('Iniciación') ? '#27ae60' : clase.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db',
-                        borderColor: clase.nivel.includes('Iniciación') ? '#27ae60' : clase.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db'
+                        backgroundColor: (clase.nivel || '').includes('Iniciación') ? '#27ae60' : (clase.nivel || '').includes('Avanzado') ? '#e74c3c' : '#3498db',
+                        borderColor: (clase.nivel || '').includes('Iniciación') ? '#27ae60' : (clase.nivel || '').includes('Avanzado') ? '#e74c3c' : '#3498db'
                     });
                 }
             });
 
-            // Generar eventos recurrentes para clases sin alumnos asignados aún
+            // 2. Crear eventos recurrentes "Vacíos" solo para las vistas de semana y día.
+            // La vista de mes no maneja bien los eventos de fondo recurrentes.
             clases.forEach(clase => {
                 const diasClase = (clase.tipo === 'unDia') ? { [clase.diaSemana]: clase.hora } : (clase.horarios || {});
-
                 Object.entries(diasClase).forEach(([dia, hora]) => {
-                    const claveUnicaRecurrente = `${clase.id}-${dia}`; // Clave para el evento recurrente
-
-                    eventos.push({
-                        title: `${clase.nivel.toUpperCase()} (Vacía)`,
+                    eventosFinales.push({
+                        id: `recurrent-${clase.id}-${dia}`,
+                        title: `${(clase.nivel || 'Clase').toUpperCase()} (Vacía)`,
                         startTime: hora,
                         endTime: calcularHoraFin(hora, clase.duracion),
                         daysOfWeek: [ordenDias[dia]],
-                        extendedProps: {
-                            listaAlumnos: '(Sin alumnos asignados)',
-                            claseId: clase.id
-                        },
-                        backgroundColor: '#6c757d', // Color gris para clases vacías
-                        borderColor: '#6c757d'
+                        display: 'background',
+                        color: '#e9ecef',
+                        classNames: ['fc-event-background-empty'],
+                        overlap: true,
                     });
                 });
             });
 
-            return [...eventosUnicos.values(), ...eventos];
+            return [...eventosFinales, ...Array.from(eventosPorFecha.values())];
         }
 
     </script>
+    <style>
+        /* Estilo para los eventos de fondo (clases vacías) */
+        .fc-event-background-empty .fc-event-title {
+            color: #6c757d !important;
+            font-style: italic;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
 </body>
 
 </html>
