@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="es">
 
@@ -307,4 +308,280 @@
 
 </body>
 
+=======
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio - Escuela Ecuestre</title>
+    <style>
+        /* Estilos para el nuevo botón de datos de prueba */
+        .test-data-container {
+            text-align: center;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            text-align: center;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin: 0 15px;
+            color: #555;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .nav-link:hover {
+            background-color: #f0ede5;
+            color: #000;
+        }
+
+        .nav-active {
+            background-color: #4a3728;
+            color: white !important;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            text-align: center;
+        }
+
+        h1 {
+            color: #4a3728;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #d4c5b9;
+            padding-bottom: 15px;
+            display: inline-block;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .menu-card {
+            background: white;
+            padding: 40px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid #eee;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #d4c5b9;
+        }
+
+        .menu-card .icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+
+        .menu-card h3 {
+            margin: 10px 0;
+            color: #4a3728;
+            font-size: 1.4rem;
+        }
+
+        .menu-card p {
+            color: #666;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link nav-active">🏠 Inicio</a>
+        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
+        <a href="clases.html" class="nav-link">📅 Clases</a>
+        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
+        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
+        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
+        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
+        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
+        <a href="bases.html" class="nav-link">🏆 Bases</a>
+    </div>
+
+    <div class="container">
+        <h1>🐴 Panel de Gestión Escuela Ecuestre</h1>
+        <div class="menu-grid">
+            <a href="calendario.html" class="menu-card" style="grid-column: 1 / -1; background: #34495e; color: white;">
+                <div class="icon">🗓️</div>
+                <h3 style="color: white;">Calendario General</h3>
+                <p style="color: #bdc3c7;">Vista semanal y mensual de todas las clases programadas</p>
+            </a>
+            <a href="control_asistencia.html" class="menu-card" style="background: #2980b9; color: white;">
+                <div class="icon">🛂</div>
+                <h3 style="color: white;">Control Asistencia</h3>
+                <p style="color: #ecf0f1;">Nuevo sistema de check-in diario</p>
+            </a>
+            <a href="asignaciones.html" class="menu-card">
+                <div class="icon">🔗</div>
+                <h3>Asignaciones</h3>
+                <p>Organizar binomios alumno/caballo</p>
+            </a>
+            <a href="clases.html" class="menu-card">
+                <div class="icon">📅</div>
+                <h3>Clases</h3>
+                <p>Programación y horarios semanales</p>
+            </a>
+            <a href="alumnos.html" class="menu-card">
+                <div class="icon">👤</div>
+                <h3>Alumnos</h3>
+                <p>Fichas, niveles y notas médicas</p>
+            </a>
+            <a href="caballos.html" class="menu-card">
+                <div class="icon">🐴</div>
+                <h3>Caballos</h3>
+                <p>Inventario, capas y disponibilidad</p>
+            </a>
+            <a href="profesores.html" class="menu-card">
+                <div class="icon">🎓</div>
+                <h3>Profesores</h3>
+                <p>Gestión del equipo técnico</p>
+            </a>
+            <a href="bases.html" class="menu-card" style="background: #e67e22; color: white;">
+                <div class="icon">🏆</div>
+                <h3 style="color: white;">Niveles (Bases)</h3>
+                <p style="color: #fbeee6;">Configurar niveles de alumnos</p>
+            </a>
+        </div>
+        <div class="test-data-container"
+            style="margin-top: 40px; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <h3 style="color: #c0392b;">Zona de Pruebas</h3>
+            <p style="color: #666;">Si la aplicación está vacía, puedes usar este botón para cargar datos de ejemplo.
+            </p>
+            <button id="loadTestDataBtn" style="background-color: #c0392b; max-width: 300px;">Cargar Datos de
+                Prueba</button>
+        </div>
+    </div>
+
+    <!-- Scripts de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="data-manager.js?v=1.9"></script>
+
+    <script>
+        document.getElementById('loadTestDataBtn').addEventListener('click', async () => {
+            if (!confirm('¿Deseas cargar un set de datos de prueba? Esto añadirá nuevos alumnos, caballos, profesores y clases. No borrará datos existentes.')) {
+                return;
+            }
+
+            alert('Iniciando carga de datos... Por favor, espera unos segundos.');
+
+            try {
+                // Datos de ejemplo
+                const nombres = ['Carlos', 'Lucía', 'Marcos', 'Sofía', 'Javier', 'Elena', 'Pablo', 'Ana'];
+                const apellidos = ['García', 'Rodríguez', 'González', 'Fernández', 'López', 'Martínez', 'Sánchez', 'Pérez'];
+                const capas = ['Tordo', 'Castaño', 'Alazán', 'Negro', 'Bayo', 'Pío'];
+                const nombresCaballos = ['Furia', 'Relámpago', 'Sultán', 'Estrella', 'Bucéfalo', 'Pegaso', 'Tornado'];
+                const especialidades = ['Iniciación / Poni Club', 'Doma Clásica', 'Salto de Obstáculos'];
+                const niveles = ['Iniciación', 'Intermedio', 'Avanzado'];
+
+                const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+                // --- Crear Profesores ---
+                const profesores = [];
+                for (let i = 0; i < 2; i++) {
+                    const prof = {
+                        id: Date.now() + i,
+                        nombre: getRandom(nombres),
+                        apellido: getRandom(apellidos),
+                        telefono: `6${Math.floor(10000000 + Math.random() * 90000000)}`,
+                        especialidad: getRandom(especialidades)
+                    };
+                    profesores.push(prof);
+                    await dataManager.set('profesoresEscuela', prof);
+                }
+
+                // --- Crear Caballos ---
+                const caballos = [];
+                for (let i = 0; i < 5; i++) {
+                    const caballo = {
+                        id: Date.now() + 100 + i,
+                        nombre: getRandom(nombresCaballos),
+                        capa: getRandom(capas),
+                        estado: 'Activo',
+                        categoria: Math.random() > 0.5 ? 'De tanda' : 'Particular',
+                        notaMedica: '',
+                        notaAlimentaria: ''
+                    };
+                    caballos.push(caballo);
+                    await dataManager.set('caballosEscuela', caballo);
+                }
+
+                // --- Crear Alumnos ---
+                const alumnos = [];
+                for (let i = 0; i < 8; i++) {
+                    const alumno = {
+                        id: Date.now() + 200 + i,
+                        dni: `${Math.floor(10000000 + Math.random() * 90000000)}A`,
+                        nombre: getRandom(nombres),
+                        apellido: getRandom(apellidos),
+                        edad: Math.floor(8 + Math.random() * 20),
+                        nivel: getRandom(niveles),
+                        estado: 'Activo',
+                        telefono: `6${Math.floor(10000000 + Math.random() * 90000000)}`,
+                        notaMedica: '',
+                        notaAlimentaria: '',
+                        tutorNombre: ''
+                    };
+                    alumnos.push(alumno);
+                    await dataManager.set('alumnosEscuela', alumno);
+                }
+
+                // --- Crear Clases ---
+                const clases = [
+                    { id: Date.now() + 300, tipo: 'unDia', diaSemana: 'Martes', hora: '17:00', duracion: '1 hora', maxAlumnos: 6, nivel: 'Iniciación' },
+                    { id: Date.now() + 301, tipo: 'unDia', diaSemana: 'Jueves', hora: '18:00', duracion: '1 hora', maxAlumnos: 6, nivel: 'Intermedio' },
+                    { id: Date.now() + 302, tipo: 'unDia', diaSemana: 'Sábado', hora: '11:00', duracion: '1 hora', maxAlumnos: 5, nivel: 'Avanzado' }
+                ];
+                for (const clase of clases) {
+                    await dataManager.set('clasesEscuela', clase);
+                }
+
+                alert('¡Datos de prueba cargados con éxito! Ya puedes navegar por las demás secciones para verlos.');
+
+            } catch (error) {
+                console.error("Error al cargar datos de prueba:", error);
+                alert('Hubo un error al cargar los datos de prueba. Revisa la consola para más detalles.');
+            }
+        });
+    </script>
+
+</body>
+
+>>>>>>> be4102565c74ea41e0999c39a6bb667d91a2dd94
 </html>

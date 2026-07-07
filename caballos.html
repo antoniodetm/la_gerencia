@@ -517,6 +517,7 @@
 </body>
 
 =======
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="es">
 
@@ -1038,5 +1039,528 @@
 
 </body>
 
+=======
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Caballos</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            text-align: center;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin: 0 15px;
+            color: #555;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .nav-link:hover {
+            background-color: #f0ede5;
+            color: #000;
+        }
+
+        .nav-active {
+            background-color: #8c7853;
+            color: white !important;
+        }
+
+        .container {
+            max-width: 650px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 30px auto;
+        }
+
+        h2,
+        h3 {
+            color: #5c4033;
+            border-bottom: 2px solid #d4c5b9;
+            padding-bottom: 8px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
+        button {
+            background-color: #8c7853;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #706042;
+        }
+
+        .btn-update {
+            background-color: #2980b9;
+        }
+
+        .btn-update:hover {
+            background-color: #1f618d;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #5c4033;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 5px;
+        }
+
+        .actions-btn {
+            padding: 6px 10px;
+            font-size: 12px;
+            margin: 0;
+            width: auto;
+        }
+
+        .btn-edit {
+            background-color: #f39c12;
+        }
+
+        .btn-edit:hover {
+            background-color: #d68910;
+        }
+
+        .btn-delete {
+            background-color: #c0392b;
+        }
+
+        .btn-delete:hover {
+            background-color: #a33226;
+        }
+
+        .btn-seguimiento {
+            background-color: #3498db;
+        }
+
+        .btn-seguimiento:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-view {
+            background-color: #3498db;
+        }
+
+        .btn-view:hover {
+            background-color: #2980b9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 25px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
+        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
+        <a href="clases.html" class="nav-link">📅 Clases</a>
+        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
+        <a href="caballos.html" class="nav-link nav-active">🐴 Caballos</a>
+        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
+        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
+        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
+        <a href="bases.html" class="nav-link">🏆 Bases</a>
+    </div>
+
+    <div class="container">
+        <h2>🐴 Gestión de Caballos</h2>
+        <form id="caballoForm">
+            <input type="hidden" id="caballoId">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="nombreCaballo">Nombre:</label>
+                    <input type="text" id="nombreCaballo" required placeholder="Ej. Furia">
+                </div>
+                <div class="form-group">
+                    <label for="capa">Capa:</label>
+                    <input type="text" id="capa" required placeholder="Ej. Tordo">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="estado">Estado:</label>
+                    <select id="estado" required>
+                        <option value="Activo">Activo (Disponible)</option>
+                        <option value="Descanso">En descanso / Lesión</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="categoria">Categoría:</label>
+                    <select id="categoria" required>
+                        <option value="Particular">Particular</option>
+                        <option value="De tanda">De tanda</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="notaMedica">Nota Médica / Herrajes / Veterinario:</label>
+                <textarea id="notaMedica"
+                    placeholder="Indica aquí cualquier condición médica, alergias, información de herrajes o citas veterinarias..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="notaAlimentaria">Nota Alimentaria / Pienso:</label>
+                <textarea id="notaAlimentaria"
+                    placeholder="Indica aquí tipo de pienso, suplementos, intolerancias o necesidades alimentarias..."></textarea>
+            </div>
+            <button type="submit" id="submitBtn">Registrar Caballo</button>
+        </form>
+    </div>
+
+    <div class="container" style="max-width: 800px;">
+        <h3>📋 Caballos de la Escuela</h3>
+        <table id="tablaCaballos">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Capa</th>
+                    <th>Estado</th>
+                    <th>Categoría</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Modal para ver Ficha -->
+    <div id="modalFicha" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarFicha()">&times;</span>
+            <h3 style="margin-top:0; color:#5c4033;">📄 Ficha del Caballo</h3>
+            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
+            <div id="fichaDetalles" style="text-align: left;"></div>
+            <button onclick="cerrarFicha()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal para Seguimiento -->
+    <div id="modalSeguimiento" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarSeguimiento()">&times;</span>
+            <h3 style="margin-top:0; color:#5c4033;">🐴 Seguimiento de Trabajo de <span
+                    id="nombreCaballoSeguimiento"></span></h3>
+            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
+            <div id="seguimientoDetalles" style="text-align: left; max-height: 400px; overflow-y: auto;"></div>
+            <button onclick="cerrarSeguimiento()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('caballoForm');
+        const tabla = document.getElementById('tablaCaballos').getElementsByTagName('tbody')[0];
+        const submitBtn = document.getElementById('submitBtn');
+        const caballoIdInput = document.getElementById('caballoId');
+
+        let ultimaDataCaballos = JSON.stringify([]);
+
+        window.onload = async function () {
+            let intentos = 0;
+            while (!dataManager.initialized && intentos < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                intentos++;
+            }
+
+            console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
+
+            await mostrarCaballos();
+
+            if (dataManager.useFirebase) {
+                dataManager.onSnapshot('caballosEscuela', async (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataCaballos) {
+                        ultimaDataCaballos = dataActual;
+                        await mostrarCaballos();
+                    }
+                });
+                dataManager.onSnapshot('attendanceEscuela', () => {
+                    // Para que el modal de seguimiento se actualice si está abierto
+                });
+            } else {
+                setInterval(async function () {
+                    const dataActual = JSON.stringify(await dataManager.get('caballosEscuela') || []);
+                    if (dataActual !== ultimaDataCaballos) {
+                        ultimaDataCaballos = dataActual;
+                        await mostrarCaballos();
+                    }
+                }, 500);
+            }
+        };
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const id = caballoIdInput.value;
+            const nombre = document.getElementById('nombreCaballo').value.trim();
+            const capa = document.getElementById('capa').value.trim();
+            const estado = document.getElementById('estado').value;
+            const categoria = document.getElementById('categoria').value;
+            const notaMedica = document.getElementById('notaMedica').value.trim();
+            const notaAlimentaria = document.getElementById('notaAlimentaria').value.trim();
+
+            let caballos = await dataManager.get('caballosEscuela') || [];
+
+            if (id) {
+                caballos = caballos.map(c => c.id === parseInt(id) ? { id: c.id, nombre, capa, estado, categoria, notaMedica, notaAlimentaria } : c);
+
+                alert("¡Caballo actualizado!");
+            } else {
+                caballos.push({ id: Date.now(), nombre, capa, estado, categoria, notaMedica, notaAlimentaria });
+                alert("¡Caballo registrado!");
+            }
+
+            await dataManager.set('caballosEscuela', caballos);
+            restablecerFormulario();
+            await mostrarCaballos();
+        });
+
+        async function mostrarCaballos() {
+            const caballos = await dataManager.get('caballosEscuela') || [];
+            tabla.innerHTML = '';
+            if (caballos.length === 0) {
+                tabla.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">No hay caballos.</td></tr>`;
+                return;
+            }
+            caballos.forEach(c => {
+                const fila = tabla.insertRow();
+                fila.innerHTML = `
+                <td><b>${c.nombre}</b></td><td>${c.capa}</td><td>${c.estado}</td><td>${c.categoria || 'De tanda'}</td>
+                <td class="actions-cell">
+                    <button class="actions-btn btn-view" onclick="verFicha(${c.id})">Ver Ficha</button>
+                    <button class="actions-btn btn-seguimiento" onclick="verSeguimiento(${c.id})">Seguimiento</button>
+                    <button class="actions-btn btn-edit" onclick="cargarCaballoParaEditar(${c.id})">Editar</button>
+                    <button class="actions-btn btn-delete" onclick="eliminarCaballo(${c.id})">Eliminar</button>
+                </td>
+            `;
+            });
+        }
+
+        async function cargarCaballoParaEditar(id) {
+            const caballos = await dataManager.get('caballosEscuela') || [];
+            const c = caballos.find(item => item.id === id);
+            if (c) {
+                caballoIdInput.value = c.id;
+                document.getElementById('nombreCaballo').value = c.nombre;
+                document.getElementById('capa').value = c.capa;
+                document.getElementById('estado').value = c.estado;
+                document.getElementById('categoria').value = c.categoria || 'De tanda';
+                document.getElementById('notaMedica').value = c.notaMedica || '';
+                document.getElementById('notaAlimentaria').value = c.notaAlimentaria || '';
+                submitBtn.textContent = 'Actualizar Caballo';
+                submitBtn.classList.add('btn-update');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        async function eliminarCaballo(id) {
+            if (confirm('¿Borrar caballo?')) {
+                let caballos = await dataManager.get('caballosEscuela') || [];
+                caballos = caballos.filter(c => c.id !== id);
+                await dataManager.set('caballosEscuela', caballos);
+
+                if (caballoIdInput.value == id) restablecerFormulario();
+                await mostrarCaballos();
+            }
+        }
+
+        function restablecerFormulario() {
+            form.reset();
+            caballoIdInput.value = '';
+            submitBtn.textContent = 'Registrar Caballo';
+            submitBtn.classList.remove('btn-update');
+        }
+
+        async function verFicha(id) {
+            const caballos = await dataManager.get('caballosEscuela') || [];
+            const c = caballos.find(item => item.id === id);
+            if (c) {
+                document.getElementById('fichaDetalles').innerHTML = `
+                <p><strong>Nombre:</strong> ${c.nombre}</p>
+                <p><strong>Capa:</strong> ${c.capa}</p>
+                <p><strong>Estado:</strong> ${c.estado}</p>
+                <p><strong>Categoría:</strong> ${c.categoria || 'De tanda'}</p>
+                <p><strong>Nota Médica/Herrajes:</strong> ${c.notaMedica || '-'}</p>
+                <p><strong>Nota Alimentaria/Pienso:</strong> ${c.notaAlimentaria || '-'}</p>
+            `;
+                document.getElementById('modalFicha').style.display = 'block';
+            }
+        }
+
+        function cerrarFicha() {
+            document.getElementById('modalFicha').style.display = 'none';
+        }
+
+        async function verSeguimiento(id) {
+            const caballos = await dataManager.get('caballosEscuela') || [];
+            const caballo = caballos.find(c => c.id === id);
+            if (!caballo) return;
+
+            document.getElementById('nombreCaballoSeguimiento').textContent = caballo.nombre;
+
+            const asistencias = await dataManager.get('attendanceEscuela') || [];
+            const historialCaballo = asistencias
+                .filter(att => att.caballo === caballo.nombre && att.asistio)
+                .sort((a, b) => new Date(b.fechaClase) - new Date(a.fechaClase));
+
+            const detallesDiv = document.getElementById('seguimientoDetalles');
+            if (historialCaballo.length === 0) {
+                detallesDiv.innerHTML = `<p style="text-align:center; color:#888;">Este caballo no tiene registros de trabajo.</p>`;
+            } else {
+                let html = `<table style="width:100%; font-size:0.9em;">
+                                <thead>
+                                    <tr style="background-color:#f0f0f0;">
+                                        <th style="padding:8px; background-color:#5c4033; color:white;">Fecha</th>
+                                        <th style="padding:8px; background-color:#5c4033; color:white;">Tipo de Clase</th>
+                                        <th style="padding:8px; background-color:#5c4033; color:white;">Alumno</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                historialCaballo.forEach(att => {
+                    html += `<tr>
+                                <td style="padding:8px; border-bottom:1px solid #eee;">${new Date(att.fechaClase + 'T12:00:00').toLocaleDateString('es-ES')}</td>
+                                <td style="padding:8px; border-bottom:1px solid #eee;"><b>${att.tipoClase || 'No especificado'}</b></td>
+                                <td style="padding:8px; border-bottom:1px solid #eee;">${att.alumno || 'N/A'}</td>
+                             </tr>`;
+                });
+                html += `</tbody></table>`;
+                detallesDiv.innerHTML = html;
+            }
+
+            document.getElementById('modalSeguimiento').style.display = 'block';
+        }
+
+        function cerrarSeguimiento() {
+            document.getElementById('modalSeguimiento').style.display = 'none';
+        }
+    </script>
+
+    <!-- Scripts de Firebase -->
+    <script src="firebase-config.js"></script>
+    <script src="data-manager.js?v=1.9"></script>
+
+</body>
+
+>>>>>>> be4102565c74ea41e0999c39a6bb667d91a2dd94
 >>>>>>> 13fad7142c32d85c390e5d09061e73c3fb870c82
 </html>

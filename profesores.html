@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="es">
 
@@ -370,4 +371,378 @@
 
 </body>
 
+=======
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Profesores</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            text-align: center;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin: 0 15px;
+            color: #555;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .nav-link:hover {
+            background-color: #f0ede5;
+            color: #000;
+        }
+
+        .nav-active {
+            background-color: #16a085;
+            color: white !important;
+        }
+
+        .container {
+            max-width: 650px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 30px auto;
+        }
+
+        h2,
+        h3 {
+            color: #16a085;
+            border-bottom: 2px solid #d4c5b9;
+            padding-bottom: 8px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #1abc9c;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #16a085;
+        }
+
+        .btn-update {
+            background-color: #2980b9;
+        }
+
+        .btn-update:hover {
+            background-color: #1f618d;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #16a085;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 5px;
+        }
+
+        .actions-btn {
+            padding: 6px 10px;
+            font-size: 12px;
+            margin: 0;
+            width: auto;
+        }
+
+        .btn-edit {
+            background-color: #f39c12;
+        }
+
+        .btn-edit:hover {
+            background-color: #d68910;
+        }
+
+        .btn-delete {
+            background-color: #c0392b;
+        }
+
+        .btn-delete:hover {
+            background-color: #a33226;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
+        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
+        <a href="clases.html" class="nav-link">📅 Clases</a>
+        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
+        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
+        <a href="profesores.html" class="nav-link nav-active">🎓 Profesores</a>
+        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
+        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
+        <a href="bases.html" class="nav-link">🏆 Bases</a>
+    </div>
+
+    <div class="container">
+        <h2>🎓 Registro de Profesores</h2>
+        <form id="profesorForm">
+            <input type="hidden" id="profesorId">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="nombre">Nombre:</label>
+                    <input type="text" id="nombre" required placeholder="Ej. Ana">
+                </div>
+                <div class="form-group">
+                    <label for="apellido">Apellidos:</label>
+                    <input type="text" id="apellido" required placeholder="Ej. Martínez">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="telefono">Teléfono:</label>
+                    <input type="tel" id="telefono" required placeholder="Ej. 600000000">
+                </div>
+                <div class="form-group">
+                    <label for="especialidad">Especialidad:</label>
+                    <select id="especialidad" required>
+                        <option value="Iniciación / Poni Club">Iniciación / Poni Club</option>
+                        <option value="Doma Clásica">Doma Clásica</option>
+                        <option value="Salto de Obstáculos">Salto de Obstáculos</option>
+                        <option value="Rutas y Campo">Rutas y Campo</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" id="submitBtn">Registrar Profesor</button>
+        </form>
+    </div>
+
+    <div class="container" style="max-width: 850px;">
+        <h3>📋 Equipo Técnico de Profesores</h3>
+        <table id="tablaProfesores">
+            <thead>
+                <tr>
+                    <th>Nombre y Apellidos</th>
+                    <th>Teléfono</th>
+                    <th>Especialidad</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const form = document.getElementById('profesorForm');
+        const tabla = document.getElementById('tablaProfesores').getElementsByTagName('tbody')[0];
+        const submitBtn = document.getElementById('submitBtn');
+        const profesorIdInput = document.getElementById('profesorId');
+
+        let ultimaDataProfesores = JSON.stringify([]);
+
+        window.onload = async function () {
+            let intentos = 0;
+            while (!dataManager.initialized && intentos < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                intentos++;
+            }
+
+            console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
+
+            await mostrarProfesores();
+
+            if (dataManager.useFirebase) {
+                dataManager.onSnapshot('profesoresEscuela', async (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataProfesores) {
+                        ultimaDataProfesores = dataActual;
+                        await mostrarProfesores();
+                    }
+                });
+            } else {
+                setInterval(async function () {
+                    const dataActual = JSON.stringify(await dataManager.get('profesoresEscuela') || []);
+                    if (dataActual !== ultimaDataProfesores) {
+                        ultimaDataProfesores = dataActual;
+                        await mostrarProfesores();
+                    }
+                }, 500);
+            }
+        };
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const id = profesorIdInput.value;
+            const nombre = document.getElementById('nombre').value.trim();
+            const apellido = document.getElementById('apellido').value.trim();
+            const telefono = document.getElementById('telefono').value.trim();
+            const especialidad = document.getElementById('especialidad').value;
+            const nombreCompleto = `${nombre} ${apellido}`;
+
+            if (id) {
+                let profesores = await dataManager.get('profesoresEscuela') || [];
+                const profesorAnterior = profesores.find(p => p.id === parseInt(id));
+                const nombreAnterior = `${profesorAnterior.nombre} ${profesorAnterior.apellido}`;
+
+                const profesorActualizado = { id: parseInt(id), nombre, apellido, telefono, especialidad };
+                await dataManager.set('profesoresEscuela', profesorActualizado);
+
+                if (nombreAnterior !== nombreCompleto) {
+                    let clases = await dataManager.get('clasesEscuela') || [];
+                    const clasesAfectadas = clases.filter(c => c.profesor === nombreAnterior);
+                    for (const clase of clasesAfectadas) {
+                        await dataManager.set('clasesEscuela', { ...clase, profesor: nombreCompleto });
+                    }
+                }
+
+                alert("¡Profesor actualizado!");
+            } else {
+                const nuevoProfesor = { id: Date.now(), nombre, apellido, telefono, especialidad };
+                await dataManager.set('profesoresEscuela', nuevoProfesor);
+                alert("¡Profesor registrado!");
+            }
+
+            restablecerFormulario();
+            await mostrarProfesores();
+        });
+
+        async function mostrarProfesores() {
+            const profesores = await dataManager.get('profesoresEscuela') || [];
+            tabla.innerHTML = '';
+            if (profesores.length === 0) {
+                tabla.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">No hay profesores.</td></tr>`;
+                return;
+            }
+            profesores.forEach(p => {
+                const fila = tabla.insertRow();
+                fila.innerHTML = `
+                <td><b>👤 ${p.nombre} ${p.apellido}</b></td><td>📞 ${p.telefono}</td>
+                <td><span style="background:#e8f8f5; color:#117a65; padding:3px 8px; border-radius:4px; font-size:14px; font-weight:bold;">${p.especialidad}</span></td>
+                <td class="actions-cell">
+                    <button class="actions-btn btn-edit" onclick="cargarProfesorParaEditar(${p.id})">Editar</button>
+                    <button class="actions-btn btn-delete" onclick="eliminarProfesor(${p.id})">Eliminar</button>
+                </td>
+            `;
+            });
+        }
+
+        async function cargarProfesorParaEditar(id) {
+            const profesores = await dataManager.get('profesoresEscuela') || [];
+            const p = profesores.find(item => item.id === id);
+            if (p) {
+                profesorIdInput.value = p.id;
+                document.getElementById('nombre').value = p.nombre;
+                document.getElementById('apellido').value = p.apellido;
+                document.getElementById('telefono').value = p.telefono;
+                document.getElementById('especialidad').value = p.especialidad;
+                submitBtn.textContent = 'Actualizar Datos';
+                submitBtn.classList.add('btn-update');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        async function eliminarProfesor(id) {
+            if (confirm('¿Borrar profesor?')) {
+                let profesores = await dataManager.get('profesoresEscuela') || [];
+                const profesor = profesores.find(p => p.id === id);
+                if (profesor) {
+                    const nombreCompleto = `${profesor.nombre} ${profesor.apellido}`;
+                    await dataManager.delete('profesoresEscuela', id);
+                    const clases = await dataManager.get('clasesEscuela') || [];
+                    for (const clase of clases.filter(c => c.profesor === nombreCompleto)) {
+                        await dataManager.set('clasesEscuela', { ...clase, profesor: '' });
+                    }
+                }
+
+                if (profesorIdInput.value == id) restablecerFormulario();
+                await mostrarProfesores();
+            }
+        }
+
+        function restablecerFormulario() {
+            form.reset();
+            profesorIdInput.value = '';
+            submitBtn.textContent = 'Registrar Profesor';
+            submitBtn.classList.remove('btn-update');
+        }
+    </script>
+
+    <!-- Scripts de Firebase -->
+    <script src="firebase-config.js"></script>
+    <script src="data-manager.js?v=1.9"></script>
+
+</body>
+
+>>>>>>> be4102565c74ea41e0999c39a6bb667d91a2dd94
 </html>

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="es">
 
@@ -594,4 +595,602 @@
 
 </body>
 
+=======
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Asignaciones</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            text-align: center;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin: 0 15px;
+            color: #555;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .nav-link:hover {
+            background-color: #f0ede5;
+            color: #000;
+        }
+
+        .nav-active {
+            background-color: #d35400;
+            color: white !important;
+        }
+
+        .container {
+            max-width: 650px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 30px auto;
+        }
+
+        h2,
+        h3 {
+            color: #d35400;
+            border-bottom: 2px solid #d4c5b9;
+            padding-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #e67e22;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #cf6d17;
+        }
+
+        .clase-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #d35400;
+        }
+
+        .clase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .clase-title {
+            font-size: 18px;
+            margin: 0;
+            color: #2e4a62;
+        }
+
+        .alumno-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fdfbf7;
+            padding: 8px 12px;
+            border: 1px solid #eae5dc;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+
+        .btn-add-inline {
+            background: #27ae60;
+            padding: 5px 10px;
+            font-size: 12px;
+            width: auto;
+            margin: 0;
+        }
+
+        .btn-add-inline:hover {
+            background: #219150;
+        }
+
+        .btn-edit-inline {
+            background: #f39c12;
+            padding: 3px 8px;
+            font-size: 11px;
+            width: auto;
+            margin: 0 5px 0 0;
+        }
+
+        .btn-edit-inline:hover {
+            background: #d68910;
+        }
+
+        .btn-remove-inline {
+            background: #c0392b;
+            padding: 3px 8px;
+            font-size: 11px;
+            width: auto;
+            margin: 0;
+        }
+
+        .btn-remove-inline:hover {
+            background: #a33226;
+        }
+
+        .no-records {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
+        <a href="asignaciones.html" class="nav-link nav-active">🔗 Asignaciones</a>
+        <a href="clases.html" class="nav-link">📅 Clases</a>
+        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
+        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
+        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
+        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
+        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
+        <a href="bases.html" class="nav-link">🏆 Bases</a>
+    </div>
+
+    <div class="container">
+        <h2>🔗 Apuntar Alumno a una Clase</h2>
+        <form id="asignacionForm">
+            <div class="form-group">
+                <label for="claseSelect">Seleccionar Clase / Horario:</label>
+                <select id="claseSelect" required></select>
+            </div>
+            <!-- Nuevo contenedor para seleccionar el día, inicialmente oculto -->
+            <div class="form-group" id="fechaClaseGroup" style="display: none;">
+                <label for="diaClaseSelect">Seleccionar la fecha de la clase:</label>
+                <select id="diaClaseSelect" required></select>
+            </div>
+            <div class="form-group">
+                <label for="alumnoSelect">Seleccionar Alumno:</label>
+                <select id="alumnoSelect" required></select>
+            </div>
+            <button type="submit" id="submitBtn">Añadir Alumno a la Clase</button>
+        </form>
+    </div>
+
+    <div class="container" style="max-width: 800px; background: transparent; box-shadow: none; padding: 0;">
+        <h3>📋 Distribución de Clases Grupales</h3>
+        <div id="listaGrupos"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('asignacionForm');
+        const listaGrupos = document.getElementById('listaGrupos');
+        const claseSelect = document.getElementById('claseSelect');
+        const alumnoSelect = document.getElementById('alumnoSelect');
+        const fechaClaseGroup = document.getElementById('fechaClaseGroup');
+        const diaClaseSelect = document.getElementById('diaClaseSelect');
+
+        const ordenDias = { "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6 };
+
+        let ultimaDataAsignaciones = JSON.stringify([]);
+        let ultimaDataClases = JSON.stringify([]);
+        let ultimaDataAlumnos = JSON.stringify([]);
+
+        window.onload = async function () {
+            // Esperar a que DataManager se inicialice
+            let intentos = 0;
+            while (!dataManager.initialized && intentos < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                intentos++;
+            }
+
+            console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
+
+            claseSelect.addEventListener('change', actualizarSelectorDeFecha);
+            await poblarDesplegables();
+            await mostrarAsignacionesGrupales();
+
+            if (dataManager.useFirebase) {
+                dataManager.onSnapshot('asignacionesEscuela', async (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataAsignaciones) {
+                        ultimaDataAsignaciones = dataActual;
+                        await mostrarAsignacionesGrupales();
+                    }
+                });
+
+                dataManager.onSnapshot('alumnosEscuela', async (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataAlumnos) {
+                        ultimaDataAlumnos = dataActual;
+                        await poblarDesplegables();
+                    }
+                });
+
+                dataManager.onSnapshot('clasesEscuela', async (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataClases) {
+                        ultimaDataClases = dataActual;
+                        await poblarDesplegables();
+                        await mostrarAsignacionesGrupales();
+                    }
+                });
+            } else {
+                setInterval(async function () {
+                    const asignActual = JSON.stringify(await dataManager.get('asignacionesEscuela') || []);
+                    const clasesActual = JSON.stringify(await dataManager.get('clasesEscuela') || []);
+                    const alumnosActual = JSON.stringify(await dataManager.get('alumnosEscuela') || []);
+
+                    let cambios = false;
+                    if (asignActual !== ultimaDataAsignaciones) { ultimaDataAsignaciones = asignActual; cambios = true; }
+                    if (clasesActual !== ultimaDataClases) { ultimaDataClases = clasesActual; cambios = true; }
+                    if (alumnosActual !== ultimaDataAlumnos) { ultimaDataAlumnos = alumnosActual; cambios = true; }
+
+                    if (cambios) {
+                        await poblarDesplegables();
+                        await mostrarAsignacionesGrupales();
+                    }
+                }, 500);
+            }
+        };
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const asignacionId = document.getElementById('asignacionForm').dataset.editingId;
+            const claseId = parseInt(claseSelect.value);
+            const alumnoName = alumnoSelect.value; // Esto es el nombre completo
+            const fechaSeleccionada = diaClaseSelect.value; // Esto es la fecha 'YYYY-MM-DD'
+
+            const clases = await dataManager.get('clasesEscuela') || [];
+            const clase = clases.find(c => c.id === claseId);
+
+            if (!clase) {
+                alert('Error: Clase no encontrada.');
+                return;
+            }
+
+            // El valor de diaSeleccionado ahora es la fecha 'YYYY-MM-DD'
+            if (!fechaSeleccionada) {
+                alert('Por favor, selecciona una fecha para la clase.');
+                return;
+            }
+
+            // El 'dia' de la semana se puede extraer de la fecha seleccionada
+            const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            const fechaObj = new Date(fechaSeleccionada + 'T12:00:00');
+            const diaSemanaNombre = dias[fechaObj.getDay()];
+
+            if (asignacionId) {
+                await actualizarAsignacion(parseInt(asignacionId), claseId, alumnoName, diaSemanaNombre, fechaSeleccionada);
+            } else {
+                await agregarAsignacion(claseId, alumnoName, diaSemanaNombre, fechaSeleccionada);
+            }
+        });
+
+        async function actualizarSelectorDeFecha() {
+            const claseId = parseInt(claseSelect.value);
+            const clases = await dataManager.get('clasesEscuela') || [];
+            const clase = clases.find(c => c.id === claseId);
+
+            if (clase) {
+                const diasClase = (clase.tipo === 'unDia') ? [clase.diaSemana] : Object.keys(clase.horarios || {});
+                const diasClaseNum = diasClase.map(d => ordenDias[d]);
+
+                let fechasFuturas = [];
+                let fechaActual = new Date();
+                fechaActual.setHours(0, 0, 0, 0); // Empezar desde hoy
+
+                while (fechasFuturas.length < 8) { // Generar las próximas 8 fechas
+                    if (diasClaseNum.includes(fechaActual.getDay())) {
+                        // Usar un método que no dependa de la zona horaria para obtener 'YYYY-MM-DD'
+                        const anio = fechaActual.getFullYear();
+                        const mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
+                        const dia = String(fechaActual.getDate()).padStart(2, '0');
+                        const fechaISO = `${anio}-${mes}-${dia}`;
+                        const diaSemanaNombre = fechaActual.toLocaleDateString('es-ES', { weekday: 'long' });
+                        const hora = (clase.tipo === 'unDia') ? clase.hora : clase.horarios[diaSemanaNombre];
+
+                        fechasFuturas.push({
+                            valor: fechaISO,
+                            texto: `${diaSemanaNombre.charAt(0).toUpperCase() + diaSemanaNombre.slice(1)}, ${fechaActual.toLocaleDateString('es-ES')} a las ${hora}hs`
+                        });
+                    }
+                    fechaActual.setDate(fechaActual.getDate() + 1);
+                }
+
+                diaClaseSelect.innerHTML = '<option value="">-- Elige una fecha --</option>' + fechasFuturas.map(f => `<option value="${f.valor}">${f.texto}</option>`).join('');
+                fechaClaseGroup.style.display = 'block';
+            } else {
+                fechaClaseGroup.style.display = 'none';
+                diaClaseSelect.innerHTML = '';
+            }
+        }
+
+        async function poblarDesplegables() {
+            const clases = await dataManager.get('clasesEscuela') || [];
+
+            let opcionesClases = '<option value="">-- Selecciona una Clase --</option>';
+
+            if (clases.length === 0) {
+                claseSelect.innerHTML = '<option value="">⚠️ Crea primero los horarios en "Clases"</option>';
+            } else {
+                clases.sort((a, b) => {
+                    const getDia1 = a.tipo === 'unDia' ? a.diaSemana : Object.keys(a.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
+                    const getDia2 = b.tipo === 'unDia' ? b.diaSemana : Object.keys(b.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
+                    return ordenDias[getDia1] - ordenDias[getDia2];
+                });
+
+                clases.forEach(c => {
+                    let etiqueta = '';
+                    if (c.tipo === 'unDia') {
+                        etiqueta = `${c.diaSemana} a las ${c.hora} hs [${c.nivel || 'Sin Nivel'}]`;
+                    } else {
+                        const diasHoras = Object.entries(c.horarios || {}).sort((a, b) => ordenDias[a[0]] - ordenDias[b[0]])
+                            .map(([dia, hora]) => `${dia} ${hora}`)
+                            .join(', ');
+                        etiqueta = `${diasHoras} [${c.nivel || 'Sin Nivel'}]`;
+                    }
+                    opcionesClases += `<option value="${c.id}">${etiqueta}</option>`;
+                });
+
+                claseSelect.innerHTML = opcionesClases;
+            }
+
+            const alumnos = await dataManager.get('alumnosEscuela') || [];
+            // Solo mostrar alumnos cuyo estado sea "Activo"
+            const alumnosActivos = alumnos.filter(a => (a.estado || 'Activo') === 'Activo');
+
+            alumnoSelect.innerHTML = alumnos.length === 0
+                ? '<option value="">⚠️ Registra alumnos primero</option>'
+                : alumnosActivos.length === 0
+                    ? '<option value="">⚠️ No hay alumnos marcados como Activos</option>'
+                    : '<option value="">-- Selecciona el alumno --</option>' + alumnosActivos.map(a => `<option value="${a.nombre} ${a.apellido}">${a.nombre} ${a.apellido}</option>`).join('');
+
+        }
+
+        async function agregarAsignacion(claseId, alumnoName, dia, fecha) {
+            if (!claseId || !alumnoName || !dia || !fecha) return;
+
+            const clases = await dataManager.get('clasesEscuela') || [];
+            const claseSeleccionada = clases.find(c => c.id === claseId);
+
+            if (!claseSeleccionada) {
+                alert('Error: Por favor selecciona una clase válida');
+                return;
+            }
+
+            const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+
+            // La comprobación ahora es por alumno y fecha
+            if (asignaciones.some(a => a.alumno === alumnoName && a.fecha === fecha)) {
+                alert(`⚠️ Este alumno ya está apuntado a una clase en la fecha ${new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES')}.`);
+                return;
+            }
+
+            const nuevaAsignacion = { id: Date.now(), claseId: claseId, alumno: alumnoName, dia: dia, fecha: fecha };
+            await dataManager.set('asignacionesEscuela', nuevaAsignacion);
+            form.reset();
+            fechaClaseGroup.style.display = 'none';
+            await mostrarAsignacionesGrupales();
+        }
+
+        async function actualizarAsignacion(id, claseId, alumnoName, dia, fecha) {
+            const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+            // Verificar si la nueva asignación (alumno + fecha) ya existe en otra entrada
+            const existeDuplicado = asignaciones.some(a => a.id !== id && a.alumno === alumnoName && a.fecha === fecha);
+            if (existeDuplicado) {
+                alert(`⚠️ Este alumno ya está apuntado a otra clase en la fecha ${new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES')}.`);
+                return;
+            }
+
+            const asignacionActualizada = { id, claseId, alumno: alumnoName, dia, fecha };
+            await dataManager.set('asignacionesEscuela', asignacionActualizada);
+            resetearFormulario();
+        }
+
+        function resetearFormulario() {
+            form.reset();
+            delete form.dataset.editingId;
+            document.getElementById('submitBtn').textContent = 'Añadir Alumno a la Clase';
+            document.getElementById('submitBtn').style.backgroundColor = '#e67e22'; // Color original
+            fechaClaseGroup.style.display = 'none';
+            // Habilitar campos que podrían estar deshabilitados
+            claseSelect.disabled = false;
+            alumnoSelect.disabled = false;
+        }
+
+        async function mostrarAsignacionesGrupales() {
+            const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+            const clasesDisponibles = await dataManager.get('clasesEscuela') || [];
+            listaGrupos.innerHTML = '';
+
+            // Filtrar para mostrar solo clases que tienen al menos una asignación
+            const clasesConAlumnos = clasesDisponibles.filter(clase =>
+                asignaciones.some(asignacion => asignacion.claseId === clase.id)
+            );
+
+            if (clasesConAlumnos.length === 0) {
+                listaGrupos.innerHTML = `<div class="no-records">No hay alumnos apuntados a ninguna clase.</div>`;
+                return;
+            }
+
+            clasesConAlumnos.sort((a, b) => {
+                const getDia1 = a.tipo === 'unDia' ? a.diaSemana : Object.keys(a.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
+                const getDia2 = b.tipo === 'unDia' ? b.diaSemana : Object.keys(b.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
+                return ordenDias[getDia1] - ordenDias[getDia2];
+            });
+
+            clasesConAlumnos.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'clase-card';
+
+                const alumnosEnEstaClase = asignaciones.filter(a => a.claseId === c.id);
+                const numAlumnos = alumnosEnEstaClase.length;
+
+                let etiquetaClase = '';
+
+                if (c.tipo === 'unDia') {
+                    etiquetaClase = `🗓️ ${c.diaSemana} a las ${c.hora} hs <small style="color:#777; font-weight:normal;">[${c.nivel || 'N/A'}]</small>`;
+                } else {
+                    const diasHoras = Object.entries(c.horarios || {}).sort((a, b) => ordenDias[a[0]] - ordenDias[b[0]])
+                        .map(([dia, hora]) => `${dia} ${hora}`)
+                        .join(', ');
+                    etiquetaClase = `🗓️ ${diasHoras} <small style="color:#777; font-weight:normal;">[${c.nivel || 'N/A'}]</small>`;
+                }
+
+                let htmlContenido = `
+                <div class="clase-header">
+                    <h4 class="clase-title">${etiquetaClase}</h4>
+                    <div>
+                        <span style="font-size: 0.9em; color: #555; margin-right: 15px;"><b>${numAlumnos}</b> de <b>${c.maxAlumnos || '?'}</b> alumnos</span>
+                        <button class="btn-add-inline" onclick="enfocarClase('${c.id}')">＋ Añadir alumno</button>
+                    </div>
+                </div>
+                <div class="clase-body">
+            `;
+
+                const diasDeLaClase = (c.tipo === 'unDia') ? [c.diaSemana] : Object.keys(c.horarios || {}).sort((a, b) => ordenDias[a] - ordenDias[b]);
+
+                // Agrupar alumnos por fecha
+                const alumnosPorFecha = alumnosEnEstaClase
+                    .reduce((acc, asig) => {
+                        const fecha = asig.fecha || 'Sin fecha'; // Agrupar las antiguas si las hubiera
+                        if (!acc[fecha]) acc[fecha] = [];
+                        acc[fecha].push(asig);
+                        return acc;
+                    }, {});
+
+                // Ordenar fechas y mostrar
+                Object.keys(alumnosPorFecha).sort().forEach(fecha => {
+                    const fechaStr = new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                    htmlContenido += `<h5 style="margin: 15px 0 5px 0; color: #555; border-bottom: 1px solid #eee; padding-bottom: 3px;">${fechaStr}</h5>`;
+                    alumnosPorFecha[fecha].forEach(a => {
+                        htmlContenido += `
+                            <div class="alumno-item">
+                                <span>👤 <b>${a.alumno}</b></span>
+                                <div><button class="btn-edit-inline" onclick="cargarAsignacionParaEditar(${a.id})">✏️ Editar</button>
+                                <button class="btn-remove-inline" onclick="eliminarAsignacion(${a.id})">Quitar</button></div>
+                            </div>
+                        `;
+                    });
+                });
+
+                htmlContenido += `</div>`;
+                card.innerHTML = htmlContenido;
+                listaGrupos.appendChild(card);
+            });
+        }
+
+        function enfocarClase(claseId) {
+            claseSelect.value = claseId;
+            resetearFormulario();
+            claseSelect.value = claseId;
+            actualizarSelectorDeFecha();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function cargarAsignacionParaEditar(id) {
+            const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+            const asignacion = asignaciones.find(a => a.id === id);
+            if (!asignacion) return;
+
+            form.dataset.editingId = id;
+
+            claseSelect.value = asignacion.claseId;
+            claseSelect.disabled = true; // No permitir cambiar la clase, solo la fecha
+            await actualizarSelectorDeFecha();
+
+            diaClaseSelect.value = asignacion.fecha;
+            alumnoSelect.value = asignacion.alumno;
+            alumnoSelect.disabled = true; // No permitir cambiar el alumno
+
+            document.getElementById('submitBtn').textContent = 'Actualizar Asignación';
+            document.getElementById('submitBtn').style.backgroundColor = '#f39c12';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function eliminarAsignacion(id) {
+            if (confirm('¿Deseas quitar a este alumno de la clase?')) {
+                // 1. Eliminar la asignación
+                await dataManager.delete('asignacionesEscuela', id);
+
+                // 2. Eliminar registros de asistencia futuros para esta asignación (si los hubiera)
+                // Esta parte es compleja y podría requerir más lógica. Por ahora, se elimina la asignación.
+                // Para una solución completa, necesitaríamos saber qué asistencia corresponde a qué asignación.
+                // La lógica actual en control_asistencia.html ya maneja bien el borrado.
+                // Aquí, simplemente eliminamos la asignación futura.
+                const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+                const asignacionEliminada = asignaciones.find(a => a.id === id); // Ya no estará, pero para obtener datos
+                if (asignacionEliminada) {
+                    // Lógica adicional si fuera necesario...
+                }
+
+                await mostrarAsignacionesGrupales();
+            }
+        }
+    </script>
+
+    <!-- Scripts de Firebase -->
+    <script src="firebase-config.js"></script>
+    <script src="data-manager.js?v=1.9"></script>
+
+</body>
+
+>>>>>>> be4102565c74ea41e0999c39a6bb667d91a2dd94
 </html>

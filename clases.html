@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="es">
 
@@ -662,4 +663,670 @@
 
 </body>
 
+=======
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Clases</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            text-align: center;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin: 0 15px;
+            color: #555;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .nav-link:hover {
+            background-color: #f0ede5;
+            color: #000;
+        }
+
+        .nav-active {
+            background-color: #2e4a62;
+            color: white !important;
+        }
+
+        .container {
+            max-width: 650px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 30px auto;
+        }
+
+        h2,
+        h3 {
+            color: #2e4a62;
+            border-bottom: 2px solid #d4c5b9;
+            padding-bottom: 8px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #4a6984;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #354d61;
+        }
+
+        .btn-update {
+            background-color: #2980b9;
+        }
+
+        .btn-update:hover {
+            background-color: #1f618d;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #2e4a62;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 5px;
+        }
+
+        .actions-btn {
+            padding: 6px 10px;
+            font-size: 12px;
+            margin: 0;
+            width: auto;
+        }
+
+        .btn-edit {
+            background-color: #f39c12;
+        }
+
+        .btn-edit:hover {
+            background-color: #d68910;
+        }
+
+        .btn-delete {
+            background-color: #c0392b;
+        }
+
+        .btn-delete:hover {
+            background-color: #a33226;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0;
+            font-weight: normal;
+        }
+
+        .radio-group input[type="radio"] {
+            margin-right: 8px;
+        }
+
+        .section-dias {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+
+        .section-dias.active {
+            display: block;
+        }
+
+        .dias-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .dia-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .dia-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+
+        .dia-item label {
+            margin-bottom: 0;
+        }
+
+        .horarios-container {
+            display: grid;
+            gap: 15px;
+        }
+
+        .horario-item {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .horario-item input {
+            flex: 1;
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            width: auto;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
+        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
+        <a href="clases.html" class="nav-link nav-active">📅 Clases</a>
+        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
+        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
+        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
+        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
+        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
+        <a href="bases.html" class="nav-link">🏆 Bases</a>
+    </div>
+
+    <div class="container">
+        <h2>📅 Programación de Clases</h2>
+        <form id="claseForm">
+            <input type="hidden" id="claseId">
+
+            <!-- Radio buttons para elegir uno o varios días -->
+            <div class="radio-group">
+                <label><input type="radio" name="tipoClase" value="unDia" checked> Un día fijo</label>
+                <label><input type="radio" name="tipoClase" value="variosDialas"> Varios días</label>
+            </div>
+
+            <!-- SECCIÓN: UN DÍA -->
+            <div id="seccionUnDia" class="section-dias active">
+                <h4 style="margin-top: 0;">Clase de un día</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="diaSemana">Día de la semana:</label>
+                        <select id="diaSemana">
+                            <option value="">-- Elige un día --</option>
+                            <option value="Lunes">Lunes</option>
+                            <option value="Martes">Martes</option>
+                            <option value="Miércoles">Miércoles</option>
+                            <option value="Jueves">Jueves</option>
+                            <option value="Viernes">Viernes</option>
+                            <option value="Sábado">Sábado</option>
+                            <option value="Domingo">Domingo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="hora">Hora de Inicio:</label>
+                        <input type="time" id="hora">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN: VARIOS DÍAS -->
+            <div id="seccionVariosDias" class="section-dias">
+                <h4 style="margin-top: 0;">Selecciona los días y horarios</h4>
+                <div class="dias-grid">
+                    <div class="dia-item">
+                        <input type="checkbox" id="chk-Lunes" value="Lunes" class="chk-dia">
+                        <label for="chk-Lunes">Lunes</label>
+                    </div>
+                    <div class="dia-item">
+                        <input type="checkbox" id="chk-Martes" value="Martes" class="chk-dia">
+                        <label for="chk-Martes">Martes</label>
+                    </div>
+                    <div class="dia-item">
+                        <input type="checkbox" id="chk-Miércoles" value="Miércoles" class="chk-dia">
+                        <label for="chk-Miércoles">Miércoles</label>
+                    </div>
+                    <div class="dia-item">
+                        <input type="checkbox" id="chk-Jueves" value="Jueves" class="chk-dia">
+                        <label for="chk-Jueves">Jueves</label>
+                    </div>
+                    <div class="dia-item">
+                        <input type="checkbox" id="chk-Viernes" value="Viernes" class="chk-dia">
+                        <label for="chk-Viernes">Viernes</label>
+                    </div>
+                    <div class="dia-item">
+                        <input type="checkbox" id="chk-Sábado" value="Sábado" class="chk-dia">
+                        <label for="chk-Sábado">Sábado</label>
+                    </div>
+                    <div class="dia-item">
+                        <input type="checkbox" id="chk-Domingo" value="Domingo" class="chk-dia">
+                        <label for="chk-Domingo">Domingo</label>
+                    </div>
+                </div>
+                <div id="horariosContainer" class="horarios-container"></div>
+            </div>
+
+            <!-- NIVEL DE LA CLASE -->
+            <div class="form-group">
+                <label for="nivelClase">Nivel de la Clase:</label>
+                <select id="nivelClase" required>
+                    <option value="">-- Elige un nivel --</option>
+                </select>
+            </div>
+
+            <!-- DURACIÓN Y TIPO (común a ambos) -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="duracion">Duración Sesión:</label>
+                    <select id="duracion" required>
+                        <option value="45 minutos">45 minutos</option>
+                        <option value="1 hora">1 hora</option>
+                        <option value="1 hora y media">1 hora y media</option>
+                        <option value="2 horas">2 horas</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="maxAlumnos">Nº de alumnos:</label>
+                    <input type="number" id="maxAlumnos" min="1" placeholder="Ej. 6" required>
+                </div>
+            </div>
+            <button type="submit" id="submitBtn">Agendar Clase</button>
+        </form>
+    </div>
+
+    <div class="container" style="max-width: 800px;">
+        <h3>📋 Horario Semanal de Clases</h3>
+        <table id="tablaClases">
+            <thead>
+                <tr>
+                    <th>Día / Hora</th>
+                    <th>Duración</th>
+                    <th>Nº Alumnos</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const form = document.getElementById('claseForm');
+        const tabla = document.getElementById('tablaClases').getElementsByTagName('tbody')[0];
+        const submitBtn = document.getElementById('submitBtn');
+        const claseIdInput = document.getElementById('claseId');
+        const ordenDias = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6, "Domingo": 7 };
+        let todosLosNiveles = [];
+
+        let ultimaDataClases = JSON.stringify([]);
+
+        window.onload = async function () {
+            let intentos = 0;
+            while (!dataManager.initialized && intentos < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                intentos++;
+            }
+
+            console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
+
+            setupEventListeners();
+            await mostrarClases();
+            await poblarNiveles();
+
+            if (dataManager.useFirebase) {
+                dataManager.onSnapshot('clasesEscuela', async (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataClases) {
+                        ultimaDataClases = dataActual;
+                        await mostrarClases();
+                    }
+                });
+                dataManager.onSnapshot('nivelesEscuela', async (data) => {
+                    await poblarNiveles(data);
+                });
+            } else {
+                setInterval(async function () {
+                    const dataActual = JSON.stringify(await dataManager.get('clasesEscuela') || []);
+                    if (dataActual !== ultimaDataClases) {
+                        ultimaDataClases = dataActual;
+                        await mostrarClases();
+                    }
+                }, 500);
+            }
+        };
+
+        async function poblarNiveles(data = null) {
+            todosLosNiveles = data || await dataManager.get('nivelesEscuela') || [];
+            const selectNivel = document.getElementById('nivelClase');
+            const valorActual = selectNivel.value;
+            selectNivel.innerHTML = '<option value="">-- Elige un nivel --</option>';
+            todosLosNiveles.forEach(n => {
+                selectNivel.innerHTML += `<option value="${n.nombre}">${n.nombre}</option>`;
+            });
+            if (valorActual) selectNivel.value = valorActual;
+        }
+
+        function setupEventListeners() {
+            // Radio buttons para cambiar entre un día y varios días
+            const radios = document.querySelectorAll('input[name="tipoClase"]');
+            radios.forEach(radio => {
+                radio.addEventListener('change', function () {
+                    const seccionUnDia = document.getElementById('seccionUnDia');
+                    const seccionVariosDias = document.getElementById('seccionVariosDias');
+
+                    if (this.value === 'unDia') {
+                        seccionUnDia.classList.add('active');
+                        seccionVariosDias.classList.remove('active');
+                    } else {
+                        seccionUnDia.classList.remove('active');
+                        seccionVariosDias.classList.add('active');
+                    }
+                    limpiarHorarios();
+                });
+            });
+
+            // Checkboxes para seleccionar días
+            const checkboxes = document.querySelectorAll('.chk-dia');
+            checkboxes.forEach(chk => {
+                chk.addEventListener('change', actualizarHorarios);
+            });
+        }
+
+        function actualizarHorarios() {
+            const horariosContainer = document.getElementById('horariosContainer');
+            const diasSeleccionados = Array.from(document.querySelectorAll('.chk-dia:checked')).map(c => c.value);
+
+            horariosContainer.innerHTML = '';
+            diasSeleccionados.sort((a, b) => ordenDias[a] - ordenDias[b]).forEach(dia => {
+                const div = document.createElement('div');
+                div.className = 'horario-item';
+                div.innerHTML = `
+                <label style="flex: 0; margin-bottom: 0; font-weight: bold; white-space: nowrap;">${dia}:</label>
+                <input type="time" class="hora-dia" data-dia="${dia}">
+            `;
+                horariosContainer.appendChild(div);
+            });
+        }
+
+        function limpiarHorarios() {
+            const checkboxes = document.querySelectorAll('.chk-dia');
+            checkboxes.forEach(chk => chk.checked = false);
+            const horariosContainer = document.getElementById('horariosContainer');
+            if (horariosContainer) horariosContainer.innerHTML = '';
+        }
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const id = claseIdInput.value;
+            const tipoClaseRadio = document.querySelector('input[name="tipoClase"]:checked');
+
+            if (!tipoClaseRadio) {
+                alert('Selecciona un tipo de clase');
+                return;
+            }
+
+            const tipoClase = tipoClaseRadio.value;
+            const duracion = document.getElementById('duracion').value;
+            const maxAlumnos = document.getElementById('maxAlumnos').value;
+            const nivel = document.getElementById('nivelClase').value;
+
+            if (!duracion || !maxAlumnos || !nivel) {
+                alert('Por favor completa la duración, el número de alumnos y el nivel de la clase.');
+                return;
+            }
+
+            if (tipoClase === 'unDia') {
+                const diaSemana = document.getElementById('diaSemana').value;
+                const hora = document.getElementById('hora').value;
+
+                if (!diaSemana || !hora) {
+                    alert('Por favor completa el día y la hora');
+                    return;
+                }
+
+                if (id) {
+                    const claseActualizada = { id: parseInt(id), tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos, nivel };
+                    await dataManager.set('clasesEscuela', claseActualizada);
+                    alert("¡Horario modificado!");
+                } else {
+                    const nuevaClase = { id: Date.now(), tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos, nivel };
+                    await dataManager.set('clasesEscuela', nuevaClase);
+                    alert("¡Clase agendada!");
+                }
+            } else {
+                const horarios = {};
+                document.querySelectorAll('.hora-dia').forEach(input => {
+                    if (input.value) {
+                        horarios[input.dataset.dia] = input.value;
+                    }
+                });
+
+                if (Object.keys(horarios).length === 0) {
+                    alert('Por favor selecciona al menos un día con su hora');
+                    return;
+                }
+
+                if (id) {
+                    const claseActualizada = { id: parseInt(id), tipo: 'variosDias', horarios, duracion, maxAlumnos, nivel };
+                    await dataManager.set('clasesEscuela', claseActualizada);
+                    alert("¡Horario modificado!");
+                } else {
+                    const nuevaClase = { id: Date.now(), tipo: 'variosDias', horarios, duracion, maxAlumnos, nivel };
+                    await dataManager.set('clasesEscuela', nuevaClase);
+                    alert("¡Clase agendada!");
+                }
+            }
+
+            restablecerFormulario();
+            await mostrarClases();
+        });
+
+        async function mostrarClases() {
+            const clases = await dataManager.get('clasesEscuela') || [];
+            tabla.innerHTML = '';
+            if (clases.length === 0) {
+                tabla.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">No hay horarios programados.</td></tr>`;
+                return;
+            }
+
+            clases.sort((a, b) => {
+                const getDia1 = a.tipo === 'unDia' ? a.diaSemana : Object.keys(a.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
+                const getDia2 = b.tipo === 'unDia' ? b.diaSemana : Object.keys(b.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
+                return ordenDias[getDia1] - ordenDias[getDia2];
+            });
+
+            clases.forEach(c => {
+                const fila = tabla.insertRow();
+                let contenidoFila = '';
+
+                if (c.tipo === 'unDia') {
+                    contenidoFila = `
+                    <td><b>🗓️ ${c.diaSemana}</b> a las ⏰ ${c.hora} hs <br><small style="color:#555; font-weight:bold;">Nivel: ${c.nivel || 'N/A'}</small></td>
+                    <td>⏱️ ${c.duracion}</td>
+                    <td>👥 ${c.maxAlumnos || '-'} alumnos</td>
+                `;
+                } else if (c.tipo === 'variosDias' && c.horarios) {
+                    const diasHoras = Object.entries(c.horarios).sort((a, b) => ordenDias[a[0]] - ordenDias[b[0]])
+                        .map(([dia, hora]) => `${dia} ${hora}`)
+                        .join(', ');
+                    contenidoFila = `
+                    <td><b>🗓️</b> ${diasHoras} <br><small style="color:#555; font-weight:bold;">Nivel: ${c.nivel || 'N/A'}</small></td>
+                    <td>⏱️ ${c.duracion}</td>
+                    <td>👥 ${c.maxAlumnos || '-'} alumnos</td>
+                `;
+                } else {
+                    return; // Saltar clases con formato inválido
+                }
+
+                fila.innerHTML = contenidoFila + `
+                <td class="actions-cell">
+                    <button class="actions-btn btn-edit" onclick="cargarClaseParaEditar(${c.id})">Editar</button>
+                    <button class="actions-btn btn-delete" onclick="eliminarClase(${c.id})">Eliminar</button>
+                </td>
+            `;
+            });
+        }
+
+        async function cargarClaseParaEditar(id) {
+            const clases = await dataManager.get('clasesEscuela') || [];
+            const c = clases.find(item => item.id === id);
+            if (c) {
+                claseIdInput.value = c.id;
+                document.getElementById('duracion').value = c.duracion;
+                document.getElementById('maxAlumnos').value = c.maxAlumnos || '';
+                document.getElementById('nivelClase').value = c.nivel || '';
+
+                if (c.tipo === 'unDia') {
+                    const radioUnDia = document.querySelector('input[value="unDia"]');
+                    if (radioUnDia) radioUnDia.click();
+                    document.getElementById('diaSemana').value = c.diaSemana;
+                    document.getElementById('hora').value = c.hora;
+                } else if (c.tipo === 'variosDias') {
+                    const radioVarios = document.querySelector('input[value="variosDialas"]');
+                    if (radioVarios) radioVarios.click();
+
+                    setTimeout(() => {
+                        Object.keys(c.horarios || {}).forEach(dia => {
+                            const chk = document.getElementById(`chk-${dia}`);
+                            if (chk) chk.checked = true;
+                        });
+                        actualizarHorarios();
+
+                        setTimeout(() => {
+                            Object.entries(c.horarios || {}).forEach(([dia, hora]) => {
+                                const input = document.querySelector(`.hora-dia[data-dia="${dia}"]`);
+                                if (input) input.value = hora;
+                            });
+                        }, 50);
+                    }, 50);
+                }
+
+                submitBtn.textContent = 'Actualizar Clase';
+                submitBtn.classList.add('btn-update');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        async function eliminarClase(id) {
+            if (confirm('¿Seguro que deseas eliminar este horario?')) {
+                await dataManager.delete('clasesEscuela', id);
+
+                let asignaciones = await dataManager.get('asignacionesEscuela') || [];
+                for (const asig of asignaciones.filter(a => a.claseId == id)) {
+                    await dataManager.delete('asignacionesEscuela', asig.id);
+                }
+
+                if (claseIdInput.value == id) restablecerFormulario();
+                await mostrarClases();
+            }
+        }
+
+        function restablecerFormulario() {
+            form.reset();
+            claseIdInput.value = '';
+            submitBtn.textContent = 'Agendar Clase';
+            submitBtn.classList.remove('btn-update');
+            const radioUnDia = document.querySelector('input[value="unDia"]');
+            if (radioUnDia) radioUnDia.checked = true;
+            const seccionUnDia = document.getElementById('seccionUnDia');
+            const seccionVariosDias = document.getElementById('seccionVariosDias');
+            if (seccionUnDia) seccionUnDia.classList.add('active');
+            if (seccionVariosDias) seccionVariosDias.classList.remove('active');
+            limpiarHorarios();
+        }
+    </script>
+
+    <!-- Scripts de Firebase -->
+    <script src="firebase-config.js"></script>
+    <script src="data-manager.js?v=1.9"></script>
+
+</body>
+
+>>>>>>> be4102565c74ea41e0999c39a6bb667d91a2dd94
 </html>
