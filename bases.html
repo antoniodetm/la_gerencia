@@ -338,11 +338,11 @@
             let niveles = await dataManager.get('nivelesEscuela') || [];
             if (niveles.length === 0) {
                 niveles = [
-                    { id: 1, nombre: 'Iniciación' }
+                    { id: 1, nombre: 'Iniciación' },
+                    { id: 2, nombre: 'Intermedio' },
+                    { id: 3, nombre: 'Avanzado' }
                 ];
-                for (const nivel of niveles) {
-                    await dataManager.set('nivelesEscuela', nivel);
-                }
+                await dataManager.set('nivelesEscuela', niveles);
                 await mostrarNiveles(); // Volver a mostrar después de crear
             }
 
@@ -356,10 +356,8 @@
                     { id: 4, nombre: 'Clase Particular' },
                     { id: 5, nombre: 'Salida al Campo' }
                 ];
-                for (const tipo of tiposClases) {
-                    await dataManager.set('tiposClasesEscuela', tipo);
-                }
-                await mostrarTiposClases();
+                await dataManager.set('tiposClasesEscuela', tiposClases);
+                await mostrarTiposClases(); // Volver a mostrar después de crear
             }
 
             // Inicializar productos
@@ -370,10 +368,8 @@
                     { id: 2, nombre: 'Bono 5 Clases Grupales', tipo: 'Bono', numClases: 5, precio: '85.00' },
                     { id: 3, nombre: 'Clase Suelta', tipo: 'Clase Suelta', numClases: 1, precio: '20.00' }
                 ];
-                for (const producto of productos) {
-                    await dataManager.set('productosEscuela', producto);
-                }
-                await mostrarProductos();
+                await dataManager.set('productosEscuela', productos);
+                await mostrarProductos(); // Volver a mostrar después de crear
             }
 
             // Listeners para sincronización en tiempo real
@@ -434,8 +430,8 @@
             const existe = niveles.some(n => n.nombre.toLowerCase() === nombre.toLowerCase());
             if (existe) { alert('Este nivel ya existe.'); return; }
 
-            const nuevoNivel = { id: Date.now(), nombre: nombre };
-            await dataManager.set('nivelesEscuela', nuevoNivel);
+            niveles.push({ id: Date.now(), nombre: nombre });
+            await dataManager.set('nivelesEscuela', niveles);
             nombreNivelInput.value = '';
             mostrarNiveles();
         });
@@ -450,8 +446,8 @@
             const existe = tiposClases.some(t => t.nombre.toLowerCase() === nombre.toLowerCase());
             if (existe) { alert('Este tipo de clase ya existe.'); return; }
 
-            const nuevoTipo = { id: Date.now(), nombre: nombre };
-            await dataManager.set('tiposClasesEscuela', nuevoTipo);
+            tiposClases.push({ id: Date.now(), nombre: nombre });
+            await dataManager.set('tiposClasesEscuela', tiposClases);
             nombreTipoClaseInput.value = '';
             mostrarTiposClases();
         });
@@ -473,8 +469,8 @@
             const existe = productos.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
             if (existe) { alert('Este producto ya existe.'); return; }
 
-            const nuevoProducto = { id: Date.now(), nombre, tipo, numClases, precio };
-            await dataManager.set('productosEscuela', nuevoProducto);
+            productos.push({ id: Date.now(), nombre, tipo, numClases, precio });
+            await dataManager.set('productosEscuela', productos);
             formProducto.reset();
             numClasesContainer.style.display = 'none';
             mostrarProductos();
@@ -527,29 +523,34 @@
 
         async function eliminarNivel(id) {
             if (confirm('¿Deseas eliminar este nivel de alumno?')) {
-                await dataManager.delete('nivelesEscuela', id);
+                let niveles = await dataManager.get('nivelesEscuela') || [];
+                niveles = niveles.filter(n => n.id !== id);
+                await dataManager.set('nivelesEscuela', niveles);
                 mostrarNiveles();
             }
         }
 
         async function eliminarTipoClase(id) {
             if (confirm('¿Deseas eliminar este tipo de clase?')) {
-                await dataManager.delete('tiposClasesEscuela', id);
+                let tiposClases = await dataManager.get('tiposClasesEscuela') || [];
+                tiposClases = tiposClases.filter(t => t.id !== id);
+                await dataManager.set('tiposClasesEscuela', tiposClases);
                 mostrarTiposClases();
             }
         }
 
         async function eliminarProducto(id) {
             if (confirm('¿Deseas eliminar este producto?')) {
-                await dataManager.delete('productosEscuela', id);
+                let productos = await dataManager.get('productosEscuela') || [];
+                productos = productos.filter(p => p.id !== id);
+                await dataManager.set('productosEscuela', productos);
                 mostrarProductos();
             }
         }
     </script>
 
     <!-- Scripts de Firebase -->
-    <script src="firebase-config.js"></script>
-    <script src="data-manager.js?v=1.9"></script>
+    <script src="data-manager.js?v=1.5"></script>
 
 </body>
 

@@ -1,368 +1,3 @@
-<<<<<<< HEAD
-<!DOCTYPE html>
-<html lang="es">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agenda de Clases - Escuela Ecuestre</title>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f1ea;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .nav-bar {
-            text-align: center;
-            margin-bottom: 25px;
-            background: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        .nav-link {
-            display: inline-block;
-            margin: 0 15px;
-            color: #555;
-            font-weight: bold;
-            text-decoration: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-
-        .nav-link:hover {
-            background-color: #f0ede5;
-            color: #000;
-        }
-
-        .nav-active {
-            background-color: #34495e;
-            color: white !important;
-        }
-
-        .container {
-            max-width: 1000px;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            margin: 0 auto;
-        }
-
-        h2 {
-            color: #34495e;
-            border-bottom: 2px solid #d4c5b9;
-            padding-bottom: 8px;
-            margin-top: 0;
-        }
-
-        .day-section {
-            margin-bottom: 25px;
-            border-left: 4px solid #aed6f1;
-            padding-left: 15px;
-        }
-
-        .day-section h3 {
-            color: #2980b9;
-            margin: 0 0 15px 0;
-        }
-
-        .clase-card {
-            background: #fdfefe;
-            border: 1px solid #e5e8e8;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .clase-info {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .clase-info h4 {
-            margin: 0 0 5px 0;
-        }
-
-        .clase-info p {
-            margin: 0;
-            font-size: 0.9em;
-            color: #566573;
-        }
-
-        .alumnos-list {
-            flex: 2;
-            min-width: 300px;
-        }
-
-        .alumnos-list h5 {
-            margin: 0 0 8px 0;
-            font-size: 0.95em;
-        }
-
-        .alumno-tag {
-            display: inline-block;
-            background: #eaf2f8;
-            color: #2874a6;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            margin: 2px;
-        }
-
-        .btn-add-student {
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 8px 12px;
-            cursor: pointer;
-            align-self: center;
-        }
-
-        .no-clases {
-            color: #7f8c8d;
-            font-style: italic;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-
-        .modal-content {
-            background-color: #fff;
-            margin: 15% auto;
-            padding: 25px;
-            border-radius: 8px;
-            width: 400px;
-            max-width: 90%;
-        }
-
-        .modal-header h3 {
-            margin-top: 0;
-            color: #27ae60;
-        }
-
-        select,
-        button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-        }
-    </style>
-</head>
-
-<body>
-
-    <div class="nav-bar">
-        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
-        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
-        <a href="clases.html" class="nav-link">📅 Clases</a>
-        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
-        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
-        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
-        <a href="calendario.html" class="nav-link nav-active">🗓️ Calendario</a>
-        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
-        <a href="bases.html" class="nav-link">🏆 Bases</a>
-    </div>
-
-    <div class="container">
-        <h2>🗓️ Agenda de Próximas Clases</h2>
-        <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">Vista de las clases programadas para los próximos
-            7 días.</p>
-        <div id="agenda-container"></div>
-    </div>
-
-    <!-- Modal para añadir alumno -->
-    <div id="addStudentModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Añadir Alumno a Clase</h3>
-                <p id="modalClaseInfo"></p>
-            </div>
-            <form id="addStudentForm">
-                <input type="hidden" id="modalClaseId">
-                <input type="hidden" id="modalClaseFecha">
-                <label for="modalAlumnoSelect">Seleccionar Alumno:</label>
-                <select id="modalAlumnoSelect" required></select>
-                <button type="submit" style="background-color: #27ae60; color:white;">Añadir</button>
-                <button type="button" onclick="closeModal()"
-                    style="background-color: #7f8c8d; color:white;">Cancelar</button>
-            </form>
-        </div>
-    </div>
-
-    <script src="firebase-config.js"></script>
-    <script src="data-manager.js?v=1.9"></script>
-    <script>
-        const ordenDias = { "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6 };
-        const agendaContainer = document.getElementById('agenda-container');
-        let todasLasClases = [];
-        let todasLasAsignaciones = [];
-        let todosLosAlumnos = [];
-
-        window.onload = async () => {
-            let intentos = 0;
-            while (!dataManager.initialized && intentos < 20) {
-                await new Promise(r => setTimeout(r, 100));
-                intentos++;
-            }
-
-            await loadData();
-            renderAgenda();
-
-            dataManager.onSnapshot('clasesEscuela', async (data) => { todasLasClases = data || []; renderAgenda(); });
-            dataManager.onSnapshot('asignacionesEscuela', async (data) => { todasLasAsignaciones = data || []; renderAgenda(); });
-            dataManager.onSnapshot('alumnosEscuela', async (data) => { todosLosAlumnos = data || []; renderAgenda(); });
-
-            document.getElementById('addStudentForm').addEventListener('submit', addStudentToClass);
-        };
-
-        async function loadData() {
-            [todasLasClases, todasLasAsignaciones, todosLosAlumnos] = await Promise.all([
-                dataManager.get('clasesEscuela'),
-                dataManager.get('asignacionesEscuela'),
-                dataManager.get('alumnosEscuela')
-            ]);
-        }
-
-        function renderAgenda() {
-            agendaContainer.innerHTML = '';
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-
-            for (let i = 0; i < 7; i++) {
-                const fecha = new Date(hoy);
-                fecha.setDate(hoy.getDate() + i);
-                const fechaISO = fecha.toISOString().split('T')[0];
-                const diaSemanaNum = fecha.getDay();
-                const diaSemanaNombre = Object.keys(ordenDias).find(key => ordenDias[key] === diaSemanaNum);
-
-                const daySection = document.createElement('div');
-                daySection.className = 'day-section';
-
-                const dayHeader = document.createElement('h3');
-                dayHeader.textContent = fecha.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-                daySection.appendChild(dayHeader);
-
-                // 1. Obtener clases que tienen un horario regular para este día de la semana.
-                const clasesProgramadasRegularmente = todasLasClases.filter(c => {
-                    if (c.tipo === 'unDia') return c.diaSemana === diaSemanaNombre;
-                    if (c.tipo === 'variosDias' && c.horarios) return Object.keys(c.horarios).includes(diaSemanaNombre);
-                    return false;
-                });
-
-                // 2. Obtener los IDs de las clases que tienen alumnos asignados para la fecha (aunque no sea su día habitual).
-                const idsClasesConAlumnosHoy = [...new Set(todasLasAsignaciones
-                    .filter(a => a.fecha === fechaISO)
-                    .map(a => a.claseId))];
-                const clasesConAlumnosHoy = idsClasesConAlumnosHoy.map(id => todasLasClases.find(c => c.id === id)).filter(Boolean);
-
-                // 3. Unir ambas listas y eliminar duplicados para obtener la lista final de clases del día.
-                const clasesDelDia = [...new Map([...clasesProgramadasRegularmente, ...clasesConAlumnosHoy].map(item => [item['id'], item])).values()];
-
-                if (clasesDelDia.length === 0) {
-                    daySection.innerHTML += '<p class="no-clases">No hay clases programadas para este día.</p>';
-                } else {
-                    clasesDelDia.forEach(clase => {
-                        const hora = (clase.tipo === 'unDia') ? clase.hora : (clase.horarios ? clase.horarios[diaSemanaNombre] : 'N/A');
-                        const alumnosEnClase = todasLasAsignaciones.filter(a => a.claseId === clase.id && a.fecha === fechaISO);
-
-                        const card = document.createElement('div');
-                        card.className = 'clase-card';
-                        card.innerHTML = `
-                            <div class="clase-info">
-                                <h4>${hora}hs - ${clase.nivel || 'Clase'}</h4>
-                                <p>${clase.duracion} | Máx. ${clase.maxAlumnos} alumnos</p>
-                            </div>
-                            <div class="alumnos-list">
-                                <h5>Alumnos (${alumnosEnClase.length}):</h5>
-                                ${alumnosEnClase.length > 0 ? alumnosEnClase.map(a => `<span class="alumno-tag">${a.alumno}</span>`).join('') : '<span style="font-size:0.85em; color:#7f8c8d;">Clase vacía</span>'}
-                            </div>
-                            <button class="btn-add-student" onclick="openModal(${clase.id}, '${fechaISO}', '${hora}', '${clase.nivel}')">Añadir Alumno</button>
-                        `;
-                        daySection.appendChild(card);
-                    });
-                }
-                agendaContainer.appendChild(daySection);
-            }
-        }
-
-        function openModal(claseId, fecha, hora, nivel) {
-            document.getElementById('modalClaseId').value = claseId;
-            document.getElementById('modalClaseFecha').value = fecha;
-            document.getElementById('modalClaseInfo').textContent = `Clase: ${nivel} a las ${hora}hs del ${new Date(fecha.includes('T') ? fecha : fecha + 'T12:00:00').toLocaleDateString('es-ES')}`;
-
-            const alumnosAsignadosEnFecha = todasLasAsignaciones.filter(a => a.fecha === fecha).map(a => a.alumno);
-            const alumnosDisponibles = todosLosAlumnos.filter(a => a.estado === 'Activo' && !alumnosAsignadosEnFecha.includes(`${a.nombre} ${a.apellido}`));
-
-            const select = document.getElementById('modalAlumnoSelect');
-            select.innerHTML = '<option value="">-- Selecciona un alumno --</option>';
-            alumnosDisponibles.forEach(a => {
-                select.innerHTML += `<option value="${a.nombre} ${a.apellido}">${a.nombre} ${a.apellido}</option>`;
-            });
-
-            document.getElementById('addStudentModal').style.display = 'block';
-        }
-
-        function closeModal() {
-            document.getElementById('addStudentModal').style.display = 'none';
-        }
-
-        async function addStudentToClass(e) {
-            e.preventDefault();
-            const claseId = parseInt(document.getElementById('modalClaseId').value);
-            const fecha = document.getElementById('modalClaseFecha').value;
-            const alumnoName = document.getElementById('modalAlumnoSelect').value;
-
-            if (!alumnoName) {
-                alert('Por favor, selecciona un alumno.');
-                return;
-            }
-
-            const diaSemanaNum = new Date(fecha + 'T12:00:00').getDay();
-            const diaSemanaNombre = Object.keys(ordenDias).find(key => ordenDias[key] === diaSemanaNum);
-
-            const nuevaAsignacion = {
-                id: Date.now(),
-                claseId: claseId,
-                alumno: alumnoName,
-                dia: diaSemanaNombre,
-                fecha: fecha
-            };
-
-            await dataManager.set('asignacionesEscuela', nuevaAsignacion);
-            alert('¡Alumno añadido a la clase!');
-            closeModal();
-            renderAgenda(); // Refrescar la vista
-        }
-    </script>
-</body>
-
-=======
 <!DOCTYPE html>
 <html lang="es">
 
@@ -475,8 +110,7 @@
         <div id='calendar'></div>
     </div>
 
-    <script src="firebase-config.js"></script>
-    <script src="data-manager.js?v=1.9"></script>
+    <script src="data-manager.js?v=1.5"></script>
     <script>
         const ordenDias = { "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6 };
 
@@ -500,16 +134,11 @@
                 slotMinTime: '08:00:00',
                 slotMaxTime: '22:00:00',
                 allDaySlot: false,
-                events: async function (fetchInfo, successCallback, failureCallback) {
-                    try {
-                        successCallback(await generarEventos(fetchInfo.view));
-                    } catch (error) {
-                        failureCallback(error);
-                    }
-                },
+                events: await generarEventos(),
                 eventContent: function (arg) {
                     let text = arg.event.title;
-                    if (arg.view.type.includes('timeGrid')) {
+                    // Solo añadimos los alumnos si la vista es la de día (Día/Today)
+                    if (arg.view.type === 'timeGridDay') {
                         text += '\n' + (arg.event.extendedProps.listaAlumnos || '');
                     }
                     return { domNodes: [document.createTextNode(text)] };
@@ -526,10 +155,7 @@
 
             if (dataManager.useFirebase) {
                 dataManager.onSnapshot('clasesEscuela', async () => {
-                    calendar.refetchEvents();
-                });
-                dataManager.onSnapshot('asignacionesEscuela', async () => {
-                    calendar.refetchEvents();
+                    calendar.setOption('events', await generarEventos());
                 });
             }
         });
@@ -549,74 +175,50 @@
             return `${String(finH).padStart(2, '0')}:${String(finM).padStart(2, '0')}`;
         }
 
-        async function generarEventos(view) {
+        async function generarEventos() {
             const clases = await dataManager.get('clasesEscuela') || [];
             const asignaciones = await dataManager.get('asignacionesEscuela') || [];
-            const eventosFinales = [];
-            const eventosPorFecha = new Map();
+            const eventos = [];
 
-            // 1. Crear eventos para clases con alumnos asignados
-            asignaciones.forEach(asig => {
-                const clase = clases.find(c => c.id === asig.claseId);
-                if (!clase) return;
+            clases.forEach(c => {
+                // Obtener los nombres de los alumnos y sus caballos asignados
+                const listaAlumnos = asignaciones
+                    .filter(a => a.claseId == c.id).map(a => `• ${a.alumno}`).join('\n');
 
-                const hora = (clase.tipo === 'unDia') ? clase.hora : (clase.horarios ? clase.horarios[asig.dia] : '12:00');
-                const claveEvento = `${asig.claseId}-${asig.fecha}`;
-
-                if (eventosPorFecha.has(claveEvento)) {
-                    const eventoExistente = eventosPorFecha.get(claveEvento);
-                    eventoExistente.extendedProps.listaAlumnos += `\n• ${asig.alumno}`;
-                    const numAlumnos = eventoExistente.extendedProps.listaAlumnos.split('\n').length;
-                    eventoExistente.title = `${(clase.nivel || 'Clase').toUpperCase()} (${numAlumnos} alumnos)`;
-                } else {
-                    eventosPorFecha.set(claveEvento, {
-                        id: claveEvento,
-                        title: `${(clase.nivel || 'Clase').toUpperCase()} (1 alumno)`,
-                        start: `${asig.fecha}T${hora}`,
-                        end: `${asig.fecha}T${calcularHoraFin(hora, clase.duracion)}`,
+                if (c.tipo === 'unDia') {
+                    const diaNum = ordenDias[c.diaSemana];
+                    eventos.push({
+                        title: c.nivel.toUpperCase(),
+                        daysOfWeek: [diaNum],
+                        startTime: c.hora,
+                        endTime: calcularHoraFin(c.hora, c.duracion),
                         extendedProps: {
-                            listaAlumnos: `• ${asig.alumno}`,
-                            claseId: clase.id
+                            listaAlumnos: listaAlumnos || '(Sin alumnos asignados)',
+                            claseId: c.id
                         },
-                        backgroundColor: (clase.nivel || '').includes('Iniciación') ? '#27ae60' : (clase.nivel || '').includes('Avanzado') ? '#e74c3c' : '#3498db',
-                        borderColor: (clase.nivel || '').includes('Iniciación') ? '#27ae60' : (clase.nivel || '').includes('Avanzado') ? '#e74c3c' : '#3498db'
+                        backgroundColor: c.nivel.includes('Iniciación') ? '#27ae60' : c.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db'
+                    });
+                } else if (c.tipo === 'variosDialas' && c.horarios) {
+                    Object.entries(c.horarios).forEach(([dia, hora]) => {
+                        const diaNum = ordenDias[dia];
+                        eventos.push({
+                            title: c.nivel.toUpperCase(),
+                            daysOfWeek: [diaNum],
+                            startTime: hora,
+                            endTime: calcularHoraFin(hora, c.duracion),
+                            extendedProps: {
+                                listaAlumnos: listaAlumnos || '(Sin alumnos asignados)',
+                                claseId: c.id
+                            },
+                            backgroundColor: c.nivel.includes('Iniciación') ? '#27ae60' : c.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db'
+                        });
                     });
                 }
             });
-
-            // 2. Crear eventos recurrentes "Vacíos" solo para las vistas de semana y día.
-            // La vista de mes no maneja bien los eventos de fondo recurrentes.
-            clases.forEach(clase => {
-                const diasClase = (clase.tipo === 'unDia') ? { [clase.diaSemana]: clase.hora } : (clase.horarios || {});
-                Object.entries(diasClase).forEach(([dia, hora]) => {
-                    eventosFinales.push({
-                        id: `recurrent-${clase.id}-${dia}`,
-                        title: `${(clase.nivel || 'Clase').toUpperCase()} (Vacía)`,
-                        startTime: hora,
-                        endTime: calcularHoraFin(hora, clase.duracion),
-                        daysOfWeek: [ordenDias[dia]],
-                        display: 'background',
-                        color: '#e9ecef',
-                        classNames: ['fc-event-background-empty'],
-                        overlap: true,
-                    });
-                });
-            });
-
-            return [...eventosFinales, ...Array.from(eventosPorFecha.values())];
+            return eventos;
         }
 
     </script>
-    <style>
-        /* Estilo para los eventos de fondo (clases vacías) */
-        .fc-event-background-empty .fc-event-title {
-            color: #6c757d !important;
-            font-style: italic;
-            font-weight: bold;
-            text-align: center;
-        }
-    </style>
 </body>
 
->>>>>>> be4102565c74ea41e0999c39a6bb667d91a2dd94
 </html>

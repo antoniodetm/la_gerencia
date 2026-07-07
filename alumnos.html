@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="es">
 
@@ -471,9 +470,7 @@
                     { id: 2, nombre: 'Intermedio' },
                     { id: 3, nombre: 'Avanzado' }
                 ];
-                for (const nivel of niveles) {
-                    await dataManager.set('nivelesEscuela', nivel);
-                }
+                await dataManager.set('nivelesEscuela', niveles);
             }
 
             selectNivel.innerHTML = niveles.map(n => `<option value="${n.nombre}">${n.nombre}</option>`).join('');
@@ -514,19 +511,6 @@
                 // Añadir listeners para pagos y asistencia para que el seguimiento se actualice
                 dataManager.onSnapshot('pagosAlumnosEscuela', () => { });
                 dataManager.onSnapshot('attendanceEscuela', () => { });
-            } else {
-                setInterval(async function () {
-                    const dataAlumnos = JSON.stringify(await dataManager.get('alumnosEscuela') || []);
-                    if (dataAlumnos !== ultimaDataAlumnos) {
-                        ultimaDataAlumnos = dataAlumnos;
-                        mostrarAlumnos();
-                    }
-                    const dataNiveles = JSON.stringify(await dataManager.get('nivelesEscuela') || []);
-                    if (dataNiveles !== ultimaDataNiveles) {
-                        ultimaDataNiveles = dataNiveles;
-                        poblarNiveles();
-                    }
-                }, 500);
             }
         };
 
@@ -545,29 +529,28 @@
             const tutorNombre = (edad < 18) ? tutorNombreInput.value.trim() : '';
             const nombreCompleto = `${nombre} ${apellido}`;
 
+            let alumnos = await dataManager.get('alumnosEscuela') || [];
+
             if (id) {
-                let alumnos = await dataManager.get('alumnosEscuela') || [];
                 const alumnoAnterior = alumnos.find(a => a.id === parseInt(id));
                 const nombreAnterior = `${alumnoAnterior.nombre} ${alumnoAnterior.apellido}`;
 
-                const alumnoActualizado = { id: parseInt(id), dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre };
-                await dataManager.set('alumnosEscuela', alumnoActualizado);
+                alumnos = alumnos.map(a => a.id === parseInt(id) ? { id: a.id, dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre } : a);
 
                 // Actualizar referencias en asignaciones
                 if (nombreAnterior !== nombreCompleto) {
                     let asignaciones = await dataManager.get('asignacionesEscuela') || [];
-                    const asignacionesAfectadas = asignaciones.filter(a => a.alumno === nombreAnterior);
-                    for (const asig of asignacionesAfectadas) {
-                        await dataManager.set('asignacionesEscuela', { ...asig, alumno: nombreCompleto });
-                    }
+                    asignaciones = asignaciones.map(a => a.alumno === nombreAnterior ? { ...a, alumno: nombreCompleto } : a);
+                    await dataManager.set('asignacionesEscuela', asignaciones);
                 }
+
                 alert("¡Alumno actualizado!");
             } else {
-                const nuevoAlumno = { id: Date.now(), dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre };
-                await dataManager.set('alumnosEscuela', nuevoAlumno);
+                alumnos.push({ id: Date.now(), dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre });
                 alert("¡Alumno guardado!");
             }
 
+            await dataManager.set('alumnosEscuela', alumnos);
             restablecerFormulario();
             mostrarAlumnos();
         });
@@ -596,11 +579,12 @@
                 clasesUsadas: 0
             };
 
-            await dataManager.set('pagosAlumnosEscuela', nuevoPago);
+            let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
+            pagos.push(nuevoPago);
+            await dataManager.set('pagosAlumnosEscuela', pagos);
 
             // Recargar la tabla de productos del modal
             await mostrarProductosDeAlumno(alumnoId);
-            formAddProductoAlumno.reset();
         });
 
         async function mostrarAlumnos() {
@@ -667,16 +651,17 @@
 
         async function eliminarAlumno(id) {
             if (confirm('¿Borrar alumno?')) {
-                const alumnos = await dataManager.get('alumnosEscuela') || [];
-                const alumno = alumnos.find(a => a.id === id);
-                if (alumno) {
-                    const nombreCompleto = `${alumno.nombre} ${alumno.apellido}`;
-                    await dataManager.delete('alumnosEscuela', id);
-                    const asignaciones = await dataManager.get('asignacionesEscuela') || [];
-                    for (const asig of asignaciones.filter(a => a.alumno === nombreCompleto)) {
-                        await dataManager.delete('asignacionesEscuela', asig.id);
-                    }
-                }
+                let alumnos = await dataManager.get('alumnosEscuela') || [];
+                const alumnoAEliminar = alumnos.find(a => a.id === id);
+                const nombreCompleto = `${alumnoAEliminar.nombre} ${alumnoAEliminar.apellido}`;
+
+                alumnos = alumnos.filter(a => a.id !== id);
+                await dataManager.set('alumnosEscuela', alumnos);
+
+                // Eliminar referencias en asignaciones
+                let asignaciones = await dataManager.get('asignacionesEscuela') || [];
+                asignaciones = asignaciones.filter(a => a.alumno !== nombreCompleto);
+                await dataManager.set('asignacionesEscuela', asignaciones);
 
                 if (alumnoIdInput.value == id) restablecerFormulario();
                 mostrarAlumnos();
@@ -762,21 +747,13 @@
             const a = alumnos.find(item => item.id === id);
             if (!a) return;
 
-            // Forzar la recarga de los datos más recientes para asegurar consistencia
-            const [asistencia, asignaciones, clases, pagos] = await Promise.all([
-                dataManager.get('attendanceEscuela'),
-                dataManager.get('asignacionesEscuela'),
-                dataManager.get('clasesEscuela'),
-                dataManager.get('pagosAlumnosEscuela')
-            ]);
-
             const nombreCompleto = `${a.nombre} ${a.apellido}`;
+            const asistencia = await dataManager.get('attendanceEscuela') || [];
+            const pagos = await dataManager.get('pagosAlumnosEscuela') || [];
             const misPagos = pagos.filter(p => p.alumnoId == id);
 
             let html = `<p><strong>Alumno:</strong> ${nombreCompleto}</p>`;
             html += `<hr style="border:0; border-top:1px solid #eee; margin:15px 0;">`;
-
-            const ordenDias = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6, "Domingo": 7 };
 
             // 1. Progreso de Bonos y Clases Sueltas
             html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">📈 Progreso de Bonos</h4>`;
@@ -796,7 +773,7 @@
 
                 bonosOrdenados.forEach(pago => {
                     const totalClases = pago.totalClases || 0;
-                    const clasesUsadas = pago.clasesUsadas || 0;
+                    const clasesUsadas = pago.clasesUsadas || 0; // Usar el valor guardado en la base de datos
                     const clasesRestantes = totalClases - clasesUsadas;
                     const statusColor = clasesRestantes > 0 ? '#27ae60' : '#c0392b';
                     const progresoHtml = `<b>Usadas: ${clasesUsadas}</b> / <b style="color:${statusColor};">Restantes: ${clasesRestantes}</b>`;
@@ -809,69 +786,8 @@
                 html += `</tbody></table>`;
             }
 
-            // 2. Clases pendientes de pago (asistencias sin bono)
-            let misAsistencias = asistencia.filter(att => att.alumnoId == id && att.asistio);
-            const asistenciasSinBonoAsociado = misAsistencias.filter(att => !att.pagoId).length;
-
-            // Las clases pendientes de pago son aquellas asistencias que no tienen un bono asociado.
-            const clasesPendientesDePago = asistenciasSinBonoAsociado;
-
-
-            html += `<h4 style="color:#e74c3c; margin-top: 25px; margin-bottom: 10px;">💸 Clases Pendientes de Pago</h4>`;
-            // Mostramos el aviso si hay clases pendientes de pago Y el alumno no tiene bonos activos con clases restantes
-            // para cubrir esas clases.
-            const tieneBonosActivos = bonosYClases.some(p => (p.totalClases - (p.clasesUsadas || 0)) > 0);
-            if (clasesPendientesDePago > 0 && !tieneBonosActivos) {
-                html += `<p style="background: #fadbd8; color: #c0392b; padding: 10px; border-radius: 4px; font-weight: bold;">
-                    Este alumno tiene ${clasesPendientesDePago} clase(s) suelta(s) pendiente(s) de abonar.
-                </p>`;
-            } else {
-                html += `<p style="color:#888; font-style:italic; text-align:center;">El alumno está al día con sus pagos de clases.</p>`;
-            }
-
-            // 3. Clases Reservadas (Asignaciones)
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-
-            // Obtener las fechas de las clases a las que el alumno ha asistido
-            const fechasAsistidas = new Set(
-                misAsistencias.map(att => att.fechaClase)
-            );
-
-            const misAsignacionesFuturas = asignaciones
-                .filter(asig => {
-                    if (asig.alumno !== nombreCompleto) return false;
-
-                    // Ahora 'asig.fecha' viene de 'asignaciones.html' con el formato 'YYYY-MM-DD'
-                    if (!asig.fecha) return false; // Ignorar asignaciones antiguas sin fecha
-                    const fechaAsignacion = new Date(asig.fecha + 'T12:00:00'); // Asumiendo que 'asig.fecha' existe y es 'YYYY-MM-DD'
-
-                    // No mostrar si la fecha ya pasó O si ya asistió a una clase en esa fecha.
-                    return fechaAsignacion >= hoy && !fechasAsistidas.has(asig.fecha);
-                })
-                .map(asig => {
-                    const claseInfo = clases.find(c => c.id === asig.claseId);
-                    return { ...asig, claseInfo };
-                })
-                .filter(asig => asig.claseInfo) // Filtrar por si una clase fue eliminada
-                .sort((a, b) => new Date(a.fecha) - new Date(b.fecha)); // Ordenar por fecha
-
-            html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">🗓️ Clases Reservadas</h4>`;
-            if (misAsignacionesFuturas.length > 0) {
-                html += misAsignacionesFuturas.map(asig => {
-                    const clase = asig.claseInfo;
-                    const hora = (clase.tipo === 'unDia') ? clase.hora : (clase.horarios ? clase.horarios[asig.dia] : 'N/A');
-                    const fechaClaseStr = new Date(asig.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-                    return `<span style="display:inline-block; background:#eaf2f8; padding:3px 8px; margin:3px; border-radius:3px; font-size:0.9em; border:1px solid #aed6f1;">
-                        <b>${fechaClaseStr}</b> a las ${hora}hs <small style="color:#5499c7;">(${clase.nivel || 'N/A'})</small>
-                    </span>`;
-                }).join('');
-            } else {
-                html += `<p style="color:#888; font-style:italic; text-align:center;">Este alumno no está apuntado a ninguna clase fija.</p>`;
-            }
-
-            // 4. Historial de Asistencia
-            misAsistencias = misAsistencias.sort((x, y) => new Date(y.fechaClase) - new Date(x.fechaClase));
+            // 2. Historial de Asistencia
+            const misAsistencias = asistencia.filter(att => att.alumnoId == id && att.asistio).sort((x, y) => new Date(y.fechaClase) - new Date(x.fechaClase));
             html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">✔️ Historial de Asistencia (${misAsistencias.length} clases)</h4>`;
             if (misAsistencias.length > 0) {
                 html += misAsistencias.map(att => `<span style="display:inline-block; background:#f0f0f0; padding:2px 5px; margin:2px; border-radius:3px; font-size:0.9em; border:1px solid #ddd;">${new Date(att.fechaClase + 'T12:00:00').toLocaleDateString('es-ES')} <small style="color:#d35400;">(🐴 ${att.caballo || '?'})</small></span>`).join('');
@@ -939,11 +855,9 @@
 
         async function eliminarPago(pagoId, alumnoId) {
             if (confirm('¿Eliminar este registro de compra?')) {
-                await dataManager.delete('pagosAlumnosEscuela', pagoId);
-                // Si el modal de seguimiento está abierto para este alumno, lo refresca.
-                if (document.getElementById('modalSeguimiento').style.display === 'block' && document.getElementById('productoAlumnoId').value == alumnoId) {
-                    await verSeguimiento(alumnoId);
-                }
+                let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
+                pagos = pagos.filter(p => p.id !== pagoId);
+                await dataManager.set('pagosAlumnosEscuela', pagos);
                 await mostrarProductosDeAlumno(alumnoId);
             }
         }
@@ -958,977 +872,9 @@
     </script>
 
     <!-- Scripts de Firebase -->
-    <script src="firebase-config.js"></script>
-    <script src="data-manager.js?v=1.9"></script>
+    <script src="data-manager.js?v=1.5"></script>
 
 
 </body>
 
-=======
-<!DOCTYPE html>
-<html lang="es">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro - Alumnos</title>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f1ea;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .nav-bar {
-            text-align: center;
-            margin-bottom: 25px;
-            background: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        .nav-link {
-            display: inline-block;
-            margin: 0 15px;
-            color: #555;
-            font-weight: bold;
-            text-decoration: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-
-        .nav-link:hover {
-            background-color: #f0ede5;
-            color: #000;
-        }
-
-        .nav-active {
-            background-color: #4a3728;
-            color: white !important;
-        }
-
-        .container {
-            max-width: 650px;
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            margin: 0 auto 30px auto;
-        }
-
-        h2,
-        h3 {
-            color: #4a3728;
-            border-bottom: 2px solid #d4c5b9;
-            padding-bottom: 8px;
-        }
-
-        .form-row {
-            display: flex;
-            gap: 15px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-            flex: 1;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        input,
-        select,
-        textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-            font-family: inherit;
-        }
-
-        button {
-            background-color: #5c674e;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        button:hover {
-            background-color: #464f3c;
-        }
-
-        .btn-update {
-            background-color: #2980b9;
-        }
-
-        .btn-update:hover {
-            background-color: #1f618d;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background: white;
-        }
-
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #4a3728;
-            color: white;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        .actions-cell {
-            display: flex;
-            gap: 5px;
-        }
-
-        .actions-btn {
-            padding: 6px 10px;
-            font-size: 12px;
-            margin: 0;
-            width: auto;
-        }
-
-        .btn-edit {
-            background-color: #f39c12;
-        }
-
-        .btn-edit:hover {
-            background-color: #d68910;
-        }
-
-        .btn-delete {
-            background-color: #c0392b;
-        }
-
-        .btn-delete:hover {
-            background-color: #a33226;
-        }
-
-        .btn-view {
-            background-color: #3498db;
-        }
-
-        .btn-view:hover {
-            background-color: #2980b9;
-        }
-
-        .btn-history {
-            background-color: #9b59b6;
-        }
-
-        .btn-history:hover {
-            background-color: #8e44ad;
-        }
-
-        .btn-products {
-            background-color: #27ae60;
-        }
-
-        .btn-products:hover {
-            background-color: #229954;
-        }
-
-        .btn-seguimiento {
-            background-color: #3498db;
-        }
-
-        .btn-seguimiento:hover {
-            background-color: #2980b9;
-        }
-
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-
-        .modal-content {
-            background-color: #fff;
-            margin: 10% auto;
-            padding: 25px;
-            border-radius: 8px;
-            width: 500px;
-            max-width: 90%;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            position: relative;
-            text-align: center;
-        }
-
-        .modal-content p {
-            margin: 10px 0;
-            font-size: 1.1em;
-        }
-
-        .close {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 24px;
-            cursor: pointer;
-            color: #888;
-        }
-
-        .close:hover {
-            color: #000;
-        }
-    </style>
-</head>
-
-<body>
-
-    <div class="nav-bar">
-        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
-        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
-        <a href="clases.html" class="nav-link">📅 Clases</a>
-        <a href="alumnos.html" class="nav-link nav-active">👤 Alumnos</a>
-        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
-        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
-        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
-        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
-        <a href="bases.html" class="nav-link">🏆 Bases</a>
-    </div>
-
-    <div class="container" style="margin-bottom: 20px; border-left: 5px solid #3498db;">
-        <h3 style="margin-top: 0; color: #3498db; border-bottom: none; padding-bottom: 0;">🔍 Buscar Alumno Existente
-        </h3>
-        <input type="text" id="buscadorAlumno" placeholder="Buscar por DNI, Apellidos o Teléfono..."
-            oninput="mostrarAlumnos()" style="margin-top: 10px; border: 2px solid #3498db; font-size: 1.1em;">
-    </div>
-
-    <div class="container">
-        <h2>👤 Registro de Alumnos</h2>
-        <form id="alumnoForm">
-            <input type="hidden" id="alumnoId">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="dni" id="dniLabel">DNI:</label>
-                    <input type="text" id="dni" required placeholder="Ej. 12345678A">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="nombre">Nombre:</label>
-                    <input type="text" id="nombre" required placeholder="Ej. Juan">
-                </div>
-                <div class="form-group">
-                    <label for="apellido">Apellidos:</label>
-                    <input type="text" id="apellido" required placeholder="Ej. Pérez">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="edad">Edad:</label>
-                    <input type="number" id="edad" min="3" required placeholder="Ej. 14">
-                </div>
-                <div class="form-group">
-                    <label for="nivel">Nivel:</label>
-                    <select id="nivel" required>
-                        <option value="">Cargando...</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-row" id="tutorRow" style="display: none;">
-                <div class="form-group">
-                    <label for="tutorNombre" id="tutorNombreLabel">Nombre y Apellidos del Tutor:</label>
-                    <input type="text" id="tutorNombre" placeholder="Ej. Padre/Madre/Tutor legal">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="telefono" id="telefonoLabel">Teléfono:</label>
-                    <input type="tel" id="telefono" required placeholder="Ej. 600123456">
-                </div>
-                <div class="form-group">
-                    <label for="estado">Estado para Asignación:</label>
-                    <select id="estado" required>
-                        <option value="Activo">✅ Activo (Elegible)</option>
-                        <option value="Inactivo">❌ Inactivo (No asignable)</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="notaMedica">Nota Médica / Alergias:</label>
-                <textarea id="notaMedica"
-                    placeholder="Indica aquí cualquier condición médica, alergias, medicación o información importante para el profesor..."></textarea>
-            </div>
-            <div class="form-group">
-                <label for="notaAlimentaria">Nota Alimentaria:</label>
-                <textarea id="notaAlimentaria"
-                    placeholder="Indica aquí intolerancias, dietas específicas o necesidades alimentarias..."></textarea>
-            </div>
-            <button type="submit" id="submitBtn">Registrar Alumno</button>
-        </form>
-    </div>
-
-    <div class="container" style="max-width: 800px;">
-        <h3>📋 Alumnos Registrados</h3>
-        <table id="tablaAlumnos">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Apellidos</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-
-    <!-- Modal para ver Ficha -->
-    <div id="modalFicha" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="cerrarFicha()">&times;</span>
-            <h3 style="margin-top:0; color:#4a3728;">📄 Ficha de Contacto</h3>
-            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
-            <div id="fichaDetalles"></div>
-            <button onclick="cerrarFicha()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
-        </div>
-    </div>
-
-    <!-- Modal para ver Historial -->
-    <div id="modalHistorial" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="cerrarHistorial()">&times;</span>
-            <h3 style="margin-top:0; color:#9b59b6;">📜 Historial de Cursos</h3>
-            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
-            <div id="historialDetalles" style="text-align: left; max-height: 400px; overflow-y: auto;"></div>
-            <button onclick="cerrarHistorial()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
-        </div>
-    </div>
-
-    <!-- Modal para Seguimiento -->
-    <div id="modalSeguimiento" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="cerrarSeguimiento()">&times;</span>
-            <h3 style="margin-top:0; color:#3498db;">📊 Seguimiento de Clases</h3>
-            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
-            <div id="seguimientoDetalles" style="text-align: left; max-height: 400px; overflow-y: auto;"></div>
-            <button onclick="cerrarSeguimiento()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
-        </div>
-    </div>
-
-    <!-- Modal para Productos/Pagos -->
-    <div id="modalProductos" class="modal">
-        <div class="modal-content" style="width: 700px; max-width: 95%;">
-            <span class="close" onclick="cerrarModalProductos()">&times;</span>
-            <h3 style="margin-top:0; color:#27ae60;">🛍️ Productos y Pagos de <span id="nombreAlumnoProductos"></span>
-            </h3>
-            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
-
-            <!-- Formulario para añadir producto -->
-            <form id="formAddProductoAlumno" style="text-align: left;">
-                <input type="hidden" id="productoAlumnoId">
-                <div class="form-row">
-                    <div class="form-group" style="flex: 3;">
-                        <label for="selectProducto">Añadir Producto:</label>
-                        <select id="selectProducto" required></select>
-                    </div>
-                    <div class="form-group" style="flex: 2;">
-                        <label for="fechaCompraProducto">Fecha Compra:</label>
-                        <input type="date" id="fechaCompraProducto" required>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <button type="submit" style="margin-top: 25px; background-color: #27ae60;">Añadir</button>
-                    </div>
-                </div>
-            </form>
-
-            <!-- Tabla de productos del alumno -->
-            <div id="productosAlumnoDetalles"
-                style="text-align: left; max-height: 300px; overflow-y: auto; margin-top: 20px;"></div>
-
-            <button onclick="cerrarModalProductos()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
-        </div>
-    </div>
-
-    <script>
-        const form = document.getElementById('alumnoForm');
-        const tabla = document.getElementById('tablaAlumnos').getElementsByTagName('tbody')[0];
-        const submitBtn = document.getElementById('submitBtn');
-        const alumnoIdInput = document.getElementById('alumnoId');
-        const edadInput = document.getElementById('edad');
-        const tutorRow = document.getElementById('tutorRow');
-        const tutorNombreInput = document.getElementById('tutorNombre');
-        const dniLabel = document.getElementById('dniLabel');
-        const telefonoLabel = document.getElementById('telefonoLabel');
-        const dniInput = document.getElementById('dni');
-        const telefonoInput = document.getElementById('telefono');
-
-        // Elementos del modal de productos
-        const formAddProductoAlumno = document.getElementById('formAddProductoAlumno');
-        const fechaCompraProductoInput = document.getElementById('fechaCompraProducto');
-
-        function actualizarCamposTutor() {
-            const edad = parseInt(edadInput.value);
-            if (!isNaN(edad) && edad < 18) {
-                tutorRow.style.display = 'flex';
-                tutorNombreInput.required = true;
-                dniLabel.textContent = 'DNI del Tutor:';
-                telefonoLabel.textContent = 'Teléfono del Tutor:';
-                dniInput.placeholder = 'Ej. DNI del Tutor';
-                telefonoInput.placeholder = 'Ej. Teléfono del Tutor';
-            } else {
-                tutorRow.style.display = 'none';
-                tutorNombreInput.required = false;
-                tutorNombreInput.value = '';
-                dniLabel.textContent = 'DNI:';
-                telefonoLabel.textContent = 'Teléfono:';
-                dniInput.placeholder = 'Ej. 12345678A';
-                telefonoInput.placeholder = 'Ej. 600123456';
-            }
-        }
-
-        edadInput.addEventListener('input', actualizarCamposTutor);
-        edadInput.addEventListener('change', actualizarCamposTutor);
-
-        let ultimaDataAlumnos = JSON.stringify(JSON.parse(localStorage.getItem('alumnosEscuela')) || []);
-        let ultimaDataNiveles = JSON.stringify([]);
-
-        async function poblarNiveles() {
-            const selectNivel = document.getElementById('nivel');
-            const valorActual = selectNivel.value;
-
-            let niveles = await dataManager.get('nivelesEscuela') || [];
-            if (niveles.length === 0) {
-                niveles = [
-                    { id: 1, nombre: 'Iniciación' },
-                    { id: 2, nombre: 'Intermedio' },
-                    { id: 3, nombre: 'Avanzado' }
-                ];
-                for (const nivel of niveles) {
-                    await dataManager.set('nivelesEscuela', nivel);
-                }
-            }
-
-            selectNivel.innerHTML = niveles.map(n => `<option value="${n.nombre}">${n.nombre}</option>`).join('');
-            if (valorActual && niveles.some(n => n.nombre === valorActual)) {
-                selectNivel.value = valorActual;
-            }
-        }
-
-        window.onload = async function () {
-            // Esperar a que DataManager se inicialice
-            let intentos = 0;
-            while (!dataManager.initialized && intentos < 20) {
-                await new Promise(r => setTimeout(r, 100));
-                intentos++;
-            }
-
-            console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
-
-            await poblarNiveles();
-            mostrarAlumnos();
-
-            // Escuchar cambios en tiempo real de Firebase o localStorage
-            if (dataManager.useFirebase) {
-                dataManager.onSnapshot('alumnosEscuela', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataAlumnos) {
-                        ultimaDataAlumnos = dataActual;
-                        mostrarAlumnos();
-                    }
-                });
-                dataManager.onSnapshot('nivelesEscuela', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataNiveles) {
-                        ultimaDataNiveles = dataActual;
-                        poblarNiveles();
-                    }
-                });
-                // Añadir listeners para pagos y asistencia para que el seguimiento se actualice
-                dataManager.onSnapshot('pagosAlumnosEscuela', () => { });
-                dataManager.onSnapshot('attendanceEscuela', () => { });
-            } else {
-                setInterval(async function () {
-                    const dataAlumnos = JSON.stringify(await dataManager.get('alumnosEscuela') || []);
-                    if (dataAlumnos !== ultimaDataAlumnos) {
-                        ultimaDataAlumnos = dataAlumnos;
-                        mostrarAlumnos();
-                    }
-                    const dataNiveles = JSON.stringify(await dataManager.get('nivelesEscuela') || []);
-                    if (dataNiveles !== ultimaDataNiveles) {
-                        ultimaDataNiveles = dataNiveles;
-                        poblarNiveles();
-                    }
-                }, 500);
-            }
-        };
-
-        form.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const id = alumnoIdInput.value;
-            const dni = document.getElementById('dni').value.trim();
-            const nombre = document.getElementById('nombre').value.trim();
-            const apellido = document.getElementById('apellido').value.trim();
-            const edad = parseInt(document.getElementById('edad').value);
-            const nivel = document.getElementById('nivel').value;
-            const estado = document.getElementById('estado').value;
-            const telefono = document.getElementById('telefono').value.trim();
-            const notaMedica = document.getElementById('notaMedica').value.trim();
-            const notaAlimentaria = document.getElementById('notaAlimentaria').value.trim();
-            const tutorNombre = (edad < 18) ? tutorNombreInput.value.trim() : '';
-            const nombreCompleto = `${nombre} ${apellido}`;
-
-            if (id) {
-                let alumnos = await dataManager.get('alumnosEscuela') || [];
-                const alumnoAnterior = alumnos.find(a => a.id === parseInt(id));
-                const nombreAnterior = `${alumnoAnterior.nombre} ${alumnoAnterior.apellido}`;
-
-                const alumnoActualizado = { id: parseInt(id), dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre };
-                await dataManager.set('alumnosEscuela', alumnoActualizado);
-
-                // Actualizar referencias en asignaciones
-                if (nombreAnterior !== nombreCompleto) {
-                    let asignaciones = await dataManager.get('asignacionesEscuela') || [];
-                    const asignacionesAfectadas = asignaciones.filter(a => a.alumno === nombreAnterior);
-                    for (const asig of asignacionesAfectadas) {
-                        await dataManager.set('asignacionesEscuela', { ...asig, alumno: nombreCompleto });
-                    }
-                }
-                alert("¡Alumno actualizado!");
-            } else {
-                const nuevoAlumno = { id: Date.now(), dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre };
-                await dataManager.set('alumnosEscuela', nuevoAlumno);
-                alert("¡Alumno guardado!");
-            }
-
-            restablecerFormulario();
-            mostrarAlumnos();
-        });
-
-        formAddProductoAlumno.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const alumnoId = parseInt(document.getElementById('productoAlumnoId').value);
-            const selectProducto = document.getElementById('selectProducto');
-            const productoSeleccionado = selectProducto.options[selectProducto.selectedIndex];
-            const productoId = parseInt(productoSeleccionado.value);
-            const productoNombre = productoSeleccionado.dataset.nombre;
-            const productoTipo = productoSeleccionado.dataset.tipo;
-            const productoNumClases = productoSeleccionado.dataset.numclases;
-            const productoPrecio = productoSeleccionado.dataset.precio;
-            const fechaCompra = fechaCompraProductoInput.value;
-
-            if (!alumnoId || !productoId || !fechaCompra) {
-                alert('Por favor, complete todos los campos.');
-                return;
-            }
-
-            const nuevoPago = {
-                id: Date.now(), alumnoId, productoId, productoNombre, productoPrecio, fechaCompra,
-                tipo: productoTipo,
-                totalClases: productoTipo === 'Bono' || productoTipo === 'Clase Suelta' ? parseInt(productoNumClases) : null,
-                clasesUsadas: 0
-            };
-
-            await dataManager.set('pagosAlumnosEscuela', nuevoPago);
-
-            // Recargar la tabla de productos del modal
-            await mostrarProductosDeAlumno(alumnoId);
-            formAddProductoAlumno.reset();
-        });
-
-        async function mostrarAlumnos() {
-            const searchInput = document.getElementById('buscadorAlumno')?.value || '';
-            // Función para normalizar texto: quita mayúsculas y acentos/tildes
-            const normalizar = (texto) => (texto || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            const filtro = normalizar(searchInput);
-
-            const alumnos = await dataManager.get('alumnosEscuela') || [];
-            tabla.innerHTML = '';
-
-            const alumnosFiltrados = alumnos.filter(a => {
-                if (!filtro) return true;
-                return normalizar(a.dni).includes(filtro) ||
-                    normalizar(a.nombre).includes(filtro) ||
-                    normalizar(a.apellido).includes(filtro) ||
-                    normalizar(a.telefono).includes(filtro);
-            });
-
-            if (alumnosFiltrados.length === 0) {
-                const mensaje = filtro ? 'No se encontraron coincidencias para la búsqueda.' : 'No hay alumnos registrados.';
-                tabla.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">${mensaje}</td></tr>`;
-                return;
-            }
-            alumnosFiltrados.forEach(a => {
-                const fila = tabla.insertRow();
-                const badgeColor = (a.estado || 'Activo') === 'Activo' ? '#d5f4e6; color:#27ae60' : '#fadbd8; color:#c0392b';
-                fila.innerHTML = `
-                <td>${a.nombre}</td><td>${a.apellido}</td>
-                <td><span style="padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; background: ${badgeColor};">${a.estado || 'Activo'}</span></td>
-                <td class="actions-cell">
-                    <button class="actions-btn btn-view" onclick="verFicha(${a.id})">Ver ficha</button>
-                    <button class="actions-btn btn-products" onclick="abrirModalProductos(${a.id})">Productos</button>
-                    <button class="actions-btn btn-seguimiento" onclick="verSeguimiento(${a.id})">Seguimiento</button>
-                    <button class="actions-btn btn-history" onclick="verHistorial(${a.id})">Compras</button>
-                    <button class="actions-btn btn-edit" onclick="cargarAlumnoParaEditar(${a.id})">Editar</button>
-                    <button class="actions-btn btn-delete" onclick="eliminarAlumno(${a.id})">Eliminar</button>
-                </td>
-            `;
-            });
-        }
-
-        async function cargarAlumnoParaEditar(id) {
-            const alumnos = await dataManager.get('alumnosEscuela') || [];
-            const a = alumnos.find(item => item.id === id);
-            if (a) {
-                alumnoIdInput.value = a.id;
-                document.getElementById('dni').value = a.dni;
-                document.getElementById('nombre').value = a.nombre;
-                document.getElementById('apellido').value = a.apellido;
-                document.getElementById('edad').value = a.edad;
-                document.getElementById('nivel').value = a.nivel;
-                document.getElementById('estado').value = a.estado || 'Activo';
-                document.getElementById('telefono').value = a.telefono;
-                document.getElementById('notaMedica').value = a.notaMedica || '';
-                document.getElementById('notaAlimentaria').value = a.notaAlimentaria || '';
-                tutorNombreInput.value = a.tutorNombre || '';
-                actualizarCamposTutor();
-                submitBtn.textContent = 'Actualizar Alumno';
-                submitBtn.classList.add('btn-update');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        }
-
-        async function eliminarAlumno(id) {
-            if (confirm('¿Borrar alumno?')) {
-                const alumnos = await dataManager.get('alumnosEscuela') || [];
-                const alumno = alumnos.find(a => a.id === id);
-                if (alumno) {
-                    const nombreCompleto = `${alumno.nombre} ${alumno.apellido}`;
-                    await dataManager.delete('alumnosEscuela', id);
-                    const asignaciones = await dataManager.get('asignacionesEscuela') || [];
-                    for (const asig of asignaciones.filter(a => a.alumno === nombreCompleto)) {
-                        await dataManager.delete('asignacionesEscuela', asig.id);
-                    }
-                }
-
-                if (alumnoIdInput.value == id) restablecerFormulario();
-                mostrarAlumnos();
-            }
-        }
-
-        function restablecerFormulario() {
-            form.reset();
-            alumnoIdInput.value = '';
-            submitBtn.textContent = 'Registrar Alumno';
-            submitBtn.classList.remove('btn-update');
-            actualizarCamposTutor();
-        }
-
-        async function verFicha(id) {
-            const alumnos = await dataManager.get('alumnosEscuela') || [];
-            const a = alumnos.find(item => item.id === id);
-            if (a) {
-                const esMenor = parseInt(a.edad) < 18;
-                document.getElementById('fichaDetalles').innerHTML = `
-                <p><strong>DNI:</strong> ${a.dni} ${esMenor ? '(Tutor)' : ''}</p>
-                <p><strong>Nombre:</strong> ${a.nombre}</p>
-                <p><strong>Apellidos:</strong> ${a.apellido}</p>
-                <p><strong>Edad:</strong> ${a.edad}</p>
-                ${esMenor ? `<p><strong>Tutor:</strong> ${a.tutorNombre || '-'}</p>` : ''}
-                <p><strong>Nivel:</strong> ${a.nivel}</p>
-                <p><strong>Estado:</strong> ${a.estado || 'Activo'}</p>
-                <p><strong>Teléfono:</strong> ${a.telefono} ${esMenor ? '(Tutor)' : ''}</p>
-                <p><strong>Nota Médica:</strong> ${a.notaMedica || '-'}</p>
-                <p><strong>Nota Alimentaria:</strong> ${a.notaAlimentaria || '-'}</p>
-            `;
-                document.getElementById('modalFicha').style.display = 'block';
-            }
-        }
-
-        function cerrarFicha() {
-            document.getElementById('modalFicha').style.display = 'none';
-        }
-
-        async function verHistorial(id) {
-            const alumnos = await dataManager.get('alumnosEscuela') || [];
-            const a = alumnos.find(item => item.id === id);
-            if (!a) return;
-
-            // Función interna para normalizar nombres y evitar fallos por espacios triples o tabs
-            const limpiar = (t) => (t || '').trim().replace(/\s+/g, ' ');
-            const nombreCompleto = limpiar(`${a.nombre} ${a.apellido}`);
-
-            const asistencia = await dataManager.get('attendanceEscuela') || [];
-            const pagos = await dataManager.get('pagosAlumnosEscuela') || [];
-            const misPagos = pagos.filter(p => p.alumnoId === id);
-
-            let html = `<p><strong>Alumno:</strong> ${nombreCompleto}</p>`;
-            html += `<hr style="border:0; border-top:1px solid #eee; margin:15px 0;">`;
-
-            html += `<h4 style="color:#27ae60; margin-top: 0; margin-bottom: 10px;">🛍️ Historial de Compras</h4>`;
-            if (misPagos.length === 0) {
-                html += `<p style="color:#888; font-style:italic; text-align:center;">Este alumno no tiene productos registrados.</p>`;
-            } else {
-                html += `<table style="font-size: 0.85em; width:100%; border-collapse: collapse;">
-                        <thead><tr style="background:#27ae60; color:white;">
-                            <th style="padding:8px; text-align:left;">Producto / Servicio</th>
-                            <th style="padding:8px; text-align:right;">Precio</th>
-                            <th style="padding:8px; text-align:center;">Fecha Compra</th>
-                        </tr></thead>
-                        <tbody>`; const misPagosOrdenadosReciente = [...misPagos].sort((x, y) => new Date(y.fechaCompra) - new Date(x.fechaCompra));
-                misPagos.forEach(pago => {
-                    html += `<tr>
-                    <td style="padding:8px; border-bottom:1px solid #eee;">${pago.productoNombre}</td>
-                    <td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">${pago.productoPrecio} €</td>
-                    <td style="padding:8px; border-bottom:1px solid #eee; text-align:center;">${new Date(pago.fechaCompra + 'T12:00:00').toLocaleDateString('es-ES')}</td>
-                </tr>`;
-                });
-                html += `</tbody></table>`;
-            }
-
-            document.getElementById('historialDetalles').innerHTML = html;
-            document.getElementById('modalHistorial').style.display = 'block';
-        }
-
-        async function verSeguimiento(id) {
-            const alumnos = await dataManager.get('alumnosEscuela') || [];
-            const a = alumnos.find(item => item.id === id);
-            if (!a) return;
-
-            // Forzar la recarga de los datos más recientes para asegurar consistencia
-            const [asistencia, asignaciones, clases, pagos] = await Promise.all([
-                dataManager.get('attendanceEscuela'),
-                dataManager.get('asignacionesEscuela'),
-                dataManager.get('clasesEscuela'),
-                dataManager.get('pagosAlumnosEscuela')
-            ]);
-
-            const nombreCompleto = `${a.nombre} ${a.apellido}`;
-            const misPagos = pagos.filter(p => p.alumnoId == id);
-
-            let html = `<p><strong>Alumno:</strong> ${nombreCompleto}</p>`;
-            html += `<hr style="border:0; border-top:1px solid #eee; margin:15px 0;">`;
-
-            const ordenDias = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6, "Domingo": 7 };
-
-            // 1. Progreso de Bonos y Clases Sueltas
-            html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">📈 Progreso de Bonos</h4>`;
-            const bonosYClases = misPagos.filter(p => p.tipo === 'Bono' || p.tipo === 'Clase Suelta' || (p.totalClases && p.totalClases > 0));
-
-            if (bonosYClases.length === 0) {
-                html += `<p style="color:#888; font-style:italic; text-align:center;">Este alumno no ha comprado bonos o clases sueltas.</p>`;
-            } else {
-                html += `<table style="font-size: 0.85em; margin-top:10px; width:100%; border-collapse: collapse;">
-                        <thead><tr style="background:#3498db; color:white;">
-                            <th style="padding:8px; text-align:left;">Bono / Producto</th>
-                            <th style="padding:8px; text-align:center;">Progreso</th>
-                        </tr></thead>
-                        <tbody>`;
-
-                const bonosOrdenados = [...bonosYClases].sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra));
-
-                bonosOrdenados.forEach(pago => {
-                    const totalClases = pago.totalClases || 0;
-                    const clasesUsadas = pago.clasesUsadas || 0;
-                    const clasesRestantes = totalClases - clasesUsadas;
-                    const statusColor = clasesRestantes > 0 ? '#27ae60' : '#c0392b';
-                    const progresoHtml = `<b>Usadas: ${clasesUsadas}</b> / <b style="color:${statusColor};">Restantes: ${clasesRestantes}</b>`;
-
-                    html += `<tr>
-                        <td style="padding:8px; border-bottom:1px solid #eee;"><b>${pago.productoNombre}</b><br><small>Comprado: ${new Date(pago.fechaCompra + 'T12:00:00').toLocaleDateString('es-ES')}</small></td>
-                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:center; font-size:0.95em;">${progresoHtml}</td>
-                    </tr>`;
-                });
-                html += `</tbody></table>`;
-            }
-
-            // 2. Clases pendientes de pago (asistencias sin bono)
-            let misAsistencias = asistencia.filter(att => att.alumnoId == id && att.asistio);
-            const asistenciasSinBonoAsociado = misAsistencias.filter(att => !att.pagoId).length;
-
-            // Las clases pendientes de pago son aquellas asistencias que no tienen un bono asociado.
-            const clasesPendientesDePago = asistenciasSinBonoAsociado;
-
-
-            html += `<h4 style="color:#e74c3c; margin-top: 25px; margin-bottom: 10px;">💸 Clases Pendientes de Pago</h4>`;
-            // Mostramos el aviso si hay clases pendientes de pago Y el alumno no tiene bonos activos con clases restantes
-            // para cubrir esas clases.
-            const tieneBonosActivos = bonosYClases.some(p => (p.totalClases - (p.clasesUsadas || 0)) > 0);
-            if (clasesPendientesDePago > 0 && !tieneBonosActivos) {
-                html += `<p style="background: #fadbd8; color: #c0392b; padding: 10px; border-radius: 4px; font-weight: bold;">
-                    Este alumno tiene ${clasesPendientesDePago} clase(s) suelta(s) pendiente(s) de abonar.
-                </p>`;
-            } else {
-                html += `<p style="color:#888; font-style:italic; text-align:center;">El alumno está al día con sus pagos de clases.</p>`;
-            }
-
-            // 3. Clases Reservadas (Asignaciones)
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-
-            // Obtener las fechas de las clases a las que el alumno ha asistido
-            const fechasAsistidas = new Set(
-                misAsistencias.map(att => att.fechaClase)
-            );
-
-            const misAsignacionesFuturas = asignaciones
-                .filter(asig => {
-                    if (asig.alumno !== nombreCompleto) return false;
-
-                    // Ahora 'asig.fecha' viene de 'asignaciones.html' con el formato 'YYYY-MM-DD'
-                    if (!asig.fecha) return false; // Ignorar asignaciones antiguas sin fecha
-                    const fechaAsignacion = new Date(asig.fecha + 'T12:00:00'); // Asumiendo que 'asig.fecha' existe y es 'YYYY-MM-DD'
-
-                    // No mostrar si la fecha ya pasó O si ya asistió a una clase en esa fecha.
-                    return fechaAsignacion >= hoy && !fechasAsistidas.has(asig.fecha);
-                })
-                .map(asig => {
-                    const claseInfo = clases.find(c => c.id === asig.claseId);
-                    return { ...asig, claseInfo };
-                })
-                .filter(asig => asig.claseInfo) // Filtrar por si una clase fue eliminada
-                .sort((a, b) => new Date(a.fecha) - new Date(b.fecha)); // Ordenar por fecha
-
-            html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">🗓️ Clases Reservadas</h4>`;
-            if (misAsignacionesFuturas.length > 0) {
-                html += misAsignacionesFuturas.map(asig => {
-                    const clase = asig.claseInfo;
-                    const hora = (clase.tipo === 'unDia') ? clase.hora : (clase.horarios ? clase.horarios[asig.dia] : 'N/A');
-                    const fechaClaseStr = new Date(asig.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-                    return `<span style="display:inline-block; background:#eaf2f8; padding:3px 8px; margin:3px; border-radius:3px; font-size:0.9em; border:1px solid #aed6f1;">
-                        <b>${fechaClaseStr}</b> a las ${hora}hs <small style="color:#5499c7;">(${clase.nivel || 'N/A'})</small>
-                    </span>`;
-                }).join('');
-            } else {
-                html += `<p style="color:#888; font-style:italic; text-align:center;">Este alumno no está apuntado a ninguna clase fija.</p>`;
-            }
-
-            // 4. Historial de Asistencia
-            misAsistencias = misAsistencias.sort((x, y) => new Date(y.fechaClase) - new Date(x.fechaClase));
-            html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">✔️ Historial de Asistencia (${misAsistencias.length} clases)</h4>`;
-            if (misAsistencias.length > 0) {
-                html += misAsistencias.map(att => `<span style="display:inline-block; background:#f0f0f0; padding:2px 5px; margin:2px; border-radius:3px; font-size:0.9em; border:1px solid #ddd;">${new Date(att.fechaClase + 'T12:00:00').toLocaleDateString('es-ES')} <small style="color:#d35400;">(🐴 ${att.caballo || '?'})</small></span>`).join('');
-            } else {
-                html += `<p style="color:#888; font-style:italic; text-align:center;">Sin registros de asistencia.</p>`;
-            }
-
-            document.getElementById('seguimientoDetalles').innerHTML = html;
-            document.getElementById('modalSeguimiento').style.display = 'block';
-        }
-
-        function cerrarHistorial() {
-            document.getElementById('modalHistorial').style.display = 'none';
-        }
-
-        async function abrirModalProductos(alumnoId) {
-            const alumnos = await dataManager.get('alumnosEscuela') || [];
-            const alumno = alumnos.find(a => a.id === alumnoId);
-            if (!alumno) return;
-
-            document.getElementById('nombreAlumnoProductos').textContent = `${alumno.nombre} ${alumno.apellido}`;
-            document.getElementById('productoAlumnoId').value = alumnoId;
-
-            // Poblar dropdown de productos
-            const productos = await dataManager.get('productosEscuela') || [];
-            const selectProducto = document.getElementById('selectProducto');
-            selectProducto.innerHTML = '<option value="">-- Selecciona un producto --</option>';
-            productos.forEach(p => {
-                selectProducto.innerHTML += `<option value="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio}" data-tipo="${p.tipo}" data-numclases="${p.numClases || ''}">${p.nombre} (${p.precio} €)</option>`;
-            });
-
-            // Poner fecha de hoy por defecto
-            fechaCompraProductoInput.value = new Date().toISOString().split('T')[0];
-
-            await mostrarProductosDeAlumno(alumnoId);
-            document.getElementById('modalProductos').style.display = 'block';
-        }
-
-        async function mostrarProductosDeAlumno(alumnoId) {
-            const asistencia = await dataManager.get('attendanceEscuela') || [];
-            const pagos = await dataManager.get('pagosAlumnosEscuela') || [];
-            const misPagos = pagos.filter(p => p.alumnoId === alumnoId).sort((x, y) => new Date(y.fechaCompra) - new Date(x.fechaCompra));
-            const tablaDiv = document.getElementById('productosAlumnoDetalles');
-
-            if (misPagos.length === 0) {
-                tablaDiv.innerHTML = `<p style="text-align:center; color:#888; font-style:italic;">Este alumno no ha adquirido productos.</p>`;
-                return;
-            }
-
-            let tablaHtml = `<table style="width:100%;"><thead><tr><th>Producto</th><th style="text-align:right;">Precio</th><th style="text-align:center;">Fecha</th><th style="text-align:center;">Acción</th></tr></thead><tbody>`;
-
-            misPagos.forEach(p => {
-                tablaHtml += `<tr>
-                    <td>${p.productoNombre}</td>
-                    <td style="text-align:right;">${p.productoPrecio} €</td>
-                    <td style="text-align:center;">${new Date(p.fechaCompra + 'T12:00:00').toLocaleDateString('es-ES')}</td>
-                    <td style="text-align:center;">
-                        <button class="actions-btn btn-delete" style="font-size:11px;" onclick="eliminarPago(${p.id}, ${alumnoId})">X</button>
-                    </td>
-                </tr>`;
-            });
-            tablaHtml += `</tbody></table>`;
-            tablaDiv.innerHTML = tablaHtml;
-        }
-
-        async function eliminarPago(pagoId, alumnoId) {
-            if (confirm('¿Eliminar este registro de compra?')) {
-                await dataManager.delete('pagosAlumnosEscuela', pagoId);
-                // Si el modal de seguimiento está abierto para este alumno, lo refresca.
-                if (document.getElementById('modalSeguimiento').style.display === 'block' && document.getElementById('productoAlumnoId').value == alumnoId) {
-                    await verSeguimiento(alumnoId);
-                }
-                await mostrarProductosDeAlumno(alumnoId);
-            }
-        }
-
-        function cerrarSeguimiento() {
-            document.getElementById('modalSeguimiento').style.display = 'none';
-        }
-
-        function cerrarModalProductos() {
-            document.getElementById('modalProductos').style.display = 'none';
-        }
-    </script>
-
-    <!-- Scripts de Firebase -->
-    <script src="firebase-config.js"></script>
-    <script src="data-manager.js?v=1.9"></script>
-
-
-</body>
-
->>>>>>> be4102565c74ea41e0999c39a6bb667d91a2dd94
 </html>
