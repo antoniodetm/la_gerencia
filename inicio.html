@@ -261,6 +261,41 @@
                     await dataManager.set('clasesEscuela', clase);
                 }
 
+                // --- Crear Asignaciones de Ejemplo ---
+                // Asignar algunos alumnos a las clases recién creadas para los próximos días
+                const ordenDias = { "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6 };
+
+                for (const clase of clases) {
+                    const diaClaseNum = ordenDias[clase.diaSemana];
+                    if (diaClaseNum === undefined) continue;
+
+                    // Encontrar la próxima fecha para el día de la semana de la clase
+                    let fechaClase = new Date();
+                    while (fechaClase.getDay() !== diaClaseNum) {
+                        fechaClase.setDate(fechaClase.getDate() + 1);
+                    }
+
+                    // Formatear la fecha a YYYY-MM-DD
+                    const anio = fechaClase.getFullYear();
+                    const mes = String(fechaClase.getMonth() + 1).padStart(2, '0');
+                    const dia = String(fechaClase.getDate()).padStart(2, '0');
+                    const fechaISO = `${anio}-${mes}-${dia}`;
+
+                    // Asignar 1 o 2 alumnos a esta clase
+                    for (let i = 0; i < 2; i++) {
+                        if (alumnos[i]) {
+                            const asignacion = {
+                                id: Date.now() + 400 + i + clase.id,
+                                claseId: clase.id,
+                                alumno: `${alumnos[i].nombre} ${alumnos[i].apellido}`,
+                                dia: clase.diaSemana,
+                                fecha: fechaISO
+                            };
+                            await dataManager.set('asignacionesEscuela', asignacion);
+                        }
+                    }
+                }
+
                 alert('¡Datos de prueba cargados con éxito! Ya puedes navegar por las demás secciones para verlos.');
 
             } catch (error) {

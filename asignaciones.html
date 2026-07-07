@@ -520,7 +520,7 @@
 
                 // Ordenar fechas y mostrar
                 Object.keys(alumnosPorFecha).sort().forEach(fecha => {
-                    const fechaStr = new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                    const fechaStr = new Date(fecha.includes('T') ? fecha : fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
                     htmlContenido += `<h5 style="margin: 15px 0 5px 0; color: #555; border-bottom: 1px solid #eee; padding-bottom: 3px;">${fechaStr}</h5>`;
                     alumnosPorFecha[fecha].forEach(a => {
                         htmlContenido += `
