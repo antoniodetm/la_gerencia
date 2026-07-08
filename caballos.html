@@ -231,6 +231,18 @@
         </table>
     </div>
 
+    <!-- Modal para Seguimiento del Caballo -->
+    <div id="modalSeguimientoCaballo" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarSeguimientoCaballo()">&times;</span>
+            <h3 style="margin-top:0; color:#3498db;">📊 Seguimiento de Trabajo del Caballo</h3>
+            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
+            <div id="seguimientoCaballoDetalles" style="text-align: left; max-height: 400px; overflow-y: auto;"></div>
+            <button onclick="cerrarSeguimientoCaballo()"
+                style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
+        </div>
+    </div>
+
     <script>
         const form = document.getElementById('caballoForm');
         const tabla = document.getElementById('tablaCaballos').getElementsByTagName('tbody')[0];
@@ -258,6 +270,8 @@
                         await mostrarCaballos();
                     }
                 });
+                // Escuchar cambios en asistencia para que el modal se actualice si está abierto
+                dataManager.onSnapshot('attendanceEscuela', () => { });
             } else {
                 setInterval(async function () {
                     const dataActual = JSON.stringify(await dataManager.get('caballosEscuela') || []);
@@ -305,6 +319,7 @@
                 fila.innerHTML = `
                 <td><b>${c.nombre}</b></td><td>${c.capa}</td><td>${c.estado}</td><td>${c.categoria || 'De tanda'}</td>
                 <td class="actions-cell">
+                    <button class="actions-btn btn-seguimiento" onclick="verSeguimientoCaballo(${c.id})">Seguimiento</button>
                     <button class="actions-btn btn-edit" onclick="cargarCaballoParaEditar(${c.id})">Editar</button>
                     <button class="actions-btn btn-delete" onclick="eliminarCaballo(${c.id})">Eliminar</button>
                 </td>
@@ -344,10 +359,178 @@
             submitBtn.textContent = 'Registrar Caballo';
             submitBtn.classList.remove('btn-update');
         }
+
+        async function verSeguimientoCaballo(id) {
+            const caballos = await dataManager.get('caballosEscuela') || [];
+            const caballo = caballos.find(c => c.id === id);
+            if (!caballo) return;
+
+            const asistencias = await dataManager.get('attendanceEscuela') || [];
+            const misAsistencias = asistencias
+                .filter(att => att.caballo === caballo.nombre)
+                .sort((a, b) => new Date(b.fechaClase) - new Date(a.fechaClase));
+
+            let html = `<p><strong>Caballo:</strong> ${caballo.nombre}</p>`;
+            html += `<hr style="border:0; border-top:1px solid #eee; margin:15px 0;">`;
+
+            html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">🐴 Clases Realizadas (${misAsistencias.length})</h4>`;
+
+            if (misAsistencias.length > 0) {
+                html += `<div style="font-size: 0.9em;">`;
+                misAsistencias.forEach(att => {
+                    const fechaFormateada = new Date(att.fechaClase + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+                    html += `<div style="background:#f0f5fa; padding:5px 8px; margin-bottom:4px; border-radius:3px;">
+                        <b>${fechaFormateada}</b> - Clase de ${att.tipoClase || 'N/A'} con ${att.alumno || 'N/A'}
+                    </div>`;
+                });
+                html += `</div>`;
+            } else {
+                html += `<p style="color:#888; font-style:italic; text-align:center;">Este caballo no tiene registros de trabajo.</p>`;
+            }
+
+            document.getElementById('seguimientoCaballoDetalles').innerHTML = html;
+            document.getElementById('modalSeguimientoCaballo').style.display = 'block';
+        }
+
+        function cerrarSeguimientoCaballo() {
+            document.getElementById('modalSeguimientoCaballo').style.display = 'none';
+        }
     </script>
 
     <!-- Scripts de Firebase -->
     <script src="data-manager.js?v=1.5"></script>
+
+</body>
+
+</html>
+<th>Nombre</th>
+<th>Capa</th>
+<th>Estado</th>
+<th>Categoría</th>
+<th>Acciones</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<script>
+    const form = document.getElementById('caballoForm');
+    const tabla = document.getElementById('tablaCaballos').getElementsByTagName('tbody')[0];
+    const submitBtn = document.getElementById('submitBtn');
+    const caballoIdInput = document.getElementById('caballoId');
+
+    let ultimaDataCaballos = JSON.stringify([]);
+
+    window.onload = async function () {
+        let intentos = 0;
+        while (!dataManager.initialized && intentos < 20) {
+            await new Promise(r => setTimeout(r, 100));
+            intentos++;
+        }
+
+        console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
+
+        await mostrarCaballos();
+
+        if (dataManager.useFirebase) {
+            dataManager.onSnapshot('caballosEscuela', async (data) => {
+                const dataActual = JSON.stringify(data || []);
+                if (dataActual !== ultimaDataCaballos) {
+                    ultimaDataCaballos = dataActual;
+                    await mostrarCaballos();
+                }
+            });
+        } else {
+            setInterval(async function () {
+                const dataActual = JSON.stringify(await dataManager.get('caballosEscuela') || []);
+                if (dataActual !== ultimaDataCaballos) {
+                    ultimaDataCaballos = dataActual;
+                    await mostrarCaballos();
+                }
+            }, 500);
+        }
+    };
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const id = caballoIdInput.value;
+        const nombre = document.getElementById('nombreCaballo').value.trim();
+        const capa = document.getElementById('capa').value.trim();
+        const estado = document.getElementById('estado').value;
+        const categoria = document.getElementById('categoria').value;
+
+        let caballos = await dataManager.get('caballosEscuela') || [];
+
+        if (id) {
+            caballos = caballos.map(c => c.id === parseInt(id) ? { id: c.id, nombre, capa, estado, categoria } : c);
+
+            alert("¡Caballo actualizado!");
+        } else {
+            caballos.push({ id: Date.now(), nombre, capa, estado, categoria });
+            alert("¡Caballo registrado!");
+        }
+
+        await dataManager.set('caballosEscuela', caballos);
+        restablecerFormulario();
+        await mostrarCaballos();
+    });
+
+    async function mostrarCaballos() {
+        const caballos = await dataManager.get('caballosEscuela') || [];
+        tabla.innerHTML = '';
+        if (caballos.length === 0) {
+            tabla.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">No hay caballos.</td></tr>`;
+            return;
+        }
+        caballos.forEach(c => {
+            const fila = tabla.insertRow();
+            fila.innerHTML = `
+                <td><b>${c.nombre}</b></td><td>${c.capa}</td><td>${c.estado}</td><td>${c.categoria || 'De tanda'}</td>
+                <td class="actions-cell">
+                    <button class="actions-btn btn-edit" onclick="cargarCaballoParaEditar(${c.id})">Editar</button>
+                    <button class="actions-btn btn-delete" onclick="eliminarCaballo(${c.id})">Eliminar</button>
+                </td>
+            `;
+        });
+    }
+
+    async function cargarCaballoParaEditar(id) {
+        const caballos = await dataManager.get('caballosEscuela') || [];
+        const c = caballos.find(item => item.id === id);
+        if (c) {
+            caballoIdInput.value = c.id;
+            document.getElementById('nombreCaballo').value = c.nombre;
+            document.getElementById('capa').value = c.capa;
+            document.getElementById('estado').value = c.estado;
+            document.getElementById('categoria').value = c.categoria || 'De tanda';
+            submitBtn.textContent = 'Actualizar Caballo';
+            submitBtn.classList.add('btn-update');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    async function eliminarCaballo(id) {
+        if (confirm('¿Borrar caballo?')) {
+            let caballos = await dataManager.get('caballosEscuela') || [];
+            caballos = caballos.filter(c => c.id !== id);
+            await dataManager.set('caballosEscuela', caballos);
+
+            if (caballoIdInput.value == id) restablecerFormulario();
+            await mostrarCaballos();
+        }
+    }
+
+    function restablecerFormulario() {
+        form.reset();
+        caballoIdInput.value = '';
+        submitBtn.textContent = 'Registrar Caballo';
+        submitBtn.classList.remove('btn-update');
+    }
+</script>
+
+<!-- Scripts de Firebase -->
+<script src="data-manager.js?v=1.5"></script>
 
 </body>
 
