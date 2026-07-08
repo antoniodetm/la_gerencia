@@ -144,9 +144,14 @@
                     return { domNodes: [document.createTextNode(text)] };
                 },
                 eventClick: function (info) {
-                    // Si no estamos en la vista de día, cambia a la vista de día para la fecha del evento
                     if (info.view.type !== 'timeGridDay') {
+                        // Si no estamos en la vista de día, cambia a la vista de día para la fecha del evento
                         calendar.changeView('timeGridDay', info.event.start);
+                    } else {
+                        // Si ya estamos en la vista de día, redirigir a la página de asignaciones
+                        const claseId = info.event.extendedProps.claseId;
+                        const fecha = info.event.start.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+                        window.location.href = `asignaciones.html?claseId=${claseId}&fecha=${fecha}`;
                     }
                 }
             });
@@ -155,6 +160,12 @@
 
             if (dataManager.useFirebase) {
                 dataManager.onSnapshot('clasesEscuela', async () => {
+                    calendar.setOption('events', await generarEventos());
+                });
+                dataManager.onSnapshot('asignacionesEscuela', async () => {
+                    calendar.setOption('events', await generarEventos());
+                });
+                dataManager.onSnapshot('asignacionesEscuela', async () => {
                     calendar.setOption('events', await generarEventos());
                 });
             }
@@ -181,14 +192,16 @@
             const eventos = [];
 
             clases.forEach(c => {
-                // Obtener los nombres de los alumnos y sus caballos asignados
-                const listaAlumnos = asignaciones
-                    .filter(a => a.claseId == c.id).map(a => `• ${a.alumno}`).join('\n');
+                // Contar alumnos y generar la lista para la vista de día
+                const alumnosAsignados = asignaciones.filter(a => a.claseId == c.id);
+                const numAlumnos = alumnosAsignados.length;
+                const maxAlumnos = c.maxAlumnos || 'N/A';
+                const listaAlumnos = alumnosAsignados.map(a => `• ${a.alumno}`).join('\n');
 
                 if (c.tipo === 'unDia') {
                     const diaNum = ordenDias[c.diaSemana];
                     eventos.push({
-                        title: c.nivel.toUpperCase(),
+                        title: `Clase ${numAlumnos}/${maxAlumnos}`,
                         daysOfWeek: [diaNum],
                         startTime: c.hora,
                         endTime: calcularHoraFin(c.hora, c.duracion),
@@ -196,13 +209,13 @@
                             listaAlumnos: listaAlumnos || '(Sin alumnos asignados)',
                             claseId: c.id
                         },
-                        backgroundColor: c.nivel.includes('Iniciación') ? '#27ae60' : c.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db'
+                        backgroundColor: '#3498db'
                     });
                 } else if (c.tipo === 'variosDialas' && c.horarios) {
                     Object.entries(c.horarios).forEach(([dia, hora]) => {
                         const diaNum = ordenDias[dia];
                         eventos.push({
-                            title: c.nivel.toUpperCase(),
+                            title: `Clase ${numAlumnos}/${maxAlumnos}`,
                             daysOfWeek: [diaNum],
                             startTime: hora,
                             endTime: calcularHoraFin(hora, c.duracion),
@@ -210,7 +223,7 @@
                                 listaAlumnos: listaAlumnos || '(Sin alumnos asignados)',
                                 claseId: c.id
                             },
-                            backgroundColor: c.nivel.includes('Iniciación') ? '#27ae60' : c.nivel.includes('Avanzado') ? '#e74c3c' : '#3498db'
+                            backgroundColor: '#3498db'
                         });
                     });
                 }

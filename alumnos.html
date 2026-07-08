@@ -750,6 +750,7 @@
             const nombreCompleto = `${a.nombre} ${a.apellido}`;
             const asistencia = await dataManager.get('attendanceEscuela') || [];
             const pagos = await dataManager.get('pagosAlumnosEscuela') || [];
+            const asignaciones = await dataManager.get('asignacionesEscuela') || [];
             const misPagos = pagos.filter(p => p.alumnoId == id);
 
             let html = `<p><strong>Alumno:</strong> ${nombreCompleto}</p>`;
@@ -786,17 +787,67 @@
                 html += `</tbody></table>`;
             }
 
-            // 2. Historial de Asistencia
+            // 2. Clases Reservadas (futuras)
+            const hoy = new Date().toISOString().split('T')[0];
+            const misAsignacionesFuturas = asignaciones
+                .filter(asig => asig.alumno === nombreCompleto && asig.dia >= hoy)
+                .sort((x, y) => new Date(x.dia) - new Date(y.dia));
+
+            html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">🗓️ Clases Reservadas (${misAsignacionesFuturas.length})</h4>`;
+            if (misAsignacionesFuturas.length > 0) {
+                html += `<div style="font-size: 0.9em;">`;
+                misAsignacionesFuturas.forEach(asig => {
+                    const fechaFormateada = new Date(asig.dia + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' });
+                    html += `<div style="background:#f0f5fa; padding:5px 8px; margin-bottom:4px; border-radius:3px;">
+                        <b>${fechaFormateada}</b>
+                    </div>`;
+                });
+                html += `</div>`;
+            } else {
+                html += `<p style="color:#888; font-style:italic; text-align:center;">No tiene clases futuras reservadas.</p>`;
+            }
+
+            // 3. Historial de Asistencia (pasadas)
             const misAsistencias = asistencia.filter(att => att.alumnoId == id && att.asistio).sort((x, y) => new Date(y.fechaClase) - new Date(x.fechaClase));
-            html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">✔️ Historial de Asistencia (${misAsistencias.length} clases)</h4>`;
+            html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">✔️ Clases Realizadas (${misAsistencias.length})</h4>`;
             if (misAsistencias.length > 0) {
-                html += misAsistencias.map(att => `<span style="display:inline-block; background:#f0f0f0; padding:2px 5px; margin:2px; border-radius:3px; font-size:0.9em; border:1px solid #ddd;">${new Date(att.fechaClase + 'T12:00:00').toLocaleDateString('es-ES')} <small style="color:#d35400;">(🐴 ${att.caballo || '?'})</small></span>`).join('');
+                html += `<div style="font-size: 0.9em;">`;
+                misAsistencias.forEach(att => {
+                    html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#f0f0f0; padding:5px 8px; margin-bottom:4px; border-radius:3px;">
+                        <span><b>${new Date(att.fechaClase + 'T12:00:00').toLocaleDateString('es-ES')}</b> <small style="color:#2980b9;">(${att.tipoClase || 'Clase'})</small> <small style="color:#d35400;">(🐴 ${att.caballo || '?'})</small></span>
+                        <button class="actions-btn btn-delete" style="font-size:10px; padding: 2px 6px;" onclick="eliminarAsistencia(${att.id}, ${a.id})">X</button>
+                    </div>`;
+                });
+                html += `</div>`;
             } else {
                 html += `<p style="color:#888; font-style:italic; text-align:center;">Sin registros de asistencia.</p>`;
             }
 
             document.getElementById('seguimientoDetalles').innerHTML = html;
             document.getElementById('modalSeguimiento').style.display = 'block';
+        }
+
+        async function eliminarAsistencia(asistenciaId, alumnoId) {
+            if (!confirm('¿Eliminar este registro de asistencia? Se devolverá 1 clase al bono correspondiente si es posible.')) return;
+
+            let asistencias = await dataManager.get('attendanceEscuela') || [];
+            const asistenciaAEliminar = asistencias.find(a => a.id === asistenciaId);
+            if (!asistenciaAEliminar) return;
+
+            // Devolver la clase al bono
+            let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
+            const pagoCorrespondiente = pagos.find(p => p.alumnoId === alumnoId && (p.tipo === 'Bono' || p.tipo === 'Clase Suelta') && (p.clasesUsadas || 0) > 0);
+
+            if (pagoCorrespondiente) {
+                pagoCorrespondiente.clasesUsadas = Math.max(0, (pagoCorrespondiente.clasesUsadas || 0) - 1);
+                await dataManager.set('pagosAlumnosEscuela', pagos);
+            }
+
+            // Eliminar el registro de asistencia
+            asistencias = asistencias.filter(a => a.id !== asistenciaId);
+            await dataManager.set('attendanceEscuela', asistencias);
+
+            await verSeguimiento(alumnoId); // Recargar el modal
         }
 
         function cerrarHistorial() {

@@ -5,6 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inicio - Escuela Ecuestre</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -159,8 +165,28 @@
                 <h3 style="color: white;">Niveles (Bases)</h3>
                 <p style="color: #fbeee6;">Configurar niveles de alumnos</p>
             </a>
+            <a href="#" onclick="cargarDatosDePrueba()" class="menu-card" style="background: #16a085; color: white;">
+                <div class="icon">🧪</div>
+                <h3 style="color: white;">Cargar Datos de Prueba</h3>
+                <p style="color: #d0f0e9;">Rellena la app con datos de ejemplo.</p>
+            </a>
+            <a href="#" onclick="borrarTodosLosDatos()" class="menu-card" style="background: #c0392b; color: white;">
+                <div class="icon">🗑️</div>
+                <h3 style="color: white;">Borrar Todos los Datos</h3>
+                <p style="color: #f5d3d0;">Elimina toda la información de la aplicación.</p>
+            </a>
         </div>
     </div>
+
+    <script src="data-manager.js?v=1.5"></script>
+    <script>
+        function cargarDatosDePrueba() {
+            dataManager.cargarDatosDePrueba();
+        }
+        function borrarTodosLosDatos() {
+            dataManager.borrarTodosLosDatos();
+        }
+    </script>
 </body>
 
 </html>

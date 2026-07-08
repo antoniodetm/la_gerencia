@@ -1,6 +1,0 @@
-# Archivo de configuración de Firebase
-# ¡Contiene claves secretas! NO subir al repositorio.
-firebase-config.js
-
-# Archivos de configuración del editor
-.vscode/

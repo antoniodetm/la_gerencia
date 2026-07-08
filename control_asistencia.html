@@ -252,8 +252,10 @@
     <div class="main-container">
         <div class="header-controls">
             <h2 style="margin-top:0; color:#2980b9;">🛂 Control de Asistencia</h2>
-            <label for="fechaControl">Seleccionar Fecha:</label>
-            <input type="date" id="fechaControl">
+            <p id="descripcionVista" style="color: #555; margin: -10px 0 10px 0;">A continuación se muestran las clases
+                con alumnos apuntados para los próximos 7 días.</p>
+            <label for="fechaControl">O busca una fecha específica:</label>
+            <input type="date" id="fechaControl" onchange="if(!this.value) cargarProximasClases(true)">
         </div>
 
         <div id="listaClasesDiarias">
@@ -267,6 +269,14 @@
             <div class="modal-header">
                 <h3 id="modalTituloClase"></h3>
                 <p id="modalFechaClase" style="margin:5px 0 0 0; color:#555;"></p>
+                <div style="margin-top: 15px;">
+                    <label for="selectTipoClase" style="font-weight:bold;">Tipo de Clase:</label>
+                    <select id="selectTipoClase" required>
+                    </select>
+                    <label for="selectNivelAlumno" style="font-weight:bold; margin-top:10px;">Nivel de la Clase:</label>
+                    <select id="selectNivelAlumno" required>
+                    </select>
+                </div>
             </div>
             <div class="modal-body">
                 <div class="student-list-section">
@@ -300,16 +310,12 @@
         let todasLasAsignaciones = [];
         let todaLaAsistencia = [];
         let todosLosPagos = [];
+        let todosLosTiposClase = [];
+        let todosLosNivelesAlumno = [];
         let claseActivaId = null;
 
         window.onload = async () => {
-            let intentos = 0;
-            while (!dataManager.initialized && intentos < 20) {
-                await new Promise(r => setTimeout(r, 100));
-                intentos++;
-            }
-            fechaControlInput.value = new Date().toISOString().split('T')[0];
-            fechaControlInput.addEventListener('change', cargarClasesDelDia);
+            await dataManager.initPromise; // Esperar a que DataManager esté listo
 
             // Cargar todos los datos una vez y luego escuchar cambios
             [
@@ -318,64 +324,129 @@
                 todasLasClases,
                 todasLasAsignaciones,
                 todaLaAsistencia,
-                todosLosPagos
+                todosLosPagos,
+                todosLosTiposClase,
+                todosLosNivelesAlumno
             ] = await Promise.all([
                 dataManager.get('alumnosEscuela'),
                 dataManager.get('caballosEscuela'),
                 dataManager.get('clasesEscuela'),
                 dataManager.get('asignacionesEscuela'),
                 dataManager.get('attendanceEscuela'),
-                dataManager.get('pagosAlumnosEscuela')
+                dataManager.get('pagosAlumnosEscuela'),
+                dataManager.get('tiposClasesEscuela'),
+                dataManager.get('nivelesEscuela')
             ]);
 
-            cargarClasesDelDia();
+            cargarProximasClases();
+            fechaControlInput.addEventListener('change', () => cargarClasesDeFechaEspecifica(fechaControlInput.value));
 
             // Listeners para actualizaciones en tiempo real
             dataManager.onSnapshot('alumnosEscuela', data => { todosLosAlumnos = data || []; });
             dataManager.onSnapshot('caballosEscuela', data => { todosLosCaballos = data || []; });
             dataManager.onSnapshot('pagosAlumnosEscuela', data => { todosLosPagos = data || []; });
             dataManager.onSnapshot('attendanceEscuela', data => { todaLaAsistencia = data || []; });
+            dataManager.onSnapshot('tiposClasesEscuela', data => { todosLosTiposClase = data || []; });
+            dataManager.onSnapshot('nivelesEscuela', data => { todosLosNivelesAlumno = data || []; });
 
-            dataManager.onSnapshot('clasesEscuela', data => { todasLasClases = data || []; cargarClasesDelDia(); });
-            dataManager.onSnapshot('asignacionesEscuela', data => { todasLasAsignaciones = data || []; cargarClasesDelDia(); });
+            dataManager.onSnapshot('clasesEscuela', data => { todasLasClases = data || []; cargarProximasClases(); });
+            dataManager.onSnapshot('asignacionesEscuela', data => { todasLasAsignaciones = data || []; cargarProximasClases(); });
 
 
 
         };
 
-        async function cargarClasesDelDia() {
-            const fecha = fechaControlInput.value;
+        async function cargarClasesDeFechaEspecifica(fecha) {
             if (!fecha) return;
+
+            document.getElementById('descripcionVista').textContent = `Mostrando clases para el día ${new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' })}.`;
 
             const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
             const fechaObj = new Date(fecha + 'T12:00:00');
             const diaSemanaNombre = dias[fechaObj.getDay()];
 
-            const clasesDelDia = todasLasClases.filter(c => {
+            const clasesDelDia = (todasLasClases || []).filter(c => {
                 if (c.tipo === 'unDia') return c.diaSemana === diaSemanaNombre;
                 if (c.tipo === 'variosDias' && c.horarios) return Object.keys(c.horarios).includes(diaSemanaNombre);
                 return false;
             });
 
+            const asignacionesDelDia = (todasLasAsignaciones || []).filter(a => a.dia === fecha);
+            await renderizarGruposDeClases(asignacionesDelDia, clasesDelDia, fecha);
+
+            // Si solo hay una clase para ese día, abrir el modal automáticamente.
+            const gruposRenderizados = listaClasesDiariasDiv.querySelectorAll('.clase-card');
+            if (gruposRenderizados.length === 1) {
+                const boton = gruposRenderizados[0].querySelector('.btn-checkin');
+                if (boton) boton.click();
+            }
+        }
+
+
+        async function cargarProximasClases(reset = false) {
+            if (reset) fechaControlInput.value = '';
+            document.getElementById('descripcionVista').textContent = 'A continuación se muestran las clases con alumnos apuntados para los próximos 7 días.';
+            const hoy = new Date(new Date().setHours(0, 0, 0, 0));
+            const limite = new Date(hoy); limite.setDate(hoy.getDate() + 7);
+            const asignacionesProximas = (todasLasAsignaciones || []).filter(a => new Date(a.dia) >= hoy && new Date(a.dia) < limite);
+            await renderizarGruposDeClases(asignacionesProximas);
+        }
+        async function renderizarGruposDeClases(asignaciones, clasesBase = [], fechaFiltro = null) {
+
+            // Agrupar por fecha y luego por clase
+            const grupos = {};
+            (asignaciones || []).forEach(a => {
+                const key = `${a.dia}-${a.claseId}`;
+                if (!grupos[key]) {
+                    const claseInfo = (todasLasClases || []).find(c => c.id == a.claseId);
+                    if (!claseInfo) return;
+
+                    grupos[key] = {
+                        clase: claseInfo,
+                        dia: a.dia,
+                        alumnos: []
+                    };
+                }
+                grupos[key].alumnos.push(a);
+            });
+
+            // Añadir clases del día que no tienen alumnos asignados todavía
+            if (clasesBase.length > 0 && fechaFiltro) {
+                clasesBase.forEach(clase => {
+                    const key = `${fechaFiltro}-${clase.id}`;
+                    if (!grupos[key]) {
+                        grupos[key] = {
+                            clase: clase,
+                            dia: fechaFiltro,
+                            alumnos: []
+                        };
+                    }
+                });
+            }
+
+            const gruposOrdenados = Object.values(grupos).sort((a, b) => new Date(a.dia + 'T' + a.clase.hora) - new Date(b.dia + 'T' + b.clase.hora));
+
             listaClasesDiariasDiv.innerHTML = '';
-            if (clasesDelDia.length === 0) {
-                listaClasesDiariasDiv.innerHTML = '<p class="no-records">No hay clases programadas para este día.</p>';
+            if (gruposOrdenados.length === 0) {
+                const mensaje = fechaFiltro
+                    ? 'No hay clases programadas para este día de la semana.'
+                    : 'No se encontraron clases con alumnos para la selección actual.';
+                listaClasesDiariasDiv.innerHTML = `<p class="no-records">${mensaje}</p>`;
                 return;
             }
 
-            clasesDelDia.forEach(c => {
-                const numAsignados = todasLasAsignaciones.filter(a => a.claseId == c.id).length;
-                const alumnosEnClase = todasLasAsignaciones.filter(a => a.claseId == c.id);
-                const hora = (c.tipo === 'unDia') ? c.hora : c.horarios[diaSemanaNombre];
+            gruposOrdenados.forEach(grupo => {
+                const { clase, dia, alumnos } = grupo;
                 const card = document.createElement('div');
                 card.className = 'clase-card';
+                const fechaFormateada = new Date(dia + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
                 let alumnosHtml = '<div class="alumnos-en-clase-lista">';
-                if (alumnosEnClase.length > 0) {
-                    alumnosHtml += alumnosEnClase.map(asignacion =>
+                if (alumnos.length > 0) {
+                    alumnosHtml += alumnos.map(asignacion =>
                         `<div class="alumno-item-inline">
                             <span>${asignacion.alumno}</span>
-                            <button class="btn-quitar-inline" onclick="quitarAlumnoDeClase(${asignacion.id})">X</button>
+                            <button class="btn-quitar-inline" onclick="quitarAlumnoDeClase(${asignacion.id}, '${dia}')">X</button>
                         </div>`
                     ).join('');
                 } else {
@@ -386,10 +457,10 @@
                 card.innerHTML = `
                     <div class="clase-header">
                         <div class="clase-info">
-                            <h4>${hora}hs - ${c.nivel}</h4>
-                            <p>${numAsignados} de ${c.maxAlumnos} alumnos asignados</p>
+                            <h4>${clase.hora}hs</h4>
+                            <p>${fechaFormateada} (${alumnos.length} de ${clase.maxAlumnos} alumnos)</p>
                         </div>
-                        <button class="btn-checkin" onclick="abrirModal(${c.id})">Pasar Lista</button>
+                        <button class="btn-checkin" onclick="abrirModal(${clase.id}, '${dia}')">Pasar Lista</button>
                     </div>
                     ${alumnosHtml}
                 `;
@@ -397,22 +468,35 @@
             });
         }
 
-        async function abrirModal(claseId) {
+        async function abrirModal(claseId, fecha) {
             claseActivaId = claseId;
+            fechaControlInput.value = fecha; // Guardamos la fecha activa
             const clase = todasLasClases.find(c => c.id === claseId);
             if (!clase) return;
 
             // Poblar cabecera del modal
-            const fecha = fechaControlInput.value;
             const fechaObj = new Date(fecha + 'T12:00:00');
-            const diaSemanaNombre = fechaObj.toLocaleDateString('es-ES', { weekday: 'long' });
-            const hora = (clase.tipo === 'unDia') ? clase.hora : clase.horarios[diaSemanaNombre];
 
-            document.getElementById('modalTituloClase').textContent = `${hora}hs - ${clase.nivel}`;
+            document.getElementById('modalTituloClase').textContent = `Clase de las ${clase.hora}hs`;
             document.getElementById('modalFechaClase').textContent = fechaObj.toLocaleDateString('es-ES', { dateStyle: 'full' });
 
+            // Poblar selector de Tipo de Clase
+            const selectTipo = document.getElementById('selectTipoClase');
+            selectTipo.innerHTML = '<option value="">-- Selecciona Tipo --</option>';
+            (todosLosTiposClase || []).forEach(tipo => {
+                selectTipo.innerHTML += `<option value="${tipo.nombre}">${tipo.nombre}</option>`;
+            });
+            // Poblar selector de Nivel de Alumno
+            const selectNivel = document.getElementById('selectNivelAlumno');
+            selectNivel.innerHTML = '<option value="">-- Selecciona Nivel --</option>';
+            (todosLosNivelesAlumno || []).forEach(nivel => {
+                selectNivel.innerHTML += `<option value="${nivel.nombre}">${nivel.nombre}</option>`;
+            });
+
             // Poblar lista de alumnos asignados
-            const alumnosAsignados = todasLasAsignaciones.filter(a => a.claseId == claseId).map(a => a.alumno);
+            const alumnosAsignados = todasLasAsignaciones
+                .filter(a => a.claseId == claseId && a.dia === fecha)
+                .map(a => a.alumno);
 
             const modalListaAlumnos = document.getElementById('modalListaAlumnos');
             modalListaAlumnos.innerHTML = '';
@@ -476,12 +560,14 @@
             claseActivaId = null;
         }
 
-        async function quitarAlumnoDeClase(asignacionId) {
-            if (!confirm('¿Quitar a este alumno de la clase?')) return;
-
-            const asignacionesActualizadas = todasLasAsignaciones.filter(a => a.id !== asignacionId);
+        async function quitarAlumnoDeClase(asignacionId, fechaClase) {
+            if (new Date(fechaClase) < new Date(new Date().toISOString().split('T')[0])) {
+                alert("No se puede quitar un alumno de una clase que ya ha pasado.");
+                return;
+            }
+            if (!confirm('¿Quitar a este alumno de esta clase específica? Esta acción no se puede deshacer.')) return;
+            const asignacionesActualizadas = (todasLasAsignaciones || []).filter(a => a.id !== asignacionId);
             await dataManager.set('asignacionesEscuela', asignacionesActualizadas);
-            // La vista se actualizará automáticamente gracias al listener onSnapshot
             alert('Alumno quitado de la clase.');
         }
 
@@ -489,6 +575,14 @@
             if (!claseActivaId) return;
 
             const fecha = fechaControlInput.value;
+            const tipoClase = document.getElementById('selectTipoClase').value;
+            const nivelAlumno = document.getElementById('selectNivelAlumno').value;
+
+            if (!tipoClase || !nivelAlumno) {
+                alert('Por favor, selecciona el Tipo y el Nivel de la clase antes de guardar.');
+                return;
+            }
+
             const mensajesAlerta = [];
 
             const filasAlumnos = document.querySelectorAll('#modalListaAlumnos .student-list-item');
@@ -531,19 +625,21 @@
                     fechaClase: fecha,
                     claseId: claseActivaId,
                     caballo: caballo,
+                    tipoClase: tipoClase,
+                    nivel: nivelAlumno,
                     asistio: true
                 };
                 todaLaAsistencia.push(registroAsistencia);
 
                 // 2. Descontar clase de un bono/clase suelta
-                const bonosActivos = todosPagos
+                const bonosActivos = todosLosPagos
                     .filter(p => p.alumnoId === alumno.id && (p.tipo === 'Bono' || p.tipo === 'Clase Suelta') && (p.totalClases - (p.clasesUsadas || 0)) > 0)
                     .sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra)); // Usar el más antiguo primero
 
                 if (bonosActivos.length > 0) {
                     const bonoIdADescontar = bonosActivos[0].id;
                     // Encontrar el bono original en el array principal para modificarlo
-                    const bonoOriginal = todosPagos.find(p => p.id === bonoIdADescontar);
+                    const bonoOriginal = todosLosPagos.find(p => p.id === bonoIdADescontar);
                     if (bonoOriginal) {
                         bonoOriginal.clasesUsadas = (bonoOriginal.clasesUsadas || 0) + 1;
                         mensajesAlerta.push(`- ✅ ${nombreAlumno}: Asistencia OK. Se descuenta 1 clase de "${bonoOriginal.productoNombre}".`);
@@ -555,7 +651,7 @@
 
             // Guardar los cambios en la base de datos
             await dataManager.set('attendanceEscuela', todaLaAsistencia);
-            await dataManager.set('pagosAlumnosEscuela', todosPagos);
+            await dataManager.set('pagosAlumnosEscuela', todosLosPagos);
 
             const mensajeFinal = mensajesAlerta.length > 0 ?
                 `Resumen de la operación:\n\n${mensajesAlerta.join('\n')}` :
