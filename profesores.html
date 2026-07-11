@@ -203,10 +203,7 @@
                 <div class="form-group">
                     <label for="especialidad">Especialidad:</label>
                     <select id="especialidad" required>
-                        <option value="Iniciación / Poni Club">Iniciación / Poni Club</option>
-                        <option value="Doma Clásica">Doma Clásica</option>
-                        <option value="Salto de Obstáculos">Salto de Obstáculos</option>
-                        <option value="Rutas y Campo">Rutas y Campo</option>
+                        <option value="">Cargando...</option>
                     </select>
                 </div>
             </div>
@@ -236,6 +233,7 @@
         const profesorIdInput = document.getElementById('profesorId');
 
         let ultimaDataProfesores = JSON.stringify([]);
+        let ultimaDataEspecialidades = JSON.stringify([]);
 
         window.onload = async function () {
             let intentos = 0;
@@ -246,6 +244,7 @@
 
             console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
 
+            await poblarEspecialidades();
             await mostrarProfesores();
 
             if (dataManager.useFirebase) {
@@ -256,6 +255,13 @@
                         await mostrarProfesores();
                     }
                 });
+                dataManager.onSnapshot('especialidadesProfesoresEscuela', async (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataEspecialidades) {
+                        ultimaDataEspecialidades = dataActual;
+                        await poblarEspecialidades();
+                    }
+                });
             } else {
                 setInterval(async function () {
                     const dataActual = JSON.stringify(await dataManager.get('profesoresEscuela') || []);
@@ -264,6 +270,12 @@
                         await mostrarProfesores();
                     }
                 }, 500);
+                // No es ideal para localStorage, pero para mantener la consistencia
+                const dataEspecialidades = JSON.stringify(await dataManager.get('especialidadesProfesoresEscuela') || []);
+                if (dataEspecialidades !== ultimaDataEspecialidades) {
+                    ultimaDataEspecialidades = dataEspecialidades;
+                    await poblarEspecialidades();
+                }
             }
         };
 
@@ -300,6 +312,24 @@
             restablecerFormulario();
             await mostrarProfesores();
         });
+
+        async function poblarEspecialidades() {
+            const select = document.getElementById('especialidad');
+            const valorActual = select.value;
+
+            const especialidades = await dataManager.get('especialidadesProfesoresEscuela') || [];
+
+            if (especialidades.length === 0) {
+                select.innerHTML = '<option value="">⚠️ Crea especialidades en "Bases"</option>';
+                return;
+            }
+
+            select.innerHTML = especialidades.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
+
+            if (valorActual && especialidades.some(e => e.nombre === valorActual)) {
+                select.value = valorActual;
+            }
+        }
 
         async function mostrarProfesores() {
             const profesores = await dataManager.get('profesoresEscuela') || [];

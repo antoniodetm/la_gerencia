@@ -51,7 +51,7 @@
 
         .main-layout {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             max-width: 1400px;
             margin: 0 auto;
@@ -284,6 +284,33 @@
             </div>
         </div>
 
+        <!-- COLUMNA 4: ESPECIALIDADES DE PROFESORES -->
+        <div class="column">
+            <div class="container" style="border-top: 5px solid #16a085;">
+                <h2 style="color: #16a085; border-bottom: 2px solid #a3e4d7;">🎓 Especialidades de Profesores</h2>
+                <form id="especialidadForm">
+                    <div class="form-group">
+                        <label for="nombreEspecialidad">Nueva Especialidad:</label>
+                        <input type="text" id="nombreEspecialidad" required placeholder="Ej. Doma Clásica, Salto...">
+                    </div>
+                    <button type="submit" style="background-color: #16a085;">Añadir Especialidad</button>
+                </form>
+            </div>
+
+            <div class="container">
+                <h3 style="color: #16a085; border-bottom: 2px solid #a3e4d7;">📋 Lista de Especialidades</h3>
+                <table id="tablaEspecialidades">
+                    <thead>
+                        <tr>
+                            <th style="background-color: #16a085;">Especialidad</th>
+                            <th style="width: 80px; text-align: center; background-color: #16a085;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -297,6 +324,11 @@
         const nombreTipoClaseInput = document.getElementById('nombreTipoClase');
         const tablaTiposClases = document.getElementById('tablaTiposClases').getElementsByTagName('tbody')[0];
 
+        // Especialidades
+        const formEspecialidad = document.getElementById('especialidadForm');
+        const nombreEspecialidadInput = document.getElementById('nombreEspecialidad');
+        const tablaEspecialidades = document.getElementById('tablaEspecialidades').getElementsByTagName('tbody')[0];
+
         // Bonos
         const formProducto = document.getElementById('productoForm');
         const nombreProductoInput = document.getElementById('nombreProducto');
@@ -309,6 +341,7 @@
         let ultimaDataNiveles = JSON.stringify([]);
         let ultimaDataTiposClases = JSON.stringify([]);
         let ultimaDataProductos = JSON.stringify([]);
+        let ultimaDataEspecialidades = JSON.stringify([]);
 
         tipoProductoSelect.addEventListener('change', () => {
             if (tipoProductoSelect.value === 'Bono') {
@@ -333,6 +366,7 @@
             await mostrarNiveles();
             await mostrarTiposClases();
             await mostrarProductos();
+            await mostrarEspecialidades();
 
             // Inicializar niveles
             let niveles = await dataManager.get('nivelesEscuela') || [];
@@ -372,6 +406,19 @@
                 await mostrarProductos(); // Volver a mostrar después de crear
             }
 
+            // Inicializar especialidades
+            let especialidades = await dataManager.get('especialidadesProfesoresEscuela') || [];
+            if (especialidades.length === 0) {
+                especialidades = [
+                    { id: 1, nombre: 'Iniciación / Poni Club' },
+                    { id: 2, nombre: 'Doma Clásica' },
+                    { id: 3, nombre: 'Salto de Obstáculos' },
+                    { id: 4, nombre: 'Rutas y Campo' }
+                ];
+                await dataManager.set('especialidadesProfesoresEscuela', especialidades);
+                await mostrarEspecialidades();
+            }
+
             // Listeners para sincronización en tiempo real
             if (dataManager.useFirebase) {
                 dataManager.onSnapshot('nivelesEscuela', (data) => {
@@ -397,6 +444,14 @@
                         mostrarProductos();
                     }
                 });
+
+                dataManager.onSnapshot('especialidadesProfesoresEscuela', (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataEspecialidades) {
+                        ultimaDataEspecialidades = dataActual;
+                        mostrarEspecialidades();
+                    }
+                });
             } else {
                 setInterval(async function () {
                     const dataNiveles = JSON.stringify(await dataManager.get('nivelesEscuela') || []);
@@ -415,6 +470,12 @@
                     if (dataProductos !== ultimaDataProductos) {
                         ultimaDataProductos = dataProductos;
                         mostrarProductos();
+                    }
+
+                    const dataEspecialidades = JSON.stringify(await dataManager.get('especialidadesProfesoresEscuela') || []);
+                    if (dataEspecialidades !== ultimaDataEspecialidades) {
+                        ultimaDataEspecialidades = dataEspecialidades;
+                        mostrarEspecialidades();
                     }
                 }, 500);
             }
@@ -450,6 +511,22 @@
             await dataManager.set('tiposClasesEscuela', tiposClases);
             nombreTipoClaseInput.value = '';
             mostrarTiposClases();
+        });
+
+        // Formulario Especialidad
+        formEspecialidad.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const nombre = nombreEspecialidadInput.value.trim();
+            if (!nombre) return;
+
+            let especialidades = await dataManager.get('especialidadesProfesoresEscuela') || [];
+            const existe = especialidades.some(e => e.nombre.toLowerCase() === nombre.toLowerCase());
+            if (existe) { alert('Esta especialidad ya existe.'); return; }
+
+            especialidades.push({ id: Date.now(), nombre: nombre });
+            await dataManager.set('especialidadesProfesoresEscuela', especialidades);
+            nombreEspecialidadInput.value = '';
+            mostrarEspecialidades();
         });
 
         // Formulario Producto
@@ -521,6 +598,19 @@
             });
         }
 
+        async function mostrarEspecialidades() {
+            const especialidades = await dataManager.get('especialidadesProfesoresEscuela') || [];
+            tablaEspecialidades.innerHTML = '';
+            if (especialidades.length === 0) {
+                tablaEspecialidades.innerHTML = `<tr><td colspan="2" class="no-records">No hay especialidades.</td></tr>`;
+                return;
+            }
+            especialidades.forEach(e => {
+                const fila = tablaEspecialidades.insertRow();
+                fila.innerHTML = `<td><b>${e.nombre}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarEspecialidad(${e.id})">Eliminar</button></td>`;
+            });
+        }
+
         async function eliminarNivel(id) {
             if (confirm('¿Deseas eliminar este nivel de alumno?')) {
                 let niveles = await dataManager.get('nivelesEscuela') || [];
@@ -545,6 +635,15 @@
                 productos = productos.filter(p => p.id !== id);
                 await dataManager.set('productosEscuela', productos);
                 mostrarProductos();
+            }
+        }
+
+        async function eliminarEspecialidad(id) {
+            if (confirm('¿Deseas eliminar esta especialidad?')) {
+                let especialidades = await dataManager.get('especialidadesProfesoresEscuela') || [];
+                especialidades = especialidades.filter(e => e.id !== id);
+                await dataManager.set('especialidadesProfesoresEscuela', especialidades);
+                mostrarEspecialidades();
             }
         }
     </script>
