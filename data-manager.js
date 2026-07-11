@@ -210,6 +210,74 @@ class DataManager {
         }
     }
 
+    // Exportar todos los datos a un fichero JSON
+    async exportarDatosLocales() {
+        if (!confirm('¿Deseas exportar toda la base de datos a un fichero local?')) {
+            return;
+        }
+
+        console.log('⏳ Exportando datos...');
+        const colecciones = [
+            'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela',
+            'asignacionesEscuela', 'nivelesEscuela', 'tiposClasesEscuela', 'productosEscuela',
+            'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela'
+        ];
+
+        const backup = {};
+        try {
+            for (const collection of colecciones) {
+                backup[collection] = await this.get(collection);
+                console.log(`  - Exportada colección: ${collection}`);
+            }
+
+            const jsonString = JSON.stringify(backup, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const fecha = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `backup-la-gerencia-${fecha}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            alert('✅ ¡Exportación completada! Revisa tus descargas.');
+
+        } catch (error) {
+            console.error('❌ Error durante la exportación:', error);
+            alert('❌ Hubo un error al exportar los datos.');
+        }
+    }
+
+    // Importar datos desde un fichero JSON
+    async importarDatosLocales(file) {
+        if (!file) return;
+        if (!confirm('⚠️ ¿ESTÁS SEGURO? Esto sobreescribirá TODOS los datos actuales en Firebase con el contenido del fichero. Esta acción es irreversible.')) {
+            return;
+        }
+
+        console.log('⏳ Importando datos desde fichero...');
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const datos = JSON.parse(e.target.result);
+                for (const collection in datos) {
+                    if (datos.hasOwnProperty(collection)) {
+                        await this.set(collection, datos[collection]);
+                        console.log(`  - Importada colección: ${collection}`);
+                    }
+                }
+                alert('✅ ¡Importación completada con éxito! La página se recargará.');
+                setTimeout(() => window.location.reload(), 500);
+            } catch (error) {
+                console.error('❌ Error al importar o parsear el fichero:', error);
+                alert(`❌ Error al importar el fichero. Asegúrate de que es un backup válido.\n\nDetalles: ${error.message}`);
+            }
+        };
+        reader.readAsText(file);
+    }
+
     // Borrar todos los datos
     async borrarTodosLosDatos() {
         if (!confirm('⚠️ ¿ESTÁS SEGURO? Esta acción es irreversible y borrará TODOS los datos de la aplicación.')) {
@@ -224,7 +292,7 @@ class DataManager {
         const colecciones = [
             'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela',
             'asignacionesEscuela', 'nivelesEscuela', 'tiposClasesEscuela', 'productosEscuela',
-            'pagosAlumnosEscuela', 'attendanceEscuela'
+            'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela'
         ];
 
         try {

@@ -331,12 +331,7 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="duracion">Duración Sesión:</label>
-                    <select id="duracion" required>
-                        <option value="45 minutos">45 minutos</option>
-                        <option value="1 hora">1 hora</option>
-                        <option value="1 hora y media">1 hora y media</option>
-                        <option value="2 horas">2 horas</option>
-                    </select>
+                    <select id="duracion" required></select>
                 </div>
                 <div class="form-group">
                     <label for="maxAlumnos">Nº de alumnos:</label>
@@ -370,6 +365,7 @@
         const ordenDias = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6, "Domingo": 7 };
 
         let ultimaDataClases = JSON.stringify([]);
+        let ultimaDataDuraciones = JSON.stringify([]);
 
         window.onload = async function () {
             let intentos = 0;
@@ -382,6 +378,7 @@
 
             setupEventListeners();
             await mostrarClases();
+            await poblarDuraciones();
 
             if (dataManager.useFirebase) {
                 dataManager.onSnapshot('clasesEscuela', async (data) => {
@@ -391,12 +388,24 @@
                         await mostrarClases();
                     }
                 });
+                dataManager.onSnapshot('duracionesEscuela', async (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataDuraciones) {
+                        ultimaDataDuraciones = dataActual;
+                        await poblarDuraciones();
+                    }
+                });
             } else {
                 setInterval(async function () {
                     const dataActual = JSON.stringify(await dataManager.get('clasesEscuela') || []);
                     if (dataActual !== ultimaDataClases) {
                         ultimaDataClases = dataActual;
                         await mostrarClases();
+                    }
+                    const duracionesActual = JSON.stringify(await dataManager.get('duracionesEscuela') || []);
+                    if (duracionesActual !== ultimaDataDuraciones) {
+                        ultimaDataDuraciones = duracionesActual;
+                        await poblarDuraciones();
                     }
                 }, 500);
             }
@@ -449,6 +458,21 @@
             checkboxes.forEach(chk => chk.checked = false);
             const horariosContainer = document.getElementById('horariosContainer');
             if (horariosContainer) horariosContainer.innerHTML = '';
+        }
+
+        async function poblarDuraciones() {
+            const select = document.getElementById('duracion');
+            const valorActual = select.value;
+            const duraciones = await dataManager.get('duracionesEscuela') || [];
+
+            if (duraciones.length === 0) {
+                select.innerHTML = '<option value="">⚠️ Crea duraciones en "Bases"</option>';
+                return;
+            }
+
+            select.innerHTML = '<option value="">-- Selecciona duración --</option>' + duraciones.map(d => `<option value="${d.nombre}">${d.nombre}</option>`).join('');
+
+            if (valorActual && duraciones.some(d => d.nombre === valorActual)) select.value = valorActual;
         }
 
         form.addEventListener('submit', async function (e) {

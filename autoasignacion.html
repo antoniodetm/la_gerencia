@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-asignación de Clases</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 650px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 30px auto;
+        }
+
+        h2,
+        h3 {
+            color: #d35400;
+            border-bottom: 2px solid #d4c5b9;
+            padding-bottom: 8px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #e67e22;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #cf6d17;
+        }
+
+        .clase-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #d35400;
+        }
+
+        .clase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .clase-title {
+            font-size: 18px;
+            margin: 0;
+            color: #2e4a62;
+        }
+
+        .alumno-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fdfbf7;
+            padding: 8px 12px;
+            border: 1px solid #eae5dc;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+
+        .btn-remove-inline {
+            background: #c0392b;
+            padding: 3px 8px;
+            font-size: 11px;
+            width: auto;
+            margin: 0;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-remove-inline:hover {
+            background: #a33226;
+        }
+
+        .no-records {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>🔗 Apúntate a una Clase</h2>
+        <form id="asignacionForm">
+            <div class="form-group">
+                <label for="alumnoSelect">1. Elige tu nombre:</label>
+                <select id="alumnoSelect" required></select>
+            </div>
+            <div class="form-group">
+                <label for="claseSelect">2. Selecciona el Horario de la Clase:</label>
+                <select id="claseSelect" required></select>
+            </div>
+            <div class="form-group" id="fechaSelectContainer" style="display: none;">
+                <label for="diaSelect">3. Selecciona la Fecha de la Clase:</label>
+                <select id="diaSelect" required></select>
+            </div>
+            <button type="submit" id="submitBtn">Apuntarme a la Clase</button>
+        </form>
+    </div>
+
+    <div class="container" style="max-width: 800px; background: transparent; box-shadow: none; padding: 0;">
+        <h3>📋 Alumnos apuntados a las próximas clases</h3>
+        <div id="listaGrupos"></div>
+    </div>
+
+    <script src="data-manager.js?v=1.5"></script>
+    <script>
+        const form = document.getElementById('asignacionForm');
+        const listaGrupos = document.getElementById('listaGrupos');
+        const claseSelect = document.getElementById('claseSelect');
+        const alumnoSelect = document.getElementById('alumnoSelect');
+        const fechaSelectContainer = document.getElementById('fechaSelectContainer');
+
+        const ordenDias = { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6, "Domingo": 7 };
+
+        window.onload = async function () {
+            await dataManager.initPromise;
+
+            claseSelect.addEventListener('change', actualizarSelectorFecha);
+
+            await poblarDesplegables();
+            await mostrarAsignacionesGrupales();
+
+            dataManager.onSnapshot('asignacionesEscuela', mostrarAsignacionesGrupales);
+            dataManager.onSnapshot('alumnosEscuela', poblarDesplegables);
+            dataManager.onSnapshot('clasesEscuela', async () => {
+                await poblarDesplegables();
+                await mostrarAsignacionesGrupales();
+            });
+        };
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const claseId = claseSelect.value;
+            const fechaSeleccionada = document.getElementById('diaSelect').value;
+            await agregarAsignacion(claseId, alumnoSelect.value, fechaSeleccionada);
+        });
+
+        async function poblarDesplegables() {
+            const clases = await dataManager.get('clasesEscuela') || [];
+            clases.sort((a, b) => {
+                const getDia1 = a.tipo === 'unDia' ? a.diaSemana : Object.keys(a.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
+                const getDia2 = b.tipo === 'unDia' ? b.diaSemana : Object.keys(b.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
+                return ordenDias[getDia1] - ordenDias[getDia2];
+            });
+            claseSelect.innerHTML = '<option value="">-- Selecciona una Clase --</option>' + clases.map(c => {
+                let etiqueta = c.tipo === 'unDia' ? `${c.diaSemana} a las ${c.hora} hs` : Object.entries(c.horarios || {}).sort((a, b) => ordenDias[a[0]] - ordenDias[b[0]]).map(([dia, hora]) => `${dia} ${hora}`).join(', ');
+                return `<option value="${c.id}">${etiqueta}</option>`;
+            }).join('');
+
+            const alumnos = await dataManager.get('alumnosEscuela') || [];
+            const alumnosActivos = alumnos.filter(a => (a.estado || 'Activo') === 'Activo');
+            alumnoSelect.innerHTML = '<option value="">-- Selecciona tu nombre --</option>' + alumnosActivos.map(a => `<option value="${a.nombre} ${a.apellido}">${a.nombre} ${a.apellido}</option>`).join('');
+        }
+
+        function getProximasFechas(diaSemana, cantidad = 4) {
+            const diaNum = ordenDias[diaSemana];
+            const fechas = [];
+            let fechaActual = new Date();
+            fechaActual.setDate(fechaActual.getDate() + (diaNum - fechaActual.getDay() + 7) % 7);
+            for (let i = 0; i < cantidad; i++) {
+                fechas.push(new Date(fechaActual));
+                fechaActual.setDate(fechaActual.getDate() + 7);
+            }
+            return fechas;
+        }
+
+        async function actualizarSelectorFecha() {
+            const claseId = claseSelect.value;
+            const diaSelect = document.getElementById('diaSelect');
+            if (!claseId) {
+                fechaSelectContainer.style.display = 'none';
+                return;
+            }
+            const [clases, asignaciones] = await Promise.all([
+                dataManager.get('clasesEscuela'),
+                dataManager.get('asignacionesEscuela')
+            ]);
+
+            const claseSeleccionada = clases.find(c => c.id == claseId);
+            let opcionesFechas = '<option value="">-- Elige una fecha --</option>';
+
+            if (claseSeleccionada && claseSeleccionada.tipo === 'unDia') {
+                const fechas = getProximasFechas(claseSeleccionada.diaSemana);
+                opcionesFechas += fechas.map(f => {
+                    const fechaStr = f.toISOString().split('T')[0];
+                    const alumnosEnClase = (asignaciones || []).filter(a => a.claseId == claseId && a.dia === fechaStr).length;
+                    const estaLlena = claseSeleccionada.maxAlumnos && alumnosEnClase >= claseSeleccionada.maxAlumnos;
+                    const textoFecha = f.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+                    return `<option value="${fechaStr}" ${estaLlena ? 'disabled' : ''}>${textoFecha} ${estaLlena ? '(Completo)' : ''}</option>`;
+                }).join('');
+            }
+            diaSelect.innerHTML = opcionesFechas;
+            fechaSelectContainer.style.display = 'block';
+        }
+
+        async function agregarAsignacion(claseId, alumnoName, dia) {
+            if (!claseId || !alumnoName || !dia) {
+                alert('Por favor, completa todos los campos: tu nombre, la clase y la fecha.');
+                return;
+            }
+
+            const clases = await dataManager.get('clasesEscuela') || [];
+            const claseSeleccionada = clases.find(c => c.id == claseId);
+
+            if (!claseSeleccionada) {
+                alert("Error: La clase seleccionada no se ha encontrado.");
+                return;
+            }
+
+            let asignaciones = await dataManager.get('asignacionesEscuela') || [];
+
+            // Contar alumnos para esa clase y día específicos
+            const alumnosEnClase = asignaciones.filter(a => a.claseId == claseId && a.dia === dia).length;
+
+            // Comprobar si la clase está llena
+            if (claseSeleccionada.maxAlumnos && alumnosEnClase >= claseSeleccionada.maxAlumnos) {
+                alert("😔 Lo sentimos, esta clase ya está completa. No quedan plazas disponibles.");
+                return;
+            }
+
+            if (asignaciones.some(a => a.claseId == claseId && a.alumno === alumnoName && a.dia === dia)) {
+                alert("⚠️ Ya estás apuntado en esta clase para este día.");
+                return;
+            }
+            asignaciones.push({ id: Date.now(), claseId: parseInt(claseId), alumno: alumnoName, dia: dia });
+            await dataManager.set('asignacionesEscuela', asignaciones);
+            alert(`✅ ¡Te has apuntado correctamente a la clase del ${new Date(dia + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' })}!`);
+            form.reset();
+            actualizarSelectorFecha();
+        }
+
+        async function mostrarAsignacionesGrupales() {
+            const [asignaciones, clasesDisponibles] = await Promise.all([dataManager.get('asignacionesEscuela'), dataManager.get('clasesEscuela')]);
+            const hoy = new Date().toISOString().split('T')[0];
+            listaGrupos.innerHTML = '';
+            const asignacionesFuturas = (asignaciones || []).filter(a => a.dia >= hoy);
+            if (asignacionesFuturas.length === 0) {
+                listaGrupos.innerHTML = `<div class="no-records">Todavía no hay alumnos apuntados a clases futuras.</div>`;
+                return;
+            }
+            const grupos = {};
+            asignacionesFuturas.forEach(a => {
+                const key = `${a.claseId}-${a.dia}`;
+                if (!grupos[key]) {
+                    const claseInfo = (clasesDisponibles || []).find(c => c.id == a.claseId);
+                    if (!claseInfo) return;
+                    grupos[key] = { clase: claseInfo, dia: a.dia, alumnos: [] };
+                }
+                grupos[key].alumnos.push(a);
+            });
+            Object.values(grupos).sort((a, b) => new Date(a.dia) - new Date(b.dia)).forEach(grupo => {
+                const card = document.createElement('div');
+                card.className = 'clase-card';
+                const fechaFormateada = new Date(grupo.dia + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                card.innerHTML = `
+                    <div class="clase-header">
+                        <h4 class="clase-title">🗓️ ${fechaFormateada} a las ${grupo.clase.hora} hs </h4>
+                        <span style="font-weight: bold; color: #333;">${grupo.alumnos.length}/${grupo.clase.maxAlumnos || '?'} alumnos</span>
+                    </div>
+                    <div class="clase-body">
+                        ${grupo.alumnos.map(a => `
+                            <div class="alumno-item">
+                                <span>👤 <b>${a.alumno}</b></span>
+                            </div>`).join('')}
+                    </div>`;
+                listaGrupos.appendChild(card);
+            });
+        }
+    </script>
+
+</body>
+
+</html>

@@ -311,6 +311,33 @@
             </div>
         </div>
 
+        <!-- COLUMNA 5: DURACIONES DE CLASES -->
+        <div class="column">
+            <div class="container" style="border-top: 5px solid #9b59b6;">
+                <h2 style="color: #9b59b6; border-bottom: 2px solid #d7bde2;">⏱️ Duraciones de Clases</h2>
+                <form id="duracionForm">
+                    <div class="form-group">
+                        <label for="nombreDuracion">Nueva Duración:</label>
+                        <input type="text" id="nombreDuracion" required placeholder="Ej. 1 hora, 45 minutos...">
+                    </div>
+                    <button type="submit" style="background-color: #9b59b6;">Añadir Duración</button>
+                </form>
+            </div>
+
+            <div class="container">
+                <h3 style="color: #9b59b6; border-bottom: 2px solid #d7bde2;">📋 Lista de Duraciones</h3>
+                <table id="tablaDuraciones">
+                    <thead>
+                        <tr>
+                            <th style="background-color: #9b59b6;">Duración</th>
+                            <th style="width: 80px; text-align: center; background-color: #9b59b6;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -329,6 +356,11 @@
         const nombreEspecialidadInput = document.getElementById('nombreEspecialidad');
         const tablaEspecialidades = document.getElementById('tablaEspecialidades').getElementsByTagName('tbody')[0];
 
+        // Duraciones
+        const formDuracion = document.getElementById('duracionForm');
+        const nombreDuracionInput = document.getElementById('nombreDuracion');
+        const tablaDuraciones = document.getElementById('tablaDuraciones').getElementsByTagName('tbody')[0];
+
         // Bonos
         const formProducto = document.getElementById('productoForm');
         const nombreProductoInput = document.getElementById('nombreProducto');
@@ -342,6 +374,7 @@
         let ultimaDataTiposClases = JSON.stringify([]);
         let ultimaDataProductos = JSON.stringify([]);
         let ultimaDataEspecialidades = JSON.stringify([]);
+        let ultimaDataDuraciones = JSON.stringify([]);
 
         tipoProductoSelect.addEventListener('change', () => {
             if (tipoProductoSelect.value === 'Bono') {
@@ -367,6 +400,7 @@
             await mostrarTiposClases();
             await mostrarProductos();
             await mostrarEspecialidades();
+            await mostrarDuraciones();
 
             // Inicializar niveles
             let niveles = await dataManager.get('nivelesEscuela') || [];
@@ -419,6 +453,19 @@
                 await mostrarEspecialidades();
             }
 
+            // Inicializar duraciones
+            let duraciones = await dataManager.get('duracionesEscuela') || [];
+            if (duraciones.length === 0) {
+                duraciones = [
+                    { id: 1, nombre: '45 minutos' },
+                    { id: 2, nombre: '1 hora' },
+                    { id: 3, nombre: '1 hora y media' },
+                    { id: 4, nombre: '2 horas' }
+                ];
+                await dataManager.set('duracionesEscuela', duraciones);
+                await mostrarDuraciones();
+            }
+
             // Listeners para sincronización en tiempo real
             if (dataManager.useFirebase) {
                 dataManager.onSnapshot('nivelesEscuela', (data) => {
@@ -452,6 +499,14 @@
                         mostrarEspecialidades();
                     }
                 });
+
+                dataManager.onSnapshot('duracionesEscuela', (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataDuraciones) {
+                        ultimaDataDuraciones = dataActual;
+                        mostrarDuraciones();
+                    }
+                });
             } else {
                 setInterval(async function () {
                     const dataNiveles = JSON.stringify(await dataManager.get('nivelesEscuela') || []);
@@ -476,6 +531,12 @@
                     if (dataEspecialidades !== ultimaDataEspecialidades) {
                         ultimaDataEspecialidades = dataEspecialidades;
                         mostrarEspecialidades();
+                    }
+
+                    const dataDuraciones = JSON.stringify(await dataManager.get('duracionesEscuela') || []);
+                    if (dataDuraciones !== ultimaDataDuraciones) {
+                        ultimaDataDuraciones = dataDuraciones;
+                        mostrarDuraciones();
                     }
                 }, 500);
             }
@@ -527,6 +588,22 @@
             await dataManager.set('especialidadesProfesoresEscuela', especialidades);
             nombreEspecialidadInput.value = '';
             mostrarEspecialidades();
+        });
+
+        // Formulario Duracion
+        formDuracion.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const nombre = nombreDuracionInput.value.trim();
+            if (!nombre) return;
+
+            let duraciones = await dataManager.get('duracionesEscuela') || [];
+            const existe = duraciones.some(d => d.nombre.toLowerCase() === nombre.toLowerCase());
+            if (existe) { alert('Esta duración ya existe.'); return; }
+
+            duraciones.push({ id: Date.now(), nombre: nombre });
+            await dataManager.set('duracionesEscuela', duraciones);
+            nombreDuracionInput.value = '';
+            mostrarDuraciones();
         });
 
         // Formulario Producto
@@ -611,6 +688,19 @@
             });
         }
 
+        async function mostrarDuraciones() {
+            const duraciones = await dataManager.get('duracionesEscuela') || [];
+            tablaDuraciones.innerHTML = '';
+            if (duraciones.length === 0) {
+                tablaDuraciones.innerHTML = `<tr><td colspan="2" class="no-records">No hay duraciones registradas.</td></tr>`;
+                return;
+            }
+            duraciones.forEach(d => {
+                const fila = tablaDuraciones.insertRow();
+                fila.innerHTML = `<td><b>${d.nombre}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarDuracion(${d.id})">Eliminar</button></td>`;
+            });
+        }
+
         async function eliminarNivel(id) {
             if (confirm('¿Deseas eliminar este nivel de alumno?')) {
                 let niveles = await dataManager.get('nivelesEscuela') || [];
@@ -643,6 +733,15 @@
                 let especialidades = await dataManager.get('especialidadesProfesoresEscuela') || [];
                 especialidades = especialidades.filter(e => e.id !== id);
                 await dataManager.set('especialidadesProfesoresEscuela', especialidades);
+                mostrarEspecialidades();
+            }
+        }
+
+        async function eliminarDuracion(id) {
+            if (confirm('¿Deseas eliminar esta duración?')) {
+                let duraciones = await dataManager.get('duracionesEscuela') || [];
+                duraciones = duraciones.filter(d => d.id !== id);
+                await dataManager.set('duracionesEscuela', duraciones);
                 mostrarEspecialidades();
             }
         }
