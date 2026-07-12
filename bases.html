@@ -201,7 +201,7 @@
 
         <!-- COLUMNA 2: FORMACIÓN ACADÉMICA -->
         <div class="container" style="border-top: 5px solid #8e44ad;">
-            <h2 style="color: #8e44ad; border-bottom: 2px solid #d7bde2;">🎓 Formación Académica</h2>
+            <h2 style="color: #8e44ad; border-bottom: 2px solid #d7bde2;">🎓 Formación</h2>
             <form id="formacionForm">
                 <div class="form-group">
                     <label for="nombreFormacion">Nueva Formación:</label>
@@ -220,28 +220,6 @@
             </table>
         </div>
 
-        <!-- COLUMNA 2: TIPOS DE CLASES -->
-        <div class="container" style="border-top: 5px solid #2e4a62;">
-            <h2 style="color: #2e4a62; border-bottom: 2px solid #aec6cf;">📅 Tipos de Clases</h2>
-            <form id="tipoClaseForm">
-                <div class="form-group">
-                    <label for="nombreTipoClase">Nuevo Tipo/Nivel de Clase:</label>
-                    <input type="text" id="nombreTipoClase" required
-                        placeholder="Ej. Clase Particular, Salida al Campo...">
-                </div>
-                <button type="submit" style="background-color: #2e4a62;">Añadir Tipo</button>
-            </form>
-            <table id="tablaTiposClases" style="margin-top: 25px;">
-                <thead>
-                    <tr>
-                        <th style="background-color: #2e4a62;">Tipo de Clase</th>
-                        <th style="width: 80px; text-align: center; background-color: #2e4a62;">Acción</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-
         <!-- COLUMNA 3: PRODUCTOS Y SERVICIOS -->
         <div class="container" style="border-top: 5px solid #27ae60;">
             <h2 style="color: #27ae60; border-bottom: 2px solid #a2e8c4;">🛍️ Productos y Servicios</h2>
@@ -249,20 +227,6 @@
                 <div class="form-group">
                     <label for="nombreProducto">Nombre del Producto/Servicio:</label>
                     <input type="text" id="nombreProducto" required placeholder="Ej. Bono 10 Clases, Clase Suelta...">
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="tipoProducto">Tipo de Producto:</label>
-                        <select id="tipoProducto">
-                            <option value="Otro">Otro (Material, etc.)</option>
-                            <option value="Bono">Bono de Clases</option>
-                            <option value="Clase Suelta">Clase Suelta</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="numClasesContainer" style="display: none;">
-                        <label for="numClases">Número de Clases:</label>
-                        <input type="number" id="numClases" min="1" placeholder="Ej. 10">
-                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -276,9 +240,8 @@
                 <thead>
                     <tr>
                         <th style="background-color: #27ae60;">Producto/Servicio</th>
-                        <th style="background-color: #27ae60; width: 80px; text-align: center;">Clases</th>
                         <th style="background-color: #27ae60; width: 80px; text-align: right;">Precio (€)</th>
-                        <th style="width: 70px; text-align: center; background-color: #27ae60;">Acción</th>
+                        <th style="width: 80px; text-align: center; background-color: #27ae60;">Acción</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -340,10 +303,11 @@
         const nombreFormacionInput = document.getElementById('nombreFormacion');
         const tablaFormaciones = document.getElementById('tablaFormaciones').getElementsByTagName('tbody')[0];
 
-        // Clases
-        const formTipoClase = document.getElementById('tipoClaseForm');
-        const nombreTipoClaseInput = document.getElementById('nombreTipoClase');
-        const tablaTiposClases = document.getElementById('tablaTiposClases').getElementsByTagName('tbody')[0];
+        // Productos
+        const formProducto = document.getElementById('productoForm');
+        const nombreProductoInput = document.getElementById('nombreProducto');
+        const precioProductoInput = document.getElementById('precioProducto');
+        const tablaProductos = document.getElementById('tablaProductos').getElementsByTagName('tbody')[0];
 
         // Especialidades
         const formEspecialidad = document.getElementById('especialidadForm');
@@ -355,31 +319,11 @@
         const nombreDuracionInput = document.getElementById('nombreDuracion');
         const tablaDuraciones = document.getElementById('tablaDuraciones').getElementsByTagName('tbody')[0];
 
-        // Bonos
-        const formProducto = document.getElementById('productoForm');
-        const nombreProductoInput = document.getElementById('nombreProducto');
-        const tipoProductoSelect = document.getElementById('tipoProducto');
-        const numClasesContainer = document.getElementById('numClasesContainer');
-        const numClasesInput = document.getElementById('numClases');
-        const precioProductoInput = document.getElementById('precioProducto');
-        const tablaProductos = document.getElementById('tablaProductos').getElementsByTagName('tbody')[0];
-
         let ultimaDataNiveles = JSON.stringify([]);
         let ultimaDataFormaciones = JSON.stringify([]);
-        let ultimaDataTiposClases = JSON.stringify([]);
         let ultimaDataProductos = JSON.stringify([]);
         let ultimaDataEspecialidades = JSON.stringify([]);
         let ultimaDataDuraciones = JSON.stringify([]);
-
-        tipoProductoSelect.addEventListener('change', () => {
-            if (tipoProductoSelect.value === 'Bono') {
-                numClasesContainer.style.display = 'block';
-                numClasesInput.required = true;
-            } else {
-                numClasesContainer.style.display = 'none';
-                numClasesInput.required = false;
-            }
-        });
 
         window.onload = async function () {
             let intentos = 0;
@@ -393,7 +337,6 @@
             // Primero, intentar mostrar los datos existentes
             await mostrarNiveles();
             await mostrarFormaciones();
-            await mostrarTiposClases();
             await mostrarProductos();
             await mostrarEspecialidades();
             await mostrarDuraciones();
@@ -420,20 +363,6 @@
                 ];
                 await dataManager.set('formacionesEscuela', formaciones);
                 await mostrarFormaciones();
-            }
-
-            // Inicializar tipos de clases
-            let tiposClases = await dataManager.get('tiposClasesEscuela') || [];
-            if (tiposClases.length === 0) {
-                tiposClases = [
-                    { id: 1, nombre: 'Iniciación' },
-                    { id: 2, nombre: 'Intermedio' },
-                    { id: 3, nombre: 'Avanzado / Competición' },
-                    { id: 4, nombre: 'Clase Particular' },
-                    { id: 5, nombre: 'Salida al Campo' }
-                ];
-                await dataManager.set('tiposClasesEscuela', tiposClases);
-                await mostrarTiposClases(); // Volver a mostrar después de crear
             }
 
             // Inicializar productos
@@ -492,14 +421,6 @@
                     }
                 });
 
-                dataManager.onSnapshot('tiposClasesEscuela', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataTiposClases) {
-                        ultimaDataTiposClases = dataActual;
-                        mostrarTiposClases();
-                    }
-                });
-
                 dataManager.onSnapshot('productosEscuela', (data) => {
                     const dataActual = JSON.stringify(data || []);
                     if (dataActual !== ultimaDataProductos) {
@@ -535,12 +456,6 @@
                     if (dataFormaciones !== ultimaDataFormaciones) {
                         ultimaDataFormaciones = dataFormaciones;
                         mostrarFormaciones();
-                    }
-
-                    const dataTipos = JSON.stringify(await dataManager.get('tiposClasesEscuela') || []);
-                    if (dataTipos !== ultimaDataTiposClases) {
-                        ultimaDataTipos = dataTipos;
-                        mostrarTiposClases();
                     }
 
                     const dataProductos = JSON.stringify(await dataManager.get('productosEscuela') || []);
@@ -596,22 +511,6 @@
             mostrarFormaciones();
         });
 
-        // Formulario Tipo Clase
-        formTipoClase.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const nombre = nombreTipoClaseInput.value.trim();
-            if (!nombre) return;
-
-            let tiposClases = await dataManager.get('tiposClasesEscuela') || [];
-            const existe = tiposClases.some(t => t.nombre.toLowerCase() === nombre.toLowerCase());
-            if (existe) { alert('Este tipo de clase ya existe.'); return; }
-
-            tiposClases.push({ id: Date.now(), nombre: nombre });
-            await dataManager.set('tiposClasesEscuela', tiposClases);
-            nombreTipoClaseInput.value = '';
-            mostrarTiposClases();
-        });
-
         // Formulario Especialidad
         formEspecialidad.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -648,23 +547,17 @@
         formProducto.addEventListener('submit', async function (e) {
             e.preventDefault();
             const nombre = nombreProductoInput.value.trim();
-            const tipo = tipoProductoSelect.value;
-            const numClases = (tipo === 'Bono') ? parseInt(numClasesInput.value) : (tipo === 'Clase Suelta' ? 1 : null);
             const precio = parseFloat(precioProductoInput.value).toFixed(2);
             if (!nombre || isNaN(precio)) return;
-            if (tipo === 'Bono' && (!numClases || numClases < 1)) {
-                alert('Por favor, especifica un número de clases válido para el bono.');
-                return;
-            }
 
             let productos = await dataManager.get('productosEscuela') || [];
             const existe = productos.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
             if (existe) { alert('Este producto ya existe.'); return; }
 
-            productos.push({ id: Date.now(), nombre, tipo, numClases, precio });
+            // Se guarda solo nombre y precio. Se elimina la lógica de 'tipo' y 'numClases'.
+            productos.push({ id: Date.now(), nombre, precio });
             await dataManager.set('productosEscuela', productos);
             formProducto.reset();
-            numClasesContainer.style.display = 'none';
             mostrarProductos();
         });
 
@@ -694,32 +587,17 @@
             });
         }
 
-        async function mostrarTiposClases() {
-            const tiposClases = await dataManager.get('tiposClasesEscuela') || [];
-            tablaTiposClases.innerHTML = '';
-            if (tiposClases.length === 0) {
-                tablaTiposClases.innerHTML = `<tr><td colspan="2" class="no-records">No hay tipos de clase.</td></tr>`;
-                return;
-            }
-            tiposClases.forEach(t => {
-                const fila = tablaTiposClases.insertRow();
-                fila.innerHTML = `<td><b>${t.nombre}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarTipoClase(${t.id})">Eliminar</button></td>`;
-            });
-        }
-
         async function mostrarProductos() {
             const productos = await dataManager.get('productosEscuela') || [];
             tablaProductos.innerHTML = '';
             if (productos.length === 0) {
-                tablaProductos.innerHTML = `<tr><td colspan="4" class="no-records">No hay productos registrados.</td></tr>`;
+                tablaProductos.innerHTML = `<tr><td colspan="3" class="no-records">No hay productos registrados.</td></tr>`;
                 return;
             }
             productos.forEach(p => {
                 const fila = tablaProductos.insertRow();
-                const clasesStr = p.numClases ? p.numClases : 'N/A';
                 fila.innerHTML = `
                 <td><b>${p.nombre}</b></td>
-                <td style="text-align:center;">${clasesStr}</td>
                 <td style="text-align:right;">${p.precio} €</td>
                 <td style="text-align:center;"><button class="btn-delete" onclick="eliminarProducto(${p.id})">Eliminar</button></td>
             `;
@@ -767,15 +645,6 @@
                 formaciones = formaciones.filter(f => f.id !== id);
                 await dataManager.set('formacionesEscuela', formaciones);
                 mostrarFormaciones();
-            }
-        }
-
-        async function eliminarTipoClase(id) {
-            if (confirm('¿Deseas eliminar este tipo de clase?')) {
-                let tiposClases = await dataManager.get('tiposClasesEscuela') || [];
-                tiposClases = tiposClases.filter(t => t.id !== id);
-                await dataManager.set('tiposClasesEscuela', tiposClases);
-                mostrarTiposClases();
             }
         }
 
