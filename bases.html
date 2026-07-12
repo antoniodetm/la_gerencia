@@ -51,10 +51,10 @@
 
         .main-layout {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 20px;
             max-width: 1400px;
-            margin: 0 auto;
+            margin: 20px auto;
         }
 
         .container {
@@ -63,7 +63,6 @@
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             margin-bottom: 25px;
-            height: fit-content;
         }
 
         h2,
@@ -180,162 +179,131 @@
     <div class="main-layout">
 
         <!-- COLUMNA 1: NIVELES DE ALUMNOS -->
-        <div class="column">
-            <div class="container">
-                <h2>👤 Niveles de Alumnos</h2>
-                <form id="nivelForm">
-                    <div class="form-group">
-                        <label for="nombreNivel">Nuevo Nivel de Alumno:</label>
-                        <input type="text" id="nombreNivel" required placeholder="Ej. Iniciación, Intermedio...">
-                    </div>
-                    <button type="submit">Añadir Nivel</button>
-                </form>
-            </div>
-
-            <div class="container">
-                <h3>📋 Lista de Niveles</h3>
-                <table id="tablaNiveles">
-                    <thead>
-                        <tr>
-                            <th>Nivel</th>
-                            <th style="width: 80px; text-align: center;">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+        <div class="container">
+            <h2>👤 Niveles de Alumnos</h2>
+            <form id="nivelForm">
+                <div class="form-group">
+                    <label for="nombreNivel">Nuevo Nivel de Alumno:</label>
+                    <input type="text" id="nombreNivel" required placeholder="Ej. Iniciación, Intermedio...">
+                </div>
+                <button type="submit">Añadir Nivel</button>
+            </form>
+            <table id="tablaNiveles" style="margin-top: 25px;">
+                <thead>
+                    <tr>
+                        <th>Nivel</th>
+                        <th style="width: 80px; text-align: center;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
 
         <!-- COLUMNA 2: TIPOS DE CLASES -->
-        <div class="column">
-            <div class="container" style="border-top: 5px solid #2e4a62;">
-                <h2 style="color: #2e4a62; border-bottom: 2px solid #aec6cf;">📅 Tipos de Clases</h2>
-                <form id="tipoClaseForm">
-                    <div class="form-group">
-                        <label for="nombreTipoClase">Nuevo Tipo/Nivel de Clase:</label>
-                        <input type="text" id="nombreTipoClase" required
-                            placeholder="Ej. Clase Particular, Salida al Campo...">
-                    </div>
-                    <button type="submit" style="background-color: #2e4a62;">Añadir Tipo</button>
-                </form>
-            </div>
-
-            <div class="container">
-                <h3 style="color: #2e4a62; border-bottom: 2px solid #aec6cf;">📋 Lista de Tipos</h3>
-                <table id="tablaTiposClases">
-                    <thead>
-                        <tr>
-                            <th style="background-color: #2e4a62;">Tipo de Clase</th>
-                            <th style="width: 80px; text-align: center; background-color: #2e4a62;">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+        <div class="container" style="border-top: 5px solid #2e4a62;">
+            <h2 style="color: #2e4a62; border-bottom: 2px solid #aec6cf;">📅 Tipos de Clases</h2>
+            <form id="tipoClaseForm">
+                <div class="form-group">
+                    <label for="nombreTipoClase">Nuevo Tipo/Nivel de Clase:</label>
+                    <input type="text" id="nombreTipoClase" required
+                        placeholder="Ej. Clase Particular, Salida al Campo...">
+                </div>
+                <button type="submit" style="background-color: #2e4a62;">Añadir Tipo</button>
+            </form>
+            <table id="tablaTiposClases" style="margin-top: 25px;">
+                <thead>
+                    <tr>
+                        <th style="background-color: #2e4a62;">Tipo de Clase</th>
+                        <th style="width: 80px; text-align: center; background-color: #2e4a62;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
 
         <!-- COLUMNA 3: PRODUCTOS Y SERVICIOS -->
-        <div class="column">
-            <div class="container" style="border-top: 5px solid #27ae60;">
-                <h2 style="color: #27ae60; border-bottom: 2px solid #a2e8c4;">🛍️ Productos y Servicios</h2>
-                <form id="productoForm">
+        <div class="container" style="border-top: 5px solid #27ae60;">
+            <h2 style="color: #27ae60; border-bottom: 2px solid #a2e8c4;">🛍️ Productos y Servicios</h2>
+            <form id="productoForm">
+                <div class="form-group">
+                    <label for="nombreProducto">Nombre del Producto/Servicio:</label>
+                    <input type="text" id="nombreProducto" required placeholder="Ej. Bono 10 Clases, Clase Suelta...">
+                </div>
+                <div class="form-row">
                     <div class="form-group">
-                        <label for="nombreProducto">Nombre del Producto/Servicio:</label>
-                        <input type="text" id="nombreProducto" required
-                            placeholder="Ej. Bono 10 Clases, Clase Suelta...">
+                        <label for="tipoProducto">Tipo de Producto:</label>
+                        <select id="tipoProducto">
+                            <option value="Otro">Otro (Material, etc.)</option>
+                            <option value="Bono">Bono de Clases</option>
+                            <option value="Clase Suelta">Clase Suelta</option>
+                        </select>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="tipoProducto">Tipo de Producto:</label>
-                            <select id="tipoProducto">
-                                <option value="Otro">Otro (Material, etc.)</option>
-                                <option value="Bono">Bono de Clases</option>
-                                <option value="Clase Suelta">Clase Suelta</option>
-                            </select>
-                        </div>
-                        <div class="form-group" id="numClasesContainer" style="display: none;">
-                            <label for="numClases">Número de Clases:</label>
-                            <input type="number" id="numClases" min="1" placeholder="Ej. 10">
-                        </div>
+                    <div class="form-group" id="numClasesContainer" style="display: none;">
+                        <label for="numClases">Número de Clases:</label>
+                        <input type="number" id="numClases" min="1" placeholder="Ej. 10">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="precioProducto">Precio (€):</label>
-                            <input type="number" id="precioProducto" required min="0" step="0.01" placeholder="Ej. 150">
-                        </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="precioProducto">Precio (€):</label>
+                        <input type="number" id="precioProducto" required min="0" step="0.01" placeholder="Ej. 150">
                     </div>
-                    <button type="submit" style="background-color: #27ae60;">Añadir Producto</button>
-                </form>
-            </div>
-
-            <div class="container">
-                <h3 style="color: #27ae60; border-bottom: 2px solid #a2e8c4;">📋 Lista de Productos</h3>
-                <table id="tablaProductos">
-                    <thead>
-                        <tr>
-                            <th style="background-color: #27ae60;">Producto/Servicio</th>
-                            <th style="background-color: #27ae60; width: 80px; text-align: center;">Clases</th>
-                            <th style="background-color: #27ae60; width: 80px; text-align: right;">Precio (€)</th>
-                            <th style="width: 70px; text-align: center; background-color: #27ae60;">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+                </div>
+                <button type="submit" style="background-color: #27ae60;">Añadir Producto</button>
+            </form>
+            <table id="tablaProductos" style="margin-top: 25px;">
+                <thead>
+                    <tr>
+                        <th style="background-color: #27ae60;">Producto/Servicio</th>
+                        <th style="background-color: #27ae60; width: 80px; text-align: center;">Clases</th>
+                        <th style="background-color: #27ae60; width: 80px; text-align: right;">Precio (€)</th>
+                        <th style="width: 70px; text-align: center; background-color: #27ae60;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
 
         <!-- COLUMNA 4: ESPECIALIDADES DE PROFESORES -->
-        <div class="column">
-            <div class="container" style="border-top: 5px solid #16a085;">
-                <h2 style="color: #16a085; border-bottom: 2px solid #a3e4d7;">🎓 Especialidades de Profesores</h2>
-                <form id="especialidadForm">
-                    <div class="form-group">
-                        <label for="nombreEspecialidad">Nueva Especialidad:</label>
-                        <input type="text" id="nombreEspecialidad" required placeholder="Ej. Doma Clásica, Salto...">
-                    </div>
-                    <button type="submit" style="background-color: #16a085;">Añadir Especialidad</button>
-                </form>
-            </div>
-
-            <div class="container">
-                <h3 style="color: #16a085; border-bottom: 2px solid #a3e4d7;">📋 Lista de Especialidades</h3>
-                <table id="tablaEspecialidades">
-                    <thead>
-                        <tr>
-                            <th style="background-color: #16a085;">Especialidad</th>
-                            <th style="width: 80px; text-align: center; background-color: #16a085;">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+        <div class="container" style="border-top: 5px solid #16a085;">
+            <h2 style="color: #16a085; border-bottom: 2px solid #a3e4d7;">🎓 Especialidades de Profesores</h2>
+            <form id="especialidadForm">
+                <div class="form-group">
+                    <label for="nombreEspecialidad">Nueva Especialidad:</label>
+                    <input type="text" id="nombreEspecialidad" required placeholder="Ej. Doma Clásica, Salto...">
+                </div>
+                <button type="submit" style="background-color: #16a085;">Añadir Especialidad</button>
+            </form>
+            <table id="tablaEspecialidades" style="margin-top: 25px;">
+                <thead>
+                    <tr>
+                        <th style="background-color: #16a085;">Especialidad</th>
+                        <th style="width: 80px; text-align: center; background-color: #16a085;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
 
         <!-- COLUMNA 5: DURACIONES DE CLASES -->
-        <div class="column">
-            <div class="container" style="border-top: 5px solid #9b59b6;">
-                <h2 style="color: #9b59b6; border-bottom: 2px solid #d7bde2;">⏱️ Duraciones de Clases</h2>
-                <form id="duracionForm">
-                    <div class="form-group">
-                        <label for="nombreDuracion">Nueva Duración:</label>
-                        <input type="text" id="nombreDuracion" required placeholder="Ej. 1 hora, 45 minutos...">
-                    </div>
-                    <button type="submit" style="background-color: #9b59b6;">Añadir Duración</button>
-                </form>
-            </div>
-
-            <div class="container">
-                <h3 style="color: #9b59b6; border-bottom: 2px solid #d7bde2;">📋 Lista de Duraciones</h3>
-                <table id="tablaDuraciones">
-                    <thead>
-                        <tr>
-                            <th style="background-color: #9b59b6;">Duración</th>
-                            <th style="width: 80px; text-align: center; background-color: #9b59b6;">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+        <div class="container" style="border-top: 5px solid #9b59b6;">
+            <h2 style="color: #9b59b6; border-bottom: 2px solid #d7bde2;">⏱️ Duraciones de Clases</h2>
+            <form id="duracionForm">
+                <div class="form-group">
+                    <label for="nombreDuracion">Nueva Duración:</label>
+                    <input type="text" id="nombreDuracion" required placeholder="Ej. 1 hora, 45 minutos...">
+                </div>
+                <button type="submit" style="background-color: #9b59b6;">Añadir Duración</button>
+            </form>
+            <table id="tablaDuraciones" style="margin-top: 25px;">
+                <thead>
+                    <tr>
+                        <th style="background-color: #9b59b6;">Duración</th>
+                        <th style="width: 80px; text-align: center; background-color: #9b59b6;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
 
     </div>
