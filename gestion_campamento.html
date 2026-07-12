@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inscripción Campamento - La Gerencia</title>
+    <title>Gestión de Inscripciones - Campamento</title>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
@@ -181,16 +181,28 @@
 </head>
 
 <body>
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
+        <a href="campamento_hub.html" class="nav-link">🏕️ Campamento</a>
+    </div>
 
     <div class="container">
-        <h2>🏕️ Formulario de Inscripción a Campamento</h2>
-        <p style="text-align: center; color: #666; margin-top: -15px; margin-bottom: 25px;">
-            Rellena todos los campos para completar tu inscripción.
-            <a href="#" onclick="rellenarDatosDePrueba(); return false;"
-                style="font-size: 0.8em; vertical-align: middle; margin-left: 10px;">(Rellenar datos de prueba)</a>
-        </p>
+        <h2>🏕️ Gestión de Inscripciones al Campamento
+            <span style="font-size: 0.6em; vertical-align: middle; margin-left: 10px;">
+                <a href="#" onclick="rellenarDatosDePrueba(); return false;">(Rellenar prueba)</a>
+                <a href="#" id="cancelEditBtn" onclick="restablecerFormulario(); return false;"
+                    style="display:none; margin-left: 10px; color: #c0392b;">(Cancelar Edición)</a>
+            </span>
+        </h2>
+        <div style="margin-bottom: 20px; border-left: 5px solid #5c674e; padding-left: 10px;">
+            <h3 style="margin-top: 0; color: #5c674e; border-bottom: none; padding-bottom: 0;">🔍 Buscar Inscripción
+            </h3>
+            <input type="text" id="buscadorInscripcion" placeholder="Buscar por nombre, apellidos, DNI, teléfono..."
+                oninput="mostrarInscripciones()" style="margin-top: 10px; border: 2px solid #5c674e; font-size: 1.1em;">
+        </div>
 
         <form id="alumnoForm">
+            <input type="hidden" id="inscripcionId">
 
             <!-- DATOS DEL NIÑO/A -->
             <h3 style="color: #4a3728; margin-top: 20px;">Datos del Niño/a</h3>
@@ -328,8 +340,35 @@
                         placeholder="Ej. Aeropuerto T4, Estación de Atocha..."></div>
             </div>
 
-            <button type="submit" id="submitBtn">Enviar Inscripción</button>
+            <button type="submit" id="submitBtn">Añadir/Actualizar Inscripción</button>
         </form>
+    </div>
+
+    <!-- LISTA DE INSCRITOS -->
+    <div class="container" style="max-width: 95%;">
+        <h3>🏕️ Inscripciones Recibidas</h3>
+        <table id="tablaInscripciones">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Apellidos</th>
+                    <th>Fecha Nac.</th>
+                    <th>Teléfono Tutor</th>
+                    <th>Viaje</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Modal para ver Ficha -->
+    <div id="modalFicha" class="modal">
+        <div class="modal-content" style="text-align: left;">
+            <span class="close" onclick="cerrarFicha()">&times;</span>
+            <h3 style="margin-top:0; color:#4a3728;">📄 Ficha de Inscripción</h3>
+            <div id="fichaDetalles" style="max-height: 70vh; overflow-y: auto; padding-right: 15px;"></div>
+        </div>
     </div>
 
     <!-- Modal de confirmación -->
@@ -347,6 +386,7 @@
     <script>
         const form = document.getElementById('alumnoForm');
         const submitBtn = document.getElementById('submitBtn');
+        const inscripcionIdInput = document.getElementById('inscripcionId');
 
         // Configuración de Firebase directamente en el código
         const firebaseConfig = {
@@ -474,12 +514,19 @@
         }
 
         window.onload = async function () {
-            console.log('🏕️ Página de inscripción de campamento cargada.');
+            console.log('🏕️ Página de gestión de campamento cargada.');
+            mostrarInscripciones();
             setupEventListeners();
+
+            // Escuchar cambios en tiempo real
+            db.collection('inscripcionesCampamento').onSnapshot(snapshot => {
+                mostrarInscripciones();
+            });
         };
 
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
+            const id = inscripcionIdInput.value;
 
             const dni = document.getElementById('dni').value.trim();
             const nombre = document.getElementById('nombre').value.trim();
@@ -526,23 +573,168 @@
             };
 
             try {
-                // Crear un nuevo documento
-                await db.collection('inscripcionesCampamento').add({
-                    ...alumnoData,
-                    fechaInscripcion: new Date().toISOString()
-                });
-                document.getElementById('modalConfirmacion').style.display = 'block';
-                form.reset();
-                actualizarCamposTutor();
+                if (id) {
+                    // Actualizar un documento existente
+                    await db.collection('inscripcionesCampamento').doc(id).update(alumnoData);
+                    alert("¡Inscripción actualizada correctamente!");
+                } else {
+                    // Crear un nuevo documento
+                    await db.collection('inscripcionesCampamento').add({
+                        ...alumnoData,
+                        fechaInscripcion: new Date().toISOString()
+                    });
+                    alert("¡Nueva inscripción añadida correctamente!");
+                }
 
+                restablecerFormulario();
             } catch (error) {
                 console.error("Error al guardar la inscripción: ", error);
-                alert("Hubo un error al enviar la inscripción. Por favor, inténtalo de nuevo.\n\nDetalles: " + error.message);
+                alert("Hubo un error al guardar la inscripción. Por favor, inténtalo de nuevo.\n\nDetalles: " + error.message);
             }
         });
 
+        function restablecerFormulario() {
+            form.reset();
+            inscripcionIdInput.value = '';
+            submitBtn.textContent = 'Añadir/Actualizar Inscripción';
+            actualizarCamposTutor();
+            document.getElementById('cancelEditBtn').style.display = 'none';
+            // Disparar eventos para ocultar secciones condicionales
+            document.getElementById('participadoConcursos').dispatchEvent(new Event('change'));
+            document.getElementById('caballoPropio').dispatchEvent(new Event('change'));
+            document.getElementById('necesitaRecogida').dispatchEvent(new Event('change'));
+        }
+
         function cerrarModal() {
             document.getElementById('modalConfirmacion').style.display = 'none';
+        }
+
+        async function mostrarInscripciones() {
+            const tabla = document.getElementById('tablaInscripciones').getElementsByTagName('tbody')[0];
+            const searchInput = document.getElementById('buscadorInscripcion').value || '';
+            const normalizar = (texto) => (texto || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const filtro = normalizar(searchInput);
+
+            const snapshot = await db.collection('inscripcionesCampamento').orderBy('fechaInscripcion', 'desc').get();
+            tabla.innerHTML = '';
+
+            const inscripciones = [];
+            snapshot.forEach(doc => inscripciones.push({ id: doc.id, ...doc.data() }));
+
+            const inscripcionesFiltradas = inscripciones.filter(i => {
+                if (!filtro) return true;
+                return normalizar(i.nombre).includes(filtro) ||
+                    normalizar(i.apellido).includes(filtro) ||
+                    normalizar(i.dni).includes(filtro) ||
+                    normalizar(i.tutorDni).includes(filtro) ||
+                    normalizar(i.telefono).includes(filtro);
+            });
+
+            if (inscripcionesFiltradas.length === 0) {
+                tabla.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#888;">No se encontraron inscripciones.</td></tr>`;
+                return;
+            }
+
+            inscripcionesFiltradas.forEach(i => {
+                const fila = tabla.insertRow();
+                const viaje = i.necesitaRecogida === 'Sí' ? '✅ Sí' : '❌ No';
+                const fechaNac = i.fechaNacimiento ? new Date(i.fechaNacimiento + 'T12:00:00').toLocaleDateString('es-ES') : '-';
+
+                fila.innerHTML = `
+                    <td>${i.nombre}</td>
+                    <td>${i.apellido}</td>
+                    <td>${fechaNac}</td>
+                    <td>${i.telefono}</td>
+                    <td>${viaje}</td>
+                    <td class="actions-cell">
+                        <button onclick="verFicha('${i.id}')" style="background-color:#3498db;">Ver Ficha</button>
+                        <button onclick="cargarInscripcionParaEditar('${i.id}')" style="background-color:#f39c12;">Editar</button>
+                        <button onclick="eliminarInscripcion('${i.id}')" style="background-color:#c0392b;">Eliminar</button>
+                    </td>
+                `;
+            });
+        }
+
+        async function cargarInscripcionParaEditar(id) {
+            const doc = await db.collection('inscripcionesCampamento').doc(id).get();
+            if (!doc.exists) {
+                alert("Error: No se encontró la inscripción.");
+                return;
+            }
+            const data = doc.data();
+            inscripcionIdInput.value = id;
+
+            // Rellenar todos los campos del formulario
+            for (const key in data) {
+                const element = document.getElementById(key);
+                if (element) {
+                    element.value = data[key];
+                    // Disparar eventos para campos condicionales
+                    if (['fechaNacimiento', 'participadoConcursos', 'caballoPropio', 'necesitaRecogida'].includes(key)) {
+                        element.dispatchEvent(new Event('change'));
+                    }
+                }
+            }
+
+            submitBtn.textContent = 'Actualizar Inscripción';
+            document.getElementById('cancelEditBtn').style.display = 'inline';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function eliminarInscripcion(id) {
+            if (confirm('¿Estás seguro de que quieres eliminar esta inscripción de forma permanente?')) {
+                try {
+                    await db.collection('inscripcionesCampamento').doc(id).delete();
+                    alert("Inscripción eliminada.");
+                    // La tabla se actualizará automáticamente gracias al listener onSnapshot
+                } catch (error) {
+                    console.error("Error al eliminar: ", error);
+                    alert("Hubo un error al eliminar la inscripción.");
+                }
+            }
+        }
+
+        async function verFicha(id) {
+            const doc = await db.collection('inscripcionesCampamento').doc(id).get();
+            if (!doc.exists) return;
+            const data = doc.data();
+            const detallesDiv = document.getElementById('fichaDetalles');
+
+            let html = '<h4>Datos del Niño/a</h4>';
+            html += `<p><strong>Nombre:</strong> ${data.nombre} ${data.apellido}</p>`;
+            html += `<p><strong>Fecha Nacimiento:</strong> ${data.fechaNacimiento}</p>`;
+            html += `<p><strong>DNI:</strong> ${data.dni}</p>`;
+            html += `<p><strong>Dirección:</strong> ${data.direccion}, ${data.cp} ${data.poblacion} (${data.provincia})</p>`;
+            html += `<p><strong>Licencia/Seg. Social:</strong> ${data.numLicencia || '-'} / ${data.numSegSocial || '-'}</p>`;
+            html += `<p><strong>Otros Seguros:</strong> ${data.otrosSeguros || '-'}</p>`;
+
+            if (getAge(data.fechaNacimiento) < 18) {
+                html += '<hr><h4>Datos del Tutor/a</h4>';
+                html += `<p><strong>Nombre:</strong> ${data.tutorNombre} ${data.tutorApellidos}</p>`;
+                html += `<p><strong>DNI Tutor:</strong> ${data.tutorDni}</p>`;
+                html += `<p><strong>Teléfono:</strong> ${data.telefono}</p>`;
+                html += `<p><strong>Email:</strong> ${data.email}</p>`;
+            }
+
+            html += '<hr><h4>Otros Datos</h4>';
+            html += `<p><strong>Experiencia:</strong> ${data.tiempoMontando} (${data.horasSemana}/sem) en ${data.clubAnterior || 'N/A'}</p>`;
+            html += `<p><strong>Concursos:</strong> ${data.participadoConcursos} (${data.categoriaConcurso || 'N/A'})</p>`;
+            html += `<p><strong>Caballo Propio:</strong> ${data.caballoPropio} (¿Lo trae? ${data.traeCaballo})</p>`;
+            html += `<p><strong>Observaciones:</strong> ${data.enfermedadesObservaciones || '-'}</p>`;
+            html += `<p><strong>Cómo nos conoció:</strong> ${data.comoNosConociste || '-'}</p>`;
+
+            if (data.necesitaRecogida === 'Sí') {
+                html += '<hr><h4>Detalles de Viaje</h4>';
+                html += `<p><strong>Recogida:</strong> ${data.fechaRecogida} a las ${data.horaRecogida} en ${data.lugarRecogida}</p>`;
+                html += `<p><strong>Salida:</strong> ${data.fechaSalida} a las ${data.horaSalida} en ${data.lugarSalida}</p>`;
+            }
+
+            detallesDiv.innerHTML = html;
+            document.getElementById('modalFicha').style.display = 'block';
+        }
+
+        function cerrarFicha() {
+            document.getElementById('modalFicha').style.display = 'none';
         }
 
     </script>
