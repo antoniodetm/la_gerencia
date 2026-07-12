@@ -262,6 +262,11 @@
                 await mostrarAsignacionesGrupales();
                 showToast('Horarios actualizados.');
             });
+
+            // Listener para el alumno seleccionado, para poder filtrar sus clases
+            alumnoSelect.addEventListener('change', () => {
+                mostrarAsignacionesGrupales();
+            });
         };
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -323,16 +328,31 @@
             const claseSeleccionada = clases.find(c => c.id == claseId);
             let opcionesFechas = '<option value="">-- Elige una fecha --</option>';
 
+            let diasDeClase = [];
             if (claseSeleccionada && claseSeleccionada.tipo === 'unDia') {
-                const fechas = getProximasFechas(claseSeleccionada.diaSemana);
-                opcionesFechas += fechas.map(f => {
-                    const fechaStr = f.toISOString().split('T')[0];
-                    const alumnosEnClase = (asignaciones || []).filter(a => a.claseId == claseId && a.dia === fechaStr).length;
-                    const estaLlena = claseSeleccionada.maxAlumnos && alumnosEnClase >= claseSeleccionada.maxAlumnos;
-                    const textoFecha = f.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-                    return `<option value="${fechaStr}" ${estaLlena ? 'disabled' : ''}>${textoFecha} ${estaLlena ? '(Completo)' : ''}</option>`;
-                }).join('');
+                diasDeClase.push(claseSeleccionada.diaSemana);
+            } else if (claseSeleccionada && claseSeleccionada.tipo === 'variosDias' && claseSeleccionada.horarios) {
+                diasDeClase = Object.keys(claseSeleccionada.horarios);
             }
+
+            let todasLasFechas = [];
+            diasDeClase.forEach(dia => {
+                const fechas = getProximasFechas(dia);
+                fechas.forEach(f => todasLasFechas.push(f));
+            });
+
+            // Ordenar todas las fechas cronológicamente
+            todasLasFechas.sort((a, b) => a - b);
+
+            // Crear las opciones
+            opcionesFechas += todasLasFechas.map(f => {
+                const fechaStr = f.toISOString().split('T')[0];
+                const alumnosEnClase = (asignaciones || []).filter(a => a.claseId == claseId && a.dia === fechaStr).length;
+                const estaLlena = claseSeleccionada.maxAlumnos && alumnosEnClase >= claseSeleccionada.maxAlumnos;
+                const textoFecha = f.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                return `<option value="${fechaStr}" ${estaLlena ? 'disabled' : ''}>${textoFecha} ${estaLlena ? '(Completo)' : ''}</option>`;
+            }).join('');
+
             diaSelect.innerHTML = opcionesFechas;
             fechaSelectContainer.style.display = 'block';
         }
@@ -374,10 +394,15 @@
         }
 
         async function mostrarAsignacionesGrupales() {
-            const [asignaciones, clasesDisponibles] = await Promise.all([dataManager.get('asignacionesEscuela'), dataManager.get('clasesEscuela')]);
+            const [asignaciones, clasesDisponibles, todosLosAlumnos] = await Promise.all([
+                dataManager.get('asignacionesEscuela'),
+                dataManager.get('clasesEscuela'),
+                dataManager.get('alumnosEscuela')
+            ]);
             const hoy = new Date().toISOString().split('T')[0];
             listaGrupos.innerHTML = '';
             const asignacionesFuturas = (asignaciones || []).filter(a => a.dia >= hoy);
+            const alumnoLogueado = alumnoSelect.value;
             if (asignacionesFuturas.length === 0) {
                 listaGrupos.innerHTML = `<div class="no-records">Todavía no hay alumnos apuntados a clases futuras.</div>`;
                 return;
@@ -395,20 +420,49 @@
             Object.values(grupos).sort((a, b) => new Date(a.dia) - new Date(b.dia)).forEach(grupo => {
                 const card = document.createElement('div');
                 card.className = 'clase-card';
+                const horaClase = grupo.clase.tipo === 'unDia' ? grupo.clase.hora : grupo.clase.horarios[new Date(grupo.dia + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long' })];
                 const fechaFormateada = new Date(grupo.dia + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
                 card.innerHTML = `
                     <div class="clase-header">
-                        <h4 class="clase-title">🗓️ ${fechaFormateada} a las ${grupo.clase.hora} hs </h4>
+                        <h4 class="clase-title">🗓️ ${fechaFormateada} a las ${horaClase} hs </h4>
                         <span style="font-weight: bold; color: #333;">${grupo.alumnos.length}/${grupo.clase.maxAlumnos || '?'} alumnos</span>
                     </div>
                     <div class="clase-body">
                         ${grupo.alumnos.map(a => `
                             <div class="alumno-item">
                                 <span>👤 <b>${a.alumno}</b></span>
+                                ${a.alumno === alumnoLogueado ? `<button class="btn-remove-inline" onclick="eliminarAsignacion(${a.id})">Borrarme</button>` : ''}
                             </div>`).join('')}
                     </div>`;
                 listaGrupos.appendChild(card);
             });
+        }
+
+        async function eliminarAsignacion(id) {
+            const alumnoLogueado = alumnoSelect.value;
+            if (!alumnoLogueado) {
+                alert("Por favor, selecciona tu nombre primero para poder borrarte.");
+                return;
+            }
+
+            const todosLosAlumnos = await dataManager.get('alumnosEscuela') || [];
+            const infoAlumno = todosLosAlumnos.find(a => `${a.nombre} ${a.apellido}` === alumnoLogueado);
+
+            if (!infoAlumno || !infoAlumno.dni) {
+                alert("No se ha podido verificar tu identidad. Contacta con la administración.");
+                return;
+            }
+
+            const dniIntroducido = prompt("Para confirmar que quieres borrarte de esta clase, por favor, introduce tu DNI:");
+
+            if (dniIntroducido && dniIntroducido.trim().toUpperCase() === infoAlumno.dni.toUpperCase()) {
+                let asignaciones = await dataManager.get('asignacionesEscuela') || [];
+                asignaciones = asignaciones.filter(a => a.id !== id);
+                await dataManager.set('asignacionesEscuela', asignaciones);
+                alert("✅ Te has borrado de la clase correctamente.");
+            } else if (dniIntroducido !== null) { // Si no es null, es que ha escrito algo pero es incorrecto
+                alert("❌ DNI incorrecto. No se ha podido realizar la operación.");
+            }
         }
     </script>
 
