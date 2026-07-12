@@ -178,11 +178,6 @@
                 <input type="file" id="importFile" style="display: none;" accept=".json"
                     onchange="importarDatos(this.files[0])">
             </a>
-            <a href="#" onclick="cargarDatosDePrueba()" class="menu-card" style="background: #16a085; color: white;">
-                <div class="icon">🧪</div>
-                <h3 style="color: white;">Cargar Datos de Prueba</h3>
-                <p style="color: #d0f0e9;">Rellena la app con datos de ejemplo.</p>
-            </a>
             <a href="#" onclick="borrarTodosLosDatos()" class="menu-card" style="background: #c0392b; color: white;">
                 <div class="icon">🗑️</div>
                 <h3 style="color: white;">Borrar Todos los Datos</h3>
@@ -201,9 +196,6 @@
             dataManager.importarDatosLocales(file);
         }
 
-        function cargarDatosDePrueba() {
-            dataManager.cargarDatosDePrueba();
-        }
         function borrarTodosLosDatos() {
             dataManager.borrarTodosLosDatos();
         }
