@@ -264,8 +264,9 @@
             });
 
             // Listener para el alumno seleccionado, para poder filtrar sus clases
-            alumnoSelect.addEventListener('change', () => {
-                mostrarAsignacionesGrupales();
+            alumnoSelect.addEventListener('change', async () => {
+                await poblarClasesParaAlumno();
+                await mostrarAsignacionesGrupales();
             });
         };
         form.addEventListener('submit', async function (e) {
@@ -285,20 +286,44 @@
 
 
         async function poblarDesplegables() {
-            const clases = await dataManager.get('clasesEscuela') || [];
-            clases.sort((a, b) => {
+            await poblarAlumnos();
+            await poblarClasesParaAlumno();
+        }
+
+        async function poblarAlumnos() {
+            const alumnos = await dataManager.get('alumnosEscuela') || [];
+            const alumnosActivos = alumnos.filter(a => (a.estado || 'Activo') === 'Activo');
+            alumnoSelect.innerHTML = '<option value="">-- Selecciona tu nombre --</option>' + alumnosActivos.map(a => `<option value="${a.nombre} ${a.apellido}">${a.nombre} ${a.apellido}</option>`).join('');
+        }
+
+        async function poblarClasesParaAlumno() {
+            const alumnoSeleccionadoNombre = alumnoSelect.value;
+            const [todosLosAlumnos, todasLasClases] = await Promise.all([
+                dataManager.get('alumnosEscuela'),
+                dataManager.get('clasesEscuela')
+            ]);
+
+            let nivelAlumno = null;
+            if (alumnoSeleccionadoNombre) {
+                const alumno = todosLosAlumnos.find(a => `${a.nombre} ${a.apellido}` === alumnoSeleccionadoNombre);
+                if (alumno) nivelAlumno = alumno.nivel;
+            }
+
+            let clasesFiltradas = todasLasClases || [];
+            if (nivelAlumno) {
+                clasesFiltradas = (todasLasClases || []).filter(c => !c.nivel || c.nivel === nivelAlumno);
+            }
+
+            clasesFiltradas.sort((a, b) => {
                 const getDia1 = a.tipo === 'unDia' ? a.diaSemana : Object.keys(a.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
                 const getDia2 = b.tipo === 'unDia' ? b.diaSemana : Object.keys(b.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
                 return ordenDias[getDia1] - ordenDias[getDia2];
             });
-            claseSelect.innerHTML = '<option value="">-- Selecciona una Clase --</option>' + clases.map(c => {
-                let etiqueta = c.tipo === 'unDia' ? `${c.diaSemana} a las ${c.hora} hs` : Object.entries(c.horarios || {}).sort((a, b) => ordenDias[a[0]] - ordenDias[b[0]]).map(([dia, hora]) => `${dia} ${hora}`).join(', ');
+
+            claseSelect.innerHTML = '<option value="">-- Selecciona una Clase --</option>' + clasesFiltradas.map(c => {
+                let etiqueta = c.tipo === 'unDia' ? `${c.diaSemana} a las ${c.hora} hs (${c.nivel || 'Abierta'})` : Object.entries(c.horarios || {}).sort((a, b) => ordenDias[a[0]] - ordenDias[b[0]]).map(([dia, hora]) => `${dia} ${hora}`).join(', ') + ` (${c.nivel || 'Abierta'})`;
                 return `<option value="${c.id}">${etiqueta}</option>`;
             }).join('');
-
-            const alumnos = await dataManager.get('alumnosEscuela') || [];
-            const alumnosActivos = alumnos.filter(a => (a.estado || 'Activo') === 'Activo');
-            alumnoSelect.innerHTML = '<option value="">-- Selecciona tu nombre --</option>' + alumnosActivos.map(a => `<option value="${a.nombre} ${a.apellido}">${a.nombre} ${a.apellido}</option>`).join('');
         }
 
         function getProximasFechas(diaSemana, cantidad = 4) {
@@ -363,11 +388,21 @@
                 return;
             }
 
-            const clases = await dataManager.get('clasesEscuela') || [];
-            const claseSeleccionada = clases.find(c => c.id == claseId);
+            const [todosLosAlumnos, todasLasClases] = await Promise.all([
+                dataManager.get('alumnosEscuela'),
+                dataManager.get('clasesEscuela')
+            ]);
+            const claseSeleccionada = todasLasClases.find(c => c.id == claseId);
+            const alumnoSeleccionado = todosLosAlumnos.find(a => `${a.nombre} ${a.apellido}` === alumnoName);
 
             if (!claseSeleccionada) {
                 alert("Error: La clase seleccionada no se ha encontrado.");
+                return;
+            }
+
+            // Comprobación de nivel
+            if (claseSeleccionada.nivel && alumnoSeleccionado && alumnoSeleccionado.nivel !== claseSeleccionada.nivel) {
+                alert(`❌ No puedes apuntarte a esta clase. Tu nivel es "${alumnoSeleccionado.nivel}" y la clase requiere nivel "${claseSeleccionada.nivel}".`);
                 return;
             }
 

@@ -312,13 +312,14 @@
 
                 clases.forEach(c => {
                     let etiqueta = '';
+                    const nivelClase = c.nivel ? `(${c.nivel})` : '(Nivel Abierto)';
                     if (c.tipo === 'unDia') {
-                        etiqueta = `${c.diaSemana} a las ${c.hora} hs`;
+                        etiqueta = `${c.diaSemana} a las ${c.hora} hs ${nivelClase}`;
                     } else {
                         const diasHoras = Object.entries(c.horarios || {}).sort((a, b) => ordenDias[a[0]] - ordenDias[b[0]])
                             .map(([dia, hora]) => `${dia} ${hora}`)
                             .join(', ');
-                        etiqueta = diasHoras;
+                        etiqueta = `${diasHoras} ${nivelClase}`;
                     }
                     opcionesClases += `<option value="${c.id}">${etiqueta}</option>`;
                 });
@@ -390,11 +391,20 @@
         async function agregarAsignacion(claseId, alumnoName, dia) {
             if (!claseId || !alumnoName) return;
 
-            const clases = await dataManager.get('clasesEscuela') || [];
-            const claseSeleccionada = clases.find(c => c.id == claseId);
+            const [todasLasClases, todosLosAlumnos] = await Promise.all([
+                dataManager.get('clasesEscuela'),
+                dataManager.get('alumnosEscuela')
+            ]);
+            const claseSeleccionada = todasLasClases.find(c => c.id == claseId);
+            const alumnoSeleccionado = todosLosAlumnos.find(a => `${a.nombre} ${a.apellido}` === alumnoName);
 
             if (!claseSeleccionada) {
                 alert('Por favor selecciona una clase válida');
+                return;
+            }
+
+            if (claseSeleccionada.nivel && alumnoSeleccionado && alumnoSeleccionado.nivel !== claseSeleccionada.nivel) {
+                alert(`❌ No se puede asignar. El nivel del alumno es "${alumnoSeleccionado.nivel}" y la clase requiere nivel "${claseSeleccionada.nivel}".`);
                 return;
             }
 

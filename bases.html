@@ -199,6 +199,27 @@
             </table>
         </div>
 
+        <!-- COLUMNA 2: FORMACIÓN ACADÉMICA -->
+        <div class="container" style="border-top: 5px solid #8e44ad;">
+            <h2 style="color: #8e44ad; border-bottom: 2px solid #d7bde2;">🎓 Formación Académica</h2>
+            <form id="formacionForm">
+                <div class="form-group">
+                    <label for="nombreFormacion">Nueva Formación:</label>
+                    <input type="text" id="nombreFormacion" required placeholder="Ej. ESO, Bachillerato...">
+                </div>
+                <button type="submit" style="background-color: #8e44ad;">Añadir Formación</button>
+            </form>
+            <table id="tablaFormaciones" style="margin-top: 25px;">
+                <thead>
+                    <tr>
+                        <th style="background-color: #8e44ad;">Formación</th>
+                        <th style="width: 80px; text-align: center; background-color: #8e44ad;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
         <!-- COLUMNA 2: TIPOS DE CLASES -->
         <div class="container" style="border-top: 5px solid #2e4a62;">
             <h2 style="color: #2e4a62; border-bottom: 2px solid #aec6cf;">📅 Tipos de Clases</h2>
@@ -314,6 +335,11 @@
         const nombreNivelInput = document.getElementById('nombreNivel');
         const tablaNiveles = document.getElementById('tablaNiveles').getElementsByTagName('tbody')[0];
 
+        // Formación
+        const formFormacion = document.getElementById('formacionForm');
+        const nombreFormacionInput = document.getElementById('nombreFormacion');
+        const tablaFormaciones = document.getElementById('tablaFormaciones').getElementsByTagName('tbody')[0];
+
         // Clases
         const formTipoClase = document.getElementById('tipoClaseForm');
         const nombreTipoClaseInput = document.getElementById('nombreTipoClase');
@@ -339,6 +365,7 @@
         const tablaProductos = document.getElementById('tablaProductos').getElementsByTagName('tbody')[0];
 
         let ultimaDataNiveles = JSON.stringify([]);
+        let ultimaDataFormaciones = JSON.stringify([]);
         let ultimaDataTiposClases = JSON.stringify([]);
         let ultimaDataProductos = JSON.stringify([]);
         let ultimaDataEspecialidades = JSON.stringify([]);
@@ -365,6 +392,7 @@
 
             // Primero, intentar mostrar los datos existentes
             await mostrarNiveles();
+            await mostrarFormaciones();
             await mostrarTiposClases();
             await mostrarProductos();
             await mostrarEspecialidades();
@@ -380,6 +408,18 @@
                 ];
                 await dataManager.set('nivelesEscuela', niveles);
                 await mostrarNiveles(); // Volver a mostrar después de crear
+            }
+
+            // Inicializar formaciones
+            let formaciones = await dataManager.get('formacionesEscuela') || [];
+            if (formaciones.length === 0) {
+                formaciones = [
+                    { id: 1, nombre: 'Primaria' },
+                    { id: 2, nombre: 'ESO' },
+                    { id: 3, nombre: 'Bachillerato' }
+                ];
+                await dataManager.set('formacionesEscuela', formaciones);
+                await mostrarFormaciones();
             }
 
             // Inicializar tipos de clases
@@ -444,6 +484,14 @@
                     }
                 });
 
+                dataManager.onSnapshot('formacionesEscuela', (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataFormaciones) {
+                        ultimaDataFormaciones = dataActual;
+                        mostrarFormaciones();
+                    }
+                });
+
                 dataManager.onSnapshot('tiposClasesEscuela', (data) => {
                     const dataActual = JSON.stringify(data || []);
                     if (dataActual !== ultimaDataTiposClases) {
@@ -481,6 +529,12 @@
                     if (dataNiveles !== ultimaDataNiveles) {
                         ultimaDataNiveles = dataNiveles;
                         mostrarNiveles();
+                    }
+
+                    const dataFormaciones = JSON.stringify(await dataManager.get('formacionesEscuela') || []);
+                    if (dataFormaciones !== ultimaDataFormaciones) {
+                        ultimaDataFormaciones = dataFormaciones;
+                        mostrarFormaciones();
                     }
 
                     const dataTipos = JSON.stringify(await dataManager.get('tiposClasesEscuela') || []);
@@ -524,6 +578,22 @@
             await dataManager.set('nivelesEscuela', niveles);
             nombreNivelInput.value = '';
             mostrarNiveles();
+        });
+
+        // Formulario Formación
+        formFormacion.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const nombre = nombreFormacionInput.value.trim();
+            if (!nombre) return;
+
+            let formaciones = await dataManager.get('formacionesEscuela') || [];
+            const existe = formaciones.some(f => f.nombre.toLowerCase() === nombre.toLowerCase());
+            if (existe) { alert('Esta formación ya existe.'); return; }
+
+            formaciones.push({ id: Date.now(), nombre: nombre });
+            await dataManager.set('formacionesEscuela', formaciones);
+            nombreFormacionInput.value = '';
+            mostrarFormaciones();
         });
 
         // Formulario Tipo Clase
@@ -611,6 +681,19 @@
             });
         }
 
+        async function mostrarFormaciones() {
+            const formaciones = await dataManager.get('formacionesEscuela') || [];
+            tablaFormaciones.innerHTML = '';
+            if (formaciones.length === 0) {
+                tablaFormaciones.innerHTML = `<tr><td colspan="2" class="no-records">No hay formaciones registradas.</td></tr>`;
+                return;
+            }
+            formaciones.forEach(f => {
+                const fila = tablaFormaciones.insertRow();
+                fila.innerHTML = `<td><b>${f.nombre}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarFormacion(${f.id})">Eliminar</button></td>`;
+            });
+        }
+
         async function mostrarTiposClases() {
             const tiposClases = await dataManager.get('tiposClasesEscuela') || [];
             tablaTiposClases.innerHTML = '';
@@ -675,6 +758,15 @@
                 niveles = niveles.filter(n => n.id !== id);
                 await dataManager.set('nivelesEscuela', niveles);
                 mostrarNiveles();
+            }
+        }
+
+        async function eliminarFormacion(id) {
+            if (confirm('¿Deseas eliminar esta formación?')) {
+                let formaciones = await dataManager.get('formacionesEscuela') || [];
+                formaciones = formaciones.filter(f => f.id !== id);
+                await dataManager.set('formacionesEscuela', formaciones);
+                mostrarFormaciones();
             }
         }
 

@@ -338,6 +338,12 @@
                     <input type="number" id="maxAlumnos" min="1" placeholder="Ej. 6" required>
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="nivelClase">Nivel de la Clase:</label>
+                    <select id="nivelClase" required></select>
+                </div>
+            </div>
             <button type="submit" id="submitBtn">Agendar Clase</button>
         </form>
     </div>
@@ -349,6 +355,7 @@
                 <tr>
                     <th>Día / Hora</th>
                     <th>Duración</th>
+                    <th>Nivel</th>
                     <th>Nº Alumnos</th>
                     <th>Acciones</th>
                 </tr>
@@ -366,6 +373,7 @@
 
         let ultimaDataClases = JSON.stringify([]);
         let ultimaDataDuraciones = JSON.stringify([]);
+        let ultimaDataNiveles = JSON.stringify([]);
 
         window.onload = async function () {
             let intentos = 0;
@@ -379,6 +387,7 @@
             setupEventListeners();
             await mostrarClases();
             await poblarDuraciones();
+            await poblarNiveles();
 
             if (dataManager.useFirebase) {
                 dataManager.onSnapshot('clasesEscuela', async (data) => {
@@ -395,6 +404,13 @@
                         await poblarDuraciones();
                     }
                 });
+                dataManager.onSnapshot('nivelesEscuela', async (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataNiveles) {
+                        ultimaDataNiveles = dataActual;
+                        await poblarNiveles();
+                    }
+                });
             } else {
                 setInterval(async function () {
                     const dataActual = JSON.stringify(await dataManager.get('clasesEscuela') || []);
@@ -406,6 +422,11 @@
                     if (duracionesActual !== ultimaDataDuraciones) {
                         ultimaDataDuraciones = duracionesActual;
                         await poblarDuraciones();
+                    }
+                    const nivelesActual = JSON.stringify(await dataManager.get('nivelesEscuela') || []);
+                    if (nivelesActual !== ultimaDataNiveles) {
+                        ultimaDataNiveles = nivelesActual;
+                        await poblarNiveles();
                     }
                 }, 500);
             }
@@ -475,6 +496,21 @@
             if (valorActual && duraciones.some(d => d.nombre === valorActual)) select.value = valorActual;
         }
 
+        async function poblarNiveles() {
+            const select = document.getElementById('nivelClase');
+            const valorActual = select.value;
+            const niveles = await dataManager.get('nivelesEscuela') || [];
+
+            if (niveles.length === 0) {
+                select.innerHTML = '<option value="">⚠️ Crea niveles en "Bases"</option>';
+                return;
+            }
+
+            select.innerHTML = '<option value="">-- Selecciona nivel --</option>' + niveles.map(n => `<option value="${n.nombre}">${n.nombre}</option>`).join('');
+
+            if (valorActual && niveles.some(n => n.nombre === valorActual)) select.value = valorActual;
+        }
+
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
             const id = claseIdInput.value;
@@ -488,8 +524,9 @@
             const tipoClase = tipoClaseRadio.value;
             const duracion = document.getElementById('duracion').value;
             const maxAlumnos = document.getElementById('maxAlumnos').value;
+            const nivel = document.getElementById('nivelClase').value;
 
-            if (!duracion || !maxAlumnos) {
+            if (!duracion || !maxAlumnos || !nivel) {
                 alert('Por favor completa la duración y el número de alumnos.');
                 return;
             }
@@ -506,10 +543,10 @@
                 }
 
                 if (id) {
-                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos } : c);
+                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos, nivel } : c);
                     alert("¡Horario modificado!");
                 } else {
-                    clases.push({ id: Date.now(), tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos });
+                    clases.push({ id: Date.now(), tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos, nivel });
                     alert("¡Clase agendada!");
                 }
             } else {
@@ -526,10 +563,10 @@
                 }
 
                 if (id) {
-                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'variosDias', horarios, duracion, maxAlumnos } : c);
+                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'variosDias', horarios, duracion, maxAlumnos, nivel } : c);
                     alert("¡Horario modificado!");
                 } else {
-                    clases.push({ id: Date.now(), tipo: 'variosDias', horarios, duracion, maxAlumnos });
+                    clases.push({ id: Date.now(), tipo: 'variosDias', horarios, duracion, maxAlumnos, nivel });
                     alert("¡Clase agendada!");
                 }
             }
@@ -561,6 +598,7 @@
                     contenidoFila = `
                     <td><b>🗓️ ${c.diaSemana}</b> a las ⏰ ${c.hora} hs</td>
                     <td>⏱️ ${c.duracion}</td>
+                    <td>${c.nivel || '-'}</td>
                     <td>👥 ${c.maxAlumnos || '-'} alumnos</td>
                 `;
                 } else if (c.tipo === 'variosDias' && c.horarios) {
@@ -569,6 +607,7 @@
                         .join(', ');
                     contenidoFila = `
                     <td><b>🗓️</b> ${diasHoras}</td>
+                    <td>${c.nivel || '-'}</td>
                     <td>⏱️ ${c.duracion}</td>
                     <td>👥 ${c.maxAlumnos || '-'} alumnos</td>
                 `;
@@ -592,6 +631,7 @@
                 claseIdInput.value = c.id;
                 document.getElementById('duracion').value = c.duracion;
                 document.getElementById('maxAlumnos').value = c.maxAlumnos || '';
+                document.getElementById('nivelClase').value = c.nivel || '';
 
                 if (c.tipo === 'unDia') {
                     const radioUnDia = document.querySelector('input[value="unDia"]');
