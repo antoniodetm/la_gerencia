@@ -290,6 +290,29 @@
             </table>
         </div>
 
+        <!-- COLUMNA 6: CONCEPTOS DE GASTO (CAMPAMENTO) -->
+        <div class="container" style="border-top: 5px solid #3498db;">
+            <h2 style="color: #3498db; border-bottom: 2px solid #aed6f1;">🏦 Conceptos Gasto Campamento</h2>
+            <form id="gastoCampamentoForm">
+                <div class="form-group">
+                    <label for="nombreGastoCampamento">Nuevo Concepto de Gasto:</label>
+                    <input type="text" id="nombreGastoCampamento" required
+                        placeholder="Ej. Helado, Bebida, Recuerdo...">
+                </div>
+                <button type="submit" style="background-color: #3498db;">Añadir Concepto</button>
+            </form>
+            <table id="tablaGastosCampamento" style="margin-top: 25px;">
+                <thead>
+                    <tr>
+                        <th style="background-color: #3498db;">Concepto</th>
+                        <th style="width: 80px; text-align: center; background-color: #3498db;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+
     </div>
 
     <script>
@@ -319,11 +342,18 @@
         const nombreDuracionInput = document.getElementById('nombreDuracion');
         const tablaDuraciones = document.getElementById('tablaDuraciones').getElementsByTagName('tbody')[0];
 
+        // Conceptos Gasto Campamento
+        const formGastoCampamento = document.getElementById('gastoCampamentoForm');
+        const nombreGastoCampamentoInput = document.getElementById('nombreGastoCampamento');
+        const tablaGastosCampamento = document.getElementById('tablaGastosCampamento').getElementsByTagName('tbody')[0];
+
+
         let ultimaDataNiveles = JSON.stringify([]);
         let ultimaDataFormaciones = JSON.stringify([]);
         let ultimaDataProductos = JSON.stringify([]);
         let ultimaDataEspecialidades = JSON.stringify([]);
         let ultimaDataDuraciones = JSON.stringify([]);
+        let ultimaDataGastosCampamento = JSON.stringify([]);
 
         window.onload = async function () {
             let intentos = 0;
@@ -340,6 +370,7 @@
             await mostrarProductos();
             await mostrarEspecialidades();
             await mostrarDuraciones();
+            await mostrarGastosCampamento();
 
             // Inicializar niveles
             let niveles = await dataManager.get('nivelesEscuela') || [];
@@ -475,6 +506,12 @@
                         ultimaDataDuraciones = dataDuraciones;
                         mostrarDuraciones();
                     }
+
+                    const dataGastos = JSON.stringify(await dataManager.get('conceptosGastoCampamento') || []);
+                    if (dataGastos !== ultimaDataGastosCampamento) {
+                        ultimaDataGastosCampamento = dataGastos;
+                        mostrarGastosCampamento();
+                    }
                 }, 500);
             }
         };
@@ -561,6 +598,21 @@
             mostrarProductos();
         });
 
+        // Formulario Gasto Campamento
+        formGastoCampamento.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const nombre = nombreGastoCampamentoInput.value.trim();
+            if (!nombre) return;
+
+            let gastos = await dataManager.get('conceptosGastoCampamento') || [];
+            const existe = gastos.some(g => g.nombre.toLowerCase() === nombre.toLowerCase());
+            if (existe) { alert('Este concepto de gasto ya existe.'); return; }
+
+            gastos.push({ id: Date.now(), nombre: nombre });
+            await dataManager.set('conceptosGastoCampamento', gastos);
+            nombreGastoCampamentoInput.value = '';
+        });
+
         async function mostrarNiveles() {
             const niveles = await dataManager.get('nivelesEscuela') || [];
             tablaNiveles.innerHTML = '';
@@ -630,6 +682,19 @@
             });
         }
 
+        async function mostrarGastosCampamento() {
+            const gastos = await dataManager.get('conceptosGastoCampamento') || [];
+            tablaGastosCampamento.innerHTML = '';
+            if (gastos.length === 0) {
+                tablaGastosCampamento.innerHTML = `<tr><td colspan="2" class="no-records">No hay conceptos de gasto.</td></tr>`;
+                return;
+            }
+            gastos.forEach(g => {
+                const fila = tablaGastosCampamento.insertRow();
+                fila.innerHTML = `<td><b>${g.nombre}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarGastoCampamento(${g.id})">Eliminar</button></td>`;
+            });
+        }
+
         async function eliminarNivel(id) {
             if (confirm('¿Deseas eliminar este nivel de alumno?')) {
                 let niveles = await dataManager.get('nivelesEscuela') || [];
@@ -672,6 +737,15 @@
                 duraciones = duraciones.filter(d => d.id !== id);
                 await dataManager.set('duracionesEscuela', duraciones);
                 mostrarEspecialidades();
+            }
+        }
+
+        async function eliminarGastoCampamento(id) {
+            if (confirm('¿Deseas eliminar este concepto de gasto?')) {
+                let gastos = await dataManager.get('conceptosGastoCampamento') || [];
+                gastos = gastos.filter(g => g.id !== id);
+                await dataManager.set('conceptosGastoCampamento', gastos);
+                // Se actualizará solo por el listener
             }
         }
     </script>

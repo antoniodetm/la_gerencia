@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banco del Campamento</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            text-align: center;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin: 0 15px;
+            color: #555;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .nav-link:hover {
+            background-color: #f0ede5;
+            color: #000;
+        }
+
+        .container {
+            max-width: 95%;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 30px auto;
+        }
+
+        h2,
+        h3 {
+            color: #4a3728;
+            border-bottom: 2px solid #d4c5b9;
+            padding-bottom: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4a3728;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .saldo {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .saldo-positivo {
+            color: #27ae60;
+        }
+
+        .saldo-negativo {
+            color: #c0392b;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 25px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #5c674e;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
+        <a href="campamento_hub.html" class="nav-link">🏕️ Campamento</a>
+    </div>
+
+    <div class="container">
+        <h2>🏦 Banco del Campamento</h2>
+        <p>Gestiona el dinero de bolsillo de los campistas. Añade el saldo inicial y registra los gastos.</p>
+        <input type="text" id="buscadorBanco" placeholder="Buscar por nombre..." oninput="renderTabla()"
+            style="margin-top: 10px; border: 2px solid #5c674e; font-size: 1.1em; margin-bottom: 20px;">
+        <table id="tablaBanco">
+            <thead>
+                <tr>
+                    <th>Alumno/a</th>
+                    <th>Saldo Actual</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Filas se generarán con JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal para Añadir/Gastar Dinero -->
+    <div id="modalTransaccion" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModal()">&times;</span>
+            <h3 id="modalTitulo"></h3>
+            <form id="formTransaccion">
+                <input type="hidden" id="inscripcionId">
+                <div class="form-group">
+                    <label for="conceptoSelect">Concepto:</label>
+                    <select id="conceptoSelect" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="importe">Importe (€):</label>
+                    <input type="number" id="importe" required step="0.01" placeholder="Ej. 50 o 2.50">
+                </div>
+                <div class="form-group">
+                    <label for="fechaTransaccion">Fecha:</label>
+                    <input type="date" id="fechaTransaccion" required>
+                </div>
+                <button type="submit" id="btnSubmitTransaccion">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Ver Movimientos -->
+    <div id="modalMovimientos" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModal()">&times;</span>
+            <h3 id="movimientosTitulo"></h3>
+            <div id="listaMovimientos" style="max-height: 60vh; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEtMPhIhuDH2GDMo0HDs8bs9o1EGBOfYM",
+            authDomain: "la-gerencia-51fdf.firebaseapp.com",
+            projectId: "la-gerencia-51fdf",
+            storageBucket: "la-gerencia-51fdf.firebasestorage.app",
+            messagingSenderId: "331472649600",
+            appId: "1:331472649600:web:10030d6a03d1215f1d5565"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        firebase.auth().signInAnonymously().catch(console.error);
+
+        let inscripciones = [];
+        let cuentasBanco = [];
+        let conceptosGasto = [];
+
+        window.onload = async () => {
+            await fetchData();
+            renderTabla();
+
+            db.collection('inscripcionesCampamento').onSnapshot(async () => {
+                await fetchData();
+                renderTabla();
+            });
+            db.collection('bancoCampamento').onSnapshot(async () => {
+                await fetchData();
+                renderTabla();
+            });
+        };
+
+        async function fetchData() {
+            const [inscripcionesSnapshot, bancoSnapshot, conceptosSnapshot] = await Promise.all([
+                db.collection('inscripcionesCampamento').get(),
+                db.collection('bancoCampamento').get(),
+                db.collection('conceptosGastoCampamento').get()
+            ]);
+
+            inscripciones = inscripcionesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            cuentasBanco = bancoSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            conceptosGasto = conceptosSnapshot.docs.length > 0 ? conceptosSnapshot.docs[0].data().items : [];
+        }
+
+        function renderTabla() {
+            const tbody = document.getElementById('tablaBanco').querySelector('tbody');
+            const filtro = document.getElementById('buscadorBanco').value.toLowerCase();
+            tbody.innerHTML = '';
+
+            const inscripcionesFiltradas = inscripciones.filter(i =>
+                `${i.nombre} ${i.apellido}`.toLowerCase().includes(filtro)
+            );
+
+            inscripcionesFiltradas.forEach(inscripcion => {
+                const cuenta = cuentasBanco.find(c => c.id === inscripcion.id);
+                const saldo = cuenta ? (cuenta.saldoActual || 0) : 0;
+                const saldoClase = saldo >= 0 ? 'saldo-positivo' : 'saldo-negativo';
+
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td><b>${inscripcion.nombre} ${inscripcion.apellido}</b></td>
+                    <td><span class="saldo ${saldoClase}">${saldo.toFixed(2)} €</span></td>
+                    <td class="actions-cell">
+                        <button style="background-color:#27ae60;" onclick="abrirModalTransaccion('${inscripcion.id}', 'ingreso')">Añadir Saldo</button>
+                        <button style="background-color:#e67e22;" onclick="abrirModalTransaccion('${inscripcion.id}', 'gasto')">Registrar Gasto</button>
+                        <button style="background-color:#3498db;" onclick="verMovimientos('${inscripcion.id}')">Ver Movimientos</button>
+                    </td>
+                `;
+            });
+        }
+
+        async function abrirModalTransaccion(inscripcionId, tipo) {
+            const modal = document.getElementById('modalTransaccion');
+            const form = document.getElementById('formTransaccion');
+            form.reset();
+
+            document.getElementById('inscripcionId').value = inscripcionId;
+            document.getElementById('fechaTransaccion').value = new Date().toISOString().split('T')[0];
+
+            const modalTitulo = document.getElementById('modalTitulo');
+            const btnSubmit = document.getElementById('btnSubmitTransaccion');
+            const conceptoSelect = document.getElementById('conceptoSelect');
+
+            if (tipo === 'ingreso') {
+                modalTitulo.textContent = 'Añadir Saldo';
+                btnSubmit.style.backgroundColor = '#27ae60';
+                btnSubmit.textContent = 'Añadir Ingreso';
+                conceptoSelect.innerHTML = `<option value="Ingreso inicial">Ingreso inicial</option><option value="Recarga de saldo">Recarga de saldo</option>`;
+            } else {
+                modalTitulo.textContent = 'Registrar Gasto';
+                btnSubmit.style.backgroundColor = '#e67e22';
+                btnSubmit.textContent = 'Registrar Gasto';
+                // Poblar con conceptos de gasto
+                if (conceptosGasto.length > 0) {
+                    conceptoSelect.innerHTML = '<option value="">-- Selecciona un concepto --</option>' +
+                        conceptosGasto.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+                } else {
+                    conceptoSelect.innerHTML = '<option value="">⚠️ Define conceptos en "Bases"</option>';
+                }
+            }
+
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                guardarTransaccion(tipo);
+            };
+
+            modal.style.display = 'block';
+        }
+
+        async function guardarTransaccion(tipo) {
+            const inscripcionId = document.getElementById('inscripcionId').value;
+            const concepto = document.getElementById('conceptoSelect').value;
+            let importe = parseFloat(document.getElementById('importe').value);
+            const fecha = document.getElementById('fechaTransaccion').value;
+
+            if (isNaN(importe) || !concepto || !fecha) {
+                alert('Por favor, completa todos los campos.');
+                return;
+            }
+
+            if (tipo === 'gasto') {
+                importe = -Math.abs(importe);
+            } else {
+                importe = Math.abs(importe);
+            }
+
+            const cuentaRef = db.collection('bancoCampamento').doc(inscripcionId);
+            const cuentaDoc = await cuentaRef.get();
+
+            const nuevaTransaccion = {
+                id: Date.now(),
+                fecha,
+                concepto,
+                importe
+            };
+
+            if (cuentaDoc.exists) {
+                await cuentaRef.update({
+                    saldoActual: firebase.firestore.FieldValue.increment(importe),
+                    transacciones: firebase.firestore.FieldValue.arrayUnion(nuevaTransaccion)
+                });
+            } else {
+                const inscripcion = inscripciones.find(i => i.id === inscripcionId);
+                await cuentaRef.set({
+                    nombreCompleto: `${inscripcion.nombre} ${inscripcion.apellido}`,
+                    saldoActual: importe,
+                    transacciones: [nuevaTransaccion]
+                });
+            }
+
+            alert('Transacción guardada correctamente.');
+            cerrarModal();
+        }
+
+        function verMovimientos(inscripcionId) {
+            const modal = document.getElementById('modalMovimientos');
+            const inscripcion = inscripciones.find(i => i.id === inscripcionId);
+            const cuenta = cuentasBanco.find(c => c.id === inscripcionId);
+
+            document.getElementById('movimientosTitulo').textContent = `Movimientos de ${inscripcion.nombre} ${inscripcion.apellido}`;
+            const listaDiv = document.getElementById('listaMovimientos');
+            listaDiv.innerHTML = '';
+
+            if (!cuenta || !cuenta.transacciones || cuenta.transacciones.length === 0) {
+                listaDiv.innerHTML = '<p style="text-align:center; color:#888;">No hay movimientos registrados.</p>';
+                modal.style.display = 'block';
+                return;
+            }
+
+            const transaccionesOrdenadas = [...cuenta.transacciones].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+            let tablaHtml = `<table style="font-size:0.9em;"><thead><tr><th>Fecha</th><th>Concepto</th><th style="text-align:right;">Importe</th></tr></thead><tbody>`;
+            transaccionesOrdenadas.forEach(t => {
+                const color = t.importe >= 0 ? 'saldo-positivo' : 'saldo-negativo';
+                tablaHtml += `
+                    <tr>
+                        <td>${new Date(t.fecha + 'T12:00:00').toLocaleDateString('es-ES')}</td>
+                        <td>${t.concepto}</td>
+                        <td style="text-align:right;" class="${color}">${t.importe.toFixed(2)} €</td>
+                    </tr>
+                `;
+            });
+            tablaHtml += `</tbody></table>`;
+            listaDiv.innerHTML = tablaHtml;
+
+            modal.style.display = 'block';
+        }
+
+        function cerrarModal() {
+            document.getElementById('modalTransaccion').style.display = 'none';
+            document.getElementById('modalMovimientos').style.display = 'none';
+        }
+    </script>
+</body>
+
+</html>
