@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscripción Campamento - La Gerencia</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            text-align: center;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin: 0 15px;
+            color: #555;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .nav-link:hover {
+            background-color: #f0ede5;
+            color: #000;
+        }
+
+        .container {
+            max-width: 750px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 30px auto;
+        }
+
+        h2,
+        h3 {
+            color: #4a3728;
+            border-bottom: 2px solid #d4c5b9;
+            padding-bottom: 8px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            flex: 1 1 200px;
+            /* Permite que los campos se ajusten */
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
+        button {
+            background-color: #5c674e;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #464f3c;
+        }
+
+        .btn-update {
+            background-color: #2980b9;
+        }
+
+        .btn-update:hover {
+            background-color: #1f618d;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 25px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+            text-align: center;
+        }
+
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
+        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
+        <a href="campamento.html" class="nav-link" style="background-color: #5c674e; color: white;">🏕️ Inscripción
+            Campamento</a>
+    </div>
+
+    <div class="container">
+        <h2>🏕️ Formulario de Inscripción a Campamento</h2>
+        <form id="alumnoForm">
+            <input type="hidden" id="alumnoId">
+
+            <!-- DATOS DEL NIÑO/A -->
+            <h3 style="color: #4a3728; margin-top: 20px;">Datos del Niño/a</h3>
+            <div class="form-row">
+                <div class="form-group"><label for="nombre">Nombre:</label><input type="text" id="nombre" required
+                        placeholder="Ej. Juan"></div>
+                <div class="form-group"><label for="apellido">Apellidos:</label><input type="text" id="apellido"
+                        required placeholder="Ej. Pérez"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label for="fechaNacimiento">Fecha de Nacimiento:</label><input type="date"
+                        id="fechaNacimiento" required></div>
+                <div class="form-group"><label for="dni">DNI:</label><input type="text" id="dni"
+                        placeholder="Ej. 12345678A"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="flex-basis: 100%;"><label for="direccion">Dirección:</label><input
+                        type="text" id="direccion" placeholder="Ej. Calle Mayor, 123"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label for="poblacion">Población:</label><input type="text" id="poblacion"
+                        placeholder="Ej. Madrid"></div>
+                <div class="form-group"><label for="provincia">Provincia:</label><input type="text" id="provincia"
+                        placeholder="Ej. Madrid"></div>
+                <div class="form-group"><label for="cp">C.P.:</label><input type="text" id="cp" placeholder="Ej. 28001">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label for="numLicencia">Nº Licencia Deportiva:</label><input type="text"
+                        id="numLicencia" placeholder="Opcional"></div>
+                <div class="form-group"><label for="numSegSocial">Nº Cartilla Seguridad Social:</label><input
+                        type="text" id="numSegSocial" placeholder="Opcional"></div>
+            </div>
+            <div class="form-group"><label for="otrosSeguros">Otros Seguros:</label><textarea id="otrosSeguros"
+                    placeholder="Indicar compañía y número de póliza si aplica..."></textarea></div>
+
+            <!-- DATOS DEL TUTOR/A (se muestra si es menor de edad) -->
+            <div id="tutorSection" style="display: none;">
+                <h3 style="color: #4a3728; margin-top: 30px;">Datos del Tutor/a</h3>
+                <div class="form-row">
+                    <div class="form-group"><label for="tutorNombre">Nombre:</label><input type="text" id="tutorNombre"
+                            placeholder="Ej. Ana"></div>
+                    <div class="form-group"><label for="tutorApellidos">Apellidos:</label><input type="text"
+                            id="tutorApellidos" placeholder="Ej. García"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label for="tutorDni">DNI del Tutor:</label><input type="text" id="tutorDni"
+                            placeholder="Ej. 87654321B"></div>
+                    <div class="form-group"><label for="telefono">Teléfono de Contacto:</label><input type="tel"
+                            id="telefono" required placeholder="Ej. 600123456"></div>
+                </div>
+                <div class="form-group"><label for="email">Email de Contacto:</label><input type="email" id="email"
+                        placeholder="Ej. email@dominio.com"></div>
+            </div>
+
+            <!-- OTROS DATOS DE INTERÉS -->
+            <h3 style="color: #4a3728; margin-top: 30px;">Otros Datos de Interés</h3>
+            <div class="form-row">
+                <div class="form-group"><label for="tiempoMontando">¿Cuánto tiempo llevas montando?</label><input
+                        type="text" id="tiempoMontando" placeholder="Ej. 2 años"></div>
+                <div class="form-group"><label for="horasSemana">¿Cuántas horas a la semana?</label><input type="text"
+                        id="horasSemana" placeholder="Ej. 3 horas"></div>
+            </div>
+            <div class="form-group"><label for="clubAnterior">¿En qué club o escuela?</label><input type="text"
+                    id="clubAnterior" placeholder="Nombre del club anterior"></div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="participadoConcursos">¿Has participado en concursos?</label>
+                    <select id="participadoConcursos">
+                        <option value="No">No</option>
+                        <option value="Sí">Sí</option>
+                    </select>
+                </div>
+                <div class="form-group" id="categoriaConcursoContainer" style="display: none;">
+                    <label for="categoriaConcurso">En caso afirmativo, ¿de qué categoría?</label>
+                    <input type="text" id="categoriaConcurso" placeholder="Ej. Ponis B, 1.10m...">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="caballoPropio">¿Tienes caballo o poni propio?</label>
+                    <select id="caballoPropio">
+                        <option value="No">No</option>
+                        <option value="Sí">Sí</option>
+                    </select>
+                </div>
+                <div class="form-group" id="traeCaballoContainer" style="display: none;">
+                    <label for="traeCaballo">¿Vas a traerlo a La Gerencia?</label>
+                    <select id="traeCaballo">
+                        <option value="No">No</option>
+                        <option value="Sí">Sí</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group"><label for="comoNosConociste">¿Cómo has conocido nuestros
+                    campamentos?</label><textarea id="comoNosConociste"
+                    placeholder="Ej. Por un amigo, redes sociales, etc."></textarea></div>
+            <div class="form-group"><label for="enfermedadesObservaciones">Enfermedades, tratamientos u otras
+                    observaciones a tener en cuenta</label><textarea id="enfermedadesObservaciones"
+                    placeholder="Alergias, medicación, etc."></textarea></div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="necesitaRecogida">¿Necesitas que te recojamos en bus o aeropuerto?</label>
+                    <select id="necesitaRecogida">
+                        <option value="No">No</option>
+                        <option value="Sí">Sí</option>
+                    </select>
+                </div>
+            </div>
+            <div id="detallesRecogidaContainer" style="display: none;">
+                <div class="form-group"><label for="detallesRecogida">Fecha, hora y lugar de recogida:</label><textarea
+                        id="detallesRecogida" placeholder="Ej. 1 de Julio a las 15:00h en Aeropuerto T4"></textarea>
+                </div>
+                <div class="form-group"><label for="detallesSalida">Fecha, hora y lugar de salida:</label><textarea
+                        id="detallesSalida" placeholder="Ej. 15 de Julio a las 12:00h en Aeropuerto T4"></textarea>
+                </div>
+            </div>
+
+            <!-- CAMPOS INTERNOS DE GESTIÓN -->
+            <h3 style="color: #4a3728; margin-top: 30px;">Datos de Gestión Interna</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="nivel">Nivel de Equitación:</label>
+                    <select id="nivel" required>
+                        <option value="">-- Selecciona Nivel --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="estado">Estado para Asignación:</label>
+                    <select id="estado" required>
+                        <option value="Activo">✅ Activo (Elegible)</option>
+                        <option value="Inactivo">❌ Inactivo (No asignable)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn">Enviar Inscripción</button>
+        </form>
+    </div>
+
+    <!-- Modal de confirmación -->
+    <div id="modalConfirmacion" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModal()">&times;</span>
+            <h3 style="margin-top:0; color:#27ae60;">✅ ¡Inscripción Enviada!</h3>
+            <p>Gracias por registrarte. Hemos recibido tus datos correctamente.</p>
+            <p>Puedes cerrar esta ventana.</p>
+            <button onclick="cerrarModal()" style="margin-top:20px; background-color:#27ae60;">Cerrar</button>
+        </div>
+    </div>
+
+
+    <script src="data-manager.js?v=1.5"></script>
+    <script>
+        const form = document.getElementById('alumnoForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const alumnoIdInput = document.getElementById('alumnoId');
+
+        async function poblarNiveles() {
+            const selectNivel = document.getElementById('nivel');
+            const valorActual = selectNivel.value;
+
+            let niveles = await dataManager.get('nivelesEscuela') || [];
+            if (niveles.length === 0) {
+                niveles = [
+                    { id: 1, nombre: 'Iniciación' },
+                    { id: 2, nombre: 'Intermedio' },
+                    { id: 3, nombre: 'Avanzado' }
+                ];
+                await dataManager.set('nivelesEscuela', niveles);
+            }
+
+            selectNivel.innerHTML = '<option value="">-- Selecciona Nivel --</option>' + niveles.map(n => `<option value="${n.nombre}">${n.nombre}</option>`).join('');
+            if (valorActual && niveles.some(n => n.nombre === valorActual)) {
+                selectNivel.value = valorActual;
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('fechaNacimiento').addEventListener('change', actualizarCamposTutor);
+
+            const participadoConcursosSelect = document.getElementById('participadoConcursos');
+            const categoriaConcursoContainer = document.getElementById('categoriaConcursoContainer');
+            participadoConcursosSelect.addEventListener('change', () => {
+                categoriaConcursoContainer.style.display = participadoConcursosSelect.value === 'Sí' ? 'block' : 'none';
+            });
+
+            const caballoPropioSelect = document.getElementById('caballoPropio');
+            const traeCaballoContainer = document.getElementById('traeCaballoContainer');
+            caballoPropioSelect.addEventListener('change', () => {
+                traeCaballoContainer.style.display = caballoPropioSelect.value === 'Sí' ? 'block' : 'none';
+            });
+
+            const necesitaRecogidaSelect = document.getElementById('necesitaRecogida');
+            const detallesRecogidaContainer = document.getElementById('detallesRecogidaContainer');
+            necesitaRecogidaSelect.addEventListener('change', () => {
+                detallesRecogidaContainer.style.display = necesitaRecogidaSelect.value === 'Sí' ? 'block' : 'none';
+            });
+        }
+
+        function getAge(fechaNacimiento) {
+            if (!fechaNacimiento) return 0;
+            const hoy = new Date();
+            const cumple = new Date(fechaNacimiento);
+            let edad = hoy.getFullYear() - cumple.getFullYear();
+            const m = hoy.getMonth() - cumple.getMonth();
+            if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) {
+                edad--;
+            }
+            return edad;
+        }
+
+        function actualizarCamposTutor() {
+            const fechaNacimiento = document.getElementById('fechaNacimiento').value;
+            const edad = getAge(fechaNacimiento);
+            const tutorSection = document.getElementById('tutorSection');
+            const tutorNombreInput = document.getElementById('tutorNombre');
+            const tutorApellidosInput = document.getElementById('tutorApellidos');
+            const tutorDniInput = document.getElementById('tutorDni');
+
+            if (edad < 18) {
+                tutorSection.style.display = 'block';
+                tutorNombreInput.required = true;
+                tutorApellidosInput.required = true;
+                tutorDniInput.required = true;
+            } else {
+                tutorSection.style.display = 'none';
+                tutorNombreInput.required = false;
+                tutorApellidosInput.required = false;
+                tutorDniInput.required = false;
+            }
+        }
+
+        window.onload = async function () {
+            await dataManager.initPromise;
+            console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
+
+            await poblarNiveles();
+            setupEventListeners();
+
+            // Listener para niveles por si se actualizan en otra pestaña
+            dataManager.onSnapshot('nivelesEscuela', (data) => {
+                poblarNiveles();
+            });
+        };
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const id = alumnoIdInput.value;
+            const dni = document.getElementById('dni').value.trim();
+            const nombre = document.getElementById('nombre').value.trim();
+            const apellido = document.getElementById('apellido').value.trim();
+            const fechaNacimiento = document.getElementById('fechaNacimiento').value;
+            const direccion = document.getElementById('direccion').value.trim();
+            const poblacion = document.getElementById('poblacion').value.trim();
+            const provincia = document.getElementById('provincia').value.trim();
+            const cp = document.getElementById('cp').value.trim();
+            const numLicencia = document.getElementById('numLicencia').value.trim();
+            const numSegSocial = document.getElementById('numSegSocial').value.trim();
+            const otrosSeguros = document.getElementById('otrosSeguros').value.trim();
+
+            const tutorNombre = document.getElementById('tutorNombre').value.trim();
+            const tutorApellidos = document.getElementById('tutorApellidos').value.trim();
+            const tutorDni = document.getElementById('tutorDni').value.trim();
+            const telefono = document.getElementById('telefono').value.trim();
+            const email = document.getElementById('email').value.trim();
+
+            const tiempoMontando = document.getElementById('tiempoMontando').value.trim();
+            const horasSemana = document.getElementById('horasSemana').value.trim();
+            const clubAnterior = document.getElementById('clubAnterior').value.trim();
+            const participadoConcursos = document.getElementById('participadoConcursos').value;
+            const categoriaConcurso = document.getElementById('categoriaConcurso').value.trim();
+            const caballoPropio = document.getElementById('caballoPropio').value;
+            const traeCaballo = document.getElementById('traeCaballo').value;
+            const comoNosConociste = document.getElementById('comoNosConociste').value.trim();
+            const enfermedadesObservaciones = document.getElementById('enfermedadesObservaciones').value.trim();
+            const necesitaRecogida = document.getElementById('necesitaRecogida').value;
+            const detallesRecogida = document.getElementById('detallesRecogida').value.trim();
+            const detallesSalida = document.getElementById('detallesSalida').value.trim();
+
+            const nivel = document.getElementById('nivel').value;
+            const estado = document.getElementById('estado').value;
+
+            let alumnos = await dataManager.get('alumnosEscuela') || [];
+
+            const alumnoData = {
+                dni, nombre, apellido, fechaNacimiento, direccion, poblacion, provincia, cp, numLicencia, numSegSocial, otrosSeguros,
+                tutorNombre, tutorApellidos, tutorDni, telefono, email,
+                tiempoMontando, horasSemana, clubAnterior, participadoConcursos, categoriaConcurso, caballoPropio, traeCaballo, comoNosConociste, enfermedadesObservaciones, necesitaRecogida, detallesRecogida, detallesSalida,
+                nivel, estado
+            };
+
+            // Este formulario solo crea nuevos alumnos, no edita.
+            alumnos.push({ id: Date.now(), ...alumnoData });
+
+            await dataManager.set('alumnosEscuela', alumnos);
+
+            document.getElementById('modalConfirmacion').style.display = 'block';
+            form.reset();
+            actualizarCamposTutor();
+        });
+
+        function cerrarModal() {
+            document.getElementById('modalConfirmacion').style.display = 'none';
+        }
+
+    </script>
+
+</body>
+
+</html>
