@@ -171,15 +171,12 @@
             }
         });
 
-        function calcularHoraFin(horaStr, duracion) {
+        function calcularHoraFin(horaStr, duracionEnMinutos) {
             if (!horaStr) return '12:00';
+            const duracion = parseInt(duracionEnMinutos) || 60; // Por defecto 60 minutos si no es un número
             const [hh, mm] = horaStr.split(':').map(Number);
-            let minTotales = hh * 60 + mm;
-            if (duracion.includes('45')) minTotales += 45;
-            else if (duracion.includes('1 hora y media')) minTotales += 90;
-            else if (duracion.includes('1 hora')) minTotales += 60;
-            else if (duracion.includes('2 horas')) minTotales += 120;
-            else minTotales += 60; // 1 hora por defecto
+
+            let minTotales = (hh * 60) + mm + duracion;
 
             const finH = Math.floor(minTotales / 60) % 24;
             const finM = minTotales % 60;

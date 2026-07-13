@@ -491,9 +491,9 @@
                 return;
             }
 
-            select.innerHTML = '<option value="">-- Selecciona duración --</option>' + duraciones.map(d => `<option value="${d.nombre}">${d.nombre}</option>`).join('');
+            select.innerHTML = '<option value="">-- Selecciona duración --</option>' + duraciones.map(d => `<option value="${d.valor}">${d.nombre} (${d.valor} min)</option>`).join('');
 
-            if (valorActual && duraciones.some(d => d.nombre === valorActual)) select.value = valorActual;
+            if (valorActual && duraciones.some(d => d.valor == valorActual)) select.value = valorActual;
         }
 
         async function poblarNiveles() {
