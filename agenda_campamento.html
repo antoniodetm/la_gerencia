@@ -87,7 +87,7 @@
 
     <div class="nav-bar">
         <a href="inicio.html" class="nav-link">🏠 Inicio</a>
-        <a href="agenda_campamento.html" class="nav-link nav-active">🚐 Agenda Campamento</a>
+        <a href="campamento_hub.html" class="nav-link">🏕️ Campamento</a>
     </div>
 
     <div class="container">
@@ -114,6 +114,20 @@
         const db = firebase.firestore();
         firebase.auth().signInAnonymously().catch(console.error);
 
+        // Función para generar un color consistente basado en un string (nombre del alumno)
+        function generarColorPorNombre(nombre) {
+            let hash = 0;
+            for (let i = 0; i < nombre.length; i++) {
+                hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            // Usamos HSL para generar colores más agradables y evitar los muy claros/oscuros
+            const h = hash % 360; // Tono
+            const s = 40 + (hash % 30); // Saturación entre 40% y 70%
+            const l = 35 + (hash % 10); // Luminosidad entre 35% y 45% (colores oscuros pero visibles)
+
+            return `hsl(${h}, ${s}%, ${l}%)`;
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             const calendarEl = document.getElementById('calendar');
             const calendar = new FullCalendar.Calendar(calendarEl, {
@@ -139,14 +153,33 @@
                 const eventos = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
+                    const colorAlumno = generarColorPorNombre(`${data.nombre} ${data.apellido}`);
+
+                    // Evento de Estancia (dura varias semanas)
+                    if (data.fechaInicioCampamento && data.semanasCampamento) {
+                        const startDate = new Date(data.fechaInicioCampamento + 'T00:00:00');
+                        const weeks = parseInt(data.semanasCampamento, 10);
+                        if (!isNaN(weeks) && weeks > 0) {
+                            const endDate = new Date(startDate);
+                            endDate.setDate(startDate.getDate() + (weeks * 7));
+
+                            eventos.push({
+                                title: `🏕️ ${data.nombre} ${data.apellido}`,
+                                start: data.fechaInicioCampamento,
+                                end: endDate.toISOString().split('T')[0],
+                                allDay: true,
+                                backgroundColor: colorAlumno
+                            });
+                        }
+                    }
 
                     // Evento de Recogida (Entrada)
                     if (data.necesitaRecogida === 'Sí' && data.fechaRecogida && data.horaRecogida) {
                         eventos.push({
                             title: `✅ ENTRADA: ${data.nombre} ${data.apellido}\n📍 ${data.lugarRecogida}`,
                             start: `${data.fechaRecogida}T${data.horaRecogida}`,
-                            backgroundColor: '#27ae60', // Verde
-                            borderColor: '#229954'
+                            backgroundColor: colorAlumno,
+                            borderColor: colorAlumno
                         });
                     }
 
@@ -155,8 +188,8 @@
                         eventos.push({
                             title: `❌ SALIDA: ${data.nombre} ${data.apellido}\n📍 ${data.lugarSalida}`,
                             start: `${data.fechaSalida}T${data.horaSalida}`,
-                            backgroundColor: '#c0392b', // Rojo
-                            borderColor: '#a93226'
+                            backgroundColor: colorAlumno,
+                            borderColor: colorAlumno
                         });
                     }
                 });

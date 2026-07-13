@@ -251,15 +251,37 @@
                 <div class="form-row">
                     <div class="form-group"><label for="tutorDni">DNI del Tutor:</label><input type="text" id="tutorDni"
                             placeholder="Ej. 87654321B"></div>
-                    <div class="form-group"><label for="telefono">Teléfono de Contacto:</label><input type="tel"
-                            id="telefono" required placeholder="Ej. 600123456"></div>
+                    <div class="form-group"><label for="tutorTelefono">Teléfono del Tutor:</label><input type="tel"
+                            id="tutorTelefono" placeholder="Ej. 600123456"></div>
                 </div>
-                <div class="form-group"><label for="email">Email de Contacto:</label><input type="email" id="email"
-                        placeholder="Ej. email@dominio.com"></div>
+                <div class="form-group"><label for="tutorEmail">Email del Tutor:</label><input type="email"
+                        id="tutorEmail" placeholder="Ej. email@dominio.com"></div>
             </div>
 
             <!-- OTROS DATOS DE INTERÉS -->
             <h3 style="color: #4a3728; margin-top: 30px;">Otros Datos de Interés</h3>
+            <div class="form-row" id="participanteContactoSection">
+                <div class="form-group"><label for="participanteTelefono">Teléfono de Contacto:</label><input type="tel"
+                        id="participanteTelefono" placeholder="Ej. 600123456"></div>
+                <div class="form-group"><label for="participanteEmail">Email de Contacto:</label><input type="email"
+                        id="participanteEmail" placeholder="Ej. email@dominio.com"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="semanasCampamento">¿Cuántas semanas de campamento?</label>
+                    <select id="semanasCampamento" required>
+                        <option value="">-- Selecciona una opción --</option>
+                        <option value="1">1 Semana</option>
+                        <option value="2">2 Semanas</option>
+                        <option value="3">3 Semanas</option>
+                        <option value="4">4 Semanas</option>
+                        <option value="5">5 Semanas</option>
+                        <option value="6">6 Semanas</option>
+                    </select>
+                </div>
+                <div class="form-group"><label for="fechaInicioCampamento">Fecha de inicio:</label><input type="date"
+                        id="fechaInicioCampamento" required></div>
+            </div>
             <div class="form-row">
                 <div class="form-group"><label for="tiempoMontando">¿Cuánto tiempo llevas montando?</label><input
                         type="text" id="tiempoMontando" placeholder="Ej. 2 años"></div>
@@ -353,7 +375,9 @@
                     <th>Nombre</th>
                     <th>Apellidos</th>
                     <th>Fecha Nac.</th>
+                    <th>Fecha Entrada</th>
                     <th>Teléfono Tutor</th>
+                    <th>Reserva Pagada</th>
                     <th>Viaje</th>
                     <th>Acciones</th>
                 </tr>
@@ -499,17 +523,29 @@
             const tutorNombreInput = document.getElementById('tutorNombre');
             const tutorApellidosInput = document.getElementById('tutorApellidos');
             const tutorDniInput = document.getElementById('tutorDni');
+            const tutorTelefonoInput = document.getElementById('tutorTelefono');
+            const tutorEmailInput = document.getElementById('tutorEmail');
+
+            const participanteContactoSection = document.getElementById('participanteContactoSection');
+            const participanteTelefonoInput = document.getElementById('participanteTelefono');
+            const participanteEmailInput = document.getElementById('participanteEmail');
 
             if (edad < 18) {
                 tutorSection.style.display = 'block';
+                participanteContactoSection.style.display = 'none';
                 tutorNombreInput.required = true;
                 tutorApellidosInput.required = true;
                 tutorDniInput.required = true;
+                tutorTelefonoInput.required = true;
+                participanteTelefonoInput.required = false;
             } else {
                 tutorSection.style.display = 'none';
+                participanteContactoSection.style.display = 'flex';
                 tutorNombreInput.required = false;
                 tutorApellidosInput.required = false;
                 tutorDniInput.required = false;
+                tutorTelefonoInput.required = false;
+                participanteTelefonoInput.required = true;
             }
         }
 
@@ -543,8 +579,28 @@
             const tutorNombre = document.getElementById('tutorNombre').value.trim();
             const tutorApellidos = document.getElementById('tutorApellidos').value.trim();
             const tutorDni = document.getElementById('tutorDni').value.trim();
-            const telefono = document.getElementById('telefono').value.trim();
-            const email = document.getElementById('email').value.trim();
+
+            const edad = getAge(fechaNacimiento);
+
+            let finalTutorNombre = '';
+            let finalTutorApellidos = '';
+            let finalTutorDni = '';
+            let finalTelefono = '';
+            let finalEmail = '';
+
+            if (edad < 18) {
+                finalTutorNombre = tutorNombre;
+                finalTutorApellidos = tutorApellidos;
+                finalTutorDni = tutorDni;
+                finalTelefono = document.getElementById('tutorTelefono').value.trim();
+                finalEmail = document.getElementById('tutorEmail').value.trim();
+            } else {
+                finalTelefono = document.getElementById('participanteTelefono').value.trim();
+                finalEmail = document.getElementById('participanteEmail').value.trim();
+            }
+
+            const semanasCampamento = document.getElementById('semanasCampamento').value;
+            const fechaInicioCampamento = document.getElementById('fechaInicioCampamento').value;
 
             const tiempoMontando = document.getElementById('tiempoMontando').value.trim();
             const horasSemana = document.getElementById('horasSemana').value.trim();
@@ -567,7 +623,7 @@
 
             const alumnoData = {
                 dni, nombre, apellido, fechaNacimiento, direccion, poblacion, provincia, cp, numLicencia, numSegSocial, otrosSeguros,
-                tutorNombre, tutorApellidos, tutorDni, telefono, email,
+                tutorNombre: finalTutorNombre, tutorApellidos: finalTutorApellidos, tutorDni: finalTutorDni, telefono: finalTelefono, email: finalEmail, semanasCampamento, fechaInicioCampamento,
                 tiempoMontando, horasSemana, clubAnterior, participadoConcursos, categoriaConcurso, caballoPropio, traeCaballo, comoNosConociste, enfermedadesObservaciones, necesitaRecogida,
                 fechaRecogida, horaRecogida, lugarRecogida, fechaSalida, horaSalida, lugarSalida
             };
@@ -581,7 +637,8 @@
                     // Crear un nuevo documento
                     await db.collection('inscripcionesCampamento').add({
                         ...alumnoData,
-                        fechaInscripcion: new Date().toISOString()
+                        fechaInscripcion: new Date().toISOString(),
+                        reservaPagada: false // Por defecto, la reserva no está pagada
                     });
                     alert("¡Nueva inscripción añadida correctamente!");
                 }
@@ -631,20 +688,34 @@
             });
 
             if (inscripcionesFiltradas.length === 0) {
-                tabla.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#888;">No se encontraron inscripciones.</td></tr>`;
+                tabla.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#888;">No se encontraron inscripciones.</td></tr>`;
                 return;
             }
+
+            // Ordenar por fecha de inicio del campamento en el cliente, si existe
+            inscripcionesFiltradas.sort((a, b) => {
+                const fechaA = a.fechaInicioCampamento ? new Date(a.fechaInicioCampamento) : new Date(0); // Fecha muy antigua si no existe
+                const fechaB = b.fechaInicioCampamento ? new Date(b.fechaInicioCampamento) : new Date(0); // Fecha muy antigua si no existe
+                if (fechaA.getTime() === fechaB.getTime()) {
+                    return (a.nombre || '').localeCompare(b.nombre || ''); // Orden secundario por nombre
+                }
+                return fechaA - fechaB;
+            });
 
             inscripcionesFiltradas.forEach(i => {
                 const fila = tabla.insertRow();
                 const viaje = i.necesitaRecogida === 'Sí' ? '✅ Sí' : '❌ No';
                 const fechaNac = i.fechaNacimiento ? new Date(i.fechaNacimiento + 'T12:00:00').toLocaleDateString('es-ES') : '-';
+                const fechaEntrada = i.fechaInicioCampamento ? new Date(i.fechaInicioCampamento + 'T12:00:00').toLocaleDateString('es-ES') : '-';
+                const reservaPagada = i.reservaPagada || false;
 
                 fila.innerHTML = `
                     <td>${i.nombre}</td>
                     <td>${i.apellido}</td>
                     <td>${fechaNac}</td>
+                    <td><b>${fechaEntrada}</b></td>
                     <td>${i.telefono}</td>
+                    <td style="text-align: center;"><input type="checkbox" ${reservaPagada ? 'checked' : ''} onclick="actualizarPagoReserva('${i.id}', this.checked)" style="width: 20px; height: 20px; cursor: pointer;"></td>
                     <td>${viaje}</td>
                     <td class="actions-cell">
                         <button onclick="verFicha('${i.id}')" style="background-color:#3498db;">Ver Ficha</button>
@@ -653,6 +724,18 @@
                     </td>
                 `;
             });
+        }
+
+        async function actualizarPagoReserva(id, pagado) {
+            try {
+                await db.collection('inscripcionesCampamento').doc(id).update({
+                    reservaPagada: pagado
+                });
+                console.log(`Estado de pago de reserva actualizado para ${id} a ${pagado}`);
+            } catch (error) {
+                console.error("Error al actualizar el pago de la reserva: ", error);
+                alert("Hubo un error al actualizar el estado del pago.");
+            }
         }
 
         async function cargarInscripcionParaEditar(id) {
@@ -674,6 +757,15 @@
                         element.dispatchEvent(new Event('change'));
                     }
                 }
+            }
+
+            // Rellenar campos de contacto correctos
+            if (getAge(data.fechaNacimiento) < 18) {
+                document.getElementById('tutorTelefono').value = data.telefono || '';
+                document.getElementById('tutorEmail').value = data.email || '';
+            } else {
+                document.getElementById('participanteTelefono').value = data.telefono || '';
+                document.getElementById('participanteEmail').value = data.email || '';
             }
 
             submitBtn.textContent = 'Actualizar Inscripción';
@@ -714,13 +806,20 @@
                 html += `<p><strong>DNI Tutor:</strong> ${data.tutorDni}</p>`;
                 html += `<p><strong>Teléfono:</strong> ${data.telefono}</p>`;
                 html += `<p><strong>Email:</strong> ${data.email}</p>`;
+            } else {
+                html += `<hr><h4>Datos de Contacto</h4>`;
+                html += `<p><strong>Teléfono:</strong> ${data.telefono}</p>`;
+                html += `<p><strong>Email:</strong> ${data.email}</p>`;
             }
 
             html += '<hr><h4>Otros Datos</h4>';
+            html += `<p><strong>Semanas de campamento:</strong> ${data.semanasCampamento || '-'}</p>`;
+            html += `<p><strong>Fecha de inicio:</strong> ${data.fechaInicioCampamento ? new Date(data.fechaInicioCampamento + 'T12:00:00').toLocaleDateString('es-ES') : '-'}</p>`;
             html += `<p><strong>Experiencia:</strong> ${data.tiempoMontando} (${data.horasSemana}/sem) en ${data.clubAnterior || 'N/A'}</p>`;
             html += `<p><strong>Concursos:</strong> ${data.participadoConcursos} (${data.categoriaConcurso || 'N/A'})</p>`;
             html += `<p><strong>Caballo Propio:</strong> ${data.caballoPropio} (¿Lo trae? ${data.traeCaballo})</p>`;
             html += `<p><strong>Observaciones:</strong> ${data.enfermedadesObservaciones || '-'}</p>`;
+            html += `<p><strong>Reserva Pagada:</strong> ${data.reservaPagada ? 'Sí' : 'No'}</p>`;
             html += `<p><strong>Cómo nos conoció:</strong> ${data.comoNosConociste || '-'}</p>`;
 
             if (data.necesitaRecogida === 'Sí') {
