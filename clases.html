@@ -261,26 +261,23 @@
         <form id="claseForm">
             <input type="hidden" id="claseId">
 
-            <!-- SECCIÓN: UN DÍA -->
-            <div id="seccionUnDia">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="diaSemana">Día de la semana:</label>
-                        <select id="diaSemana">
-                            <option value="">-- Elige un día --</option>
-                            <option value="Lunes">Lunes</option>
-                            <option value="Martes">Martes</option>
-                            <option value="Miércoles">Miércoles</option>
-                            <option value="Jueves">Jueves</option>
-                            <option value="Viernes">Viernes</option>
-                            <option value="Sábado">Sábado</option>
-                            <option value="Domingo">Domingo</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="hora">Hora de Inicio:</label>
-                        <input type="time" id="hora">
-                    </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="diaSemana">Día de la semana:</label>
+                    <select id="diaSemana">
+                        <option value="">-- Elige un día --</option>
+                        <option value="Lunes">Lunes</option>
+                        <option value="Martes">Martes</option>
+                        <option value="Miércoles">Miércoles</option>
+                        <option value="Jueves">Jueves</option>
+                        <option value="Viernes">Viernes</option>
+                        <option value="Sábado">Sábado</option>
+                        <option value="Domingo">Domingo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="hora">Hora de Inicio:</label>
+                    <input type="time" id="hora">
                 </div>
             </div>
 
@@ -390,7 +387,7 @@
         };
 
         function setupEventListeners() {
-            // No se necesitan listeners de radio/checkbox ahora
+            // No se necesitan listeners de eventos complejos para este formulario simple.
         }
 
         async function poblarDuraciones() {
@@ -430,15 +427,20 @@
             const maxAlumnos = document.getElementById('maxAlumnos').value;
             const nivel = document.getElementById('nivelClase').value;
 
-            const diaSemana = document.getElementById('diaSemana').value;
-            const hora = document.getElementById('hora').value;
-
-            if (!diaSemana || !hora || !duracion || !maxAlumnos || !nivel) {
-                alert('Por favor, completa todos los campos del formulario.');
+            if (!duracion || !maxAlumnos || !nivel) {
+                alert('Por favor completa la duración, el número de alumnos y el nivel.');
                 return;
             }
 
             let clases = await dataManager.get('clasesEscuela') || [];
+
+            const diaSemana = document.getElementById('diaSemana').value;
+            const hora = document.getElementById('hora').value;
+
+            if (!diaSemana || !hora) {
+                alert('Por favor completa el día y la hora');
+                return;
+            }
 
             if (id) {
                 clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, diaSemana, hora, duracion, maxAlumnos, nivel } : c);
@@ -462,14 +464,14 @@
             }
 
             clases.sort((a, b) => {
-                return ordenDias[a.diaSemana] - ordenDias[b.diaSemana];
+                const getDia1 = a.diaSemana;
+                const getDia2 = b.diaSemana;
+                return ordenDias[getDia1] - ordenDias[getDia2];
             });
 
             clases.forEach(c => {
                 const fila = tabla.insertRow();
-                let contenidoFila = '';
-
-                contenidoFila = `
+                const contenidoFila = `
                     <td><b>🗓️ ${c.diaSemana}</b> a las ⏰ ${c.hora} hs</td>
                     <td>⏱️ ${c.duracion}</td>
                     <td>${c.nivel || '-'}</td>
@@ -496,7 +498,6 @@
 
                 document.getElementById('diaSemana').value = c.diaSemana;
                 document.getElementById('hora').value = c.hora;
-
 
                 submitBtn.textContent = 'Actualizar Clase';
                 submitBtn.classList.add('btn-update');

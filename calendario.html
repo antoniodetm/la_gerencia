@@ -186,42 +186,35 @@
         async function generarEventos() {
             const clases = await dataManager.get('clasesEscuela') || [];
             const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+            const hoy = new Date().toISOString().split('T')[0];
             const eventos = [];
 
-            // Agrupar asignaciones por clase y fecha
+            // Agrupar asignaciones por clase y día
             const grupos = {};
-            asignaciones.forEach(a => {
+            const asignacionesFuturas = asignaciones.filter(a => a.dia >= hoy);
+
+            asignacionesFuturas.forEach(a => {
                 const key = `${a.claseId}-${a.dia}`;
                 if (!grupos[key]) {
                     const claseInfo = clases.find(c => c.id == a.claseId);
                     if (!claseInfo) return; // Si la clase fue borrada, no la mostramos
-
-                    grupos[key] = {
-                        clase: claseInfo,
-                        dia: a.dia,
-                        alumnos: []
-                    };
+                    grupos[key] = { clase: claseInfo, dia: a.dia, alumnos: [] };
                 }
                 grupos[key].alumnos.push(a.alumno);
             });
 
-            // Crear un evento por cada grupo de clase/fecha con alumnos
+            // Crear un evento por cada grupo (clase en un día específico)
             for (const key in grupos) {
                 const grupo = grupos[key];
-                const { clase, dia, alumnos } = grupo;
-
-                const numAlumnos = alumnos.length;
-                const maxAlumnos = clase.maxAlumnos || 'N/A';
-                const listaAlumnos = alumnos.map(nombre => `• ${nombre}`).join('\n');
+                const numAlumnos = grupo.alumnos.length;
+                const maxAlumnos = grupo.clase.maxAlumnos || 'N/A';
+                const listaAlumnos = grupo.alumnos.map(nombre => `• ${nombre}`).join('\n');
 
                 eventos.push({
                     title: `Clase ${numAlumnos}/${maxAlumnos}`,
-                    start: `${dia}T${clase.hora}`,
-                    end: `${dia}T${calcularHoraFin(clase.hora, clase.duracion)}`,
-                    extendedProps: {
-                        listaAlumnos: listaAlumnos || '(Sin alumnos asignados)',
-                        claseId: clase.id
-                    },
+                    start: `${grupo.dia}T${grupo.clase.hora}`,
+                    end: `${grupo.dia}T${calcularHoraFin(grupo.clase.hora, grupo.clase.duracion)}`,
+                    extendedProps: { listaAlumnos: listaAlumnos || '(Sin alumnos asignados)', claseId: grupo.clase.id },
                     backgroundColor: '#3498db'
                 });
             }

@@ -301,18 +301,25 @@
         <div class="container" style="border-top: 5px solid #3498db;">
             <h2 style="color: #3498db; border-bottom: 2px solid #aed6f1;">🏦 Conceptos Gasto Campamento</h2>
             <form id="gastoCampamentoForm">
-                <div class="form-group">
-                    <label for="nombreGastoCampamento">Nuevo Concepto de Gasto:</label>
-                    <input type="text" id="nombreGastoCampamento" required
-                        placeholder="Ej. Helado, Bebida, Recuerdo...">
+                <input type="hidden" id="gastoCampamentoId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nombreGastoCampamento">Concepto de Gasto:</label>
+                        <input type="text" id="nombreGastoCampamento" required placeholder="Ej. Helado, Bebida...">
+                    </div>
+                    <div class="form-group" style="flex: 0 0 100px;">
+                        <label for="precioGastoCampamento">Precio (€):</label>
+                        <input type="number" id="precioGastoCampamento" required step="0.01" placeholder="Ej. 1.50">
+                    </div>
                 </div>
-                <button type="submit" style="background-color: #3498db;">Añadir Concepto</button>
+                <button type="submit" id="btnSubmitGasto" style="background-color: #3498db;">Añadir Concepto</button>
             </form>
             <table id="tablaGastosCampamento" style="margin-top: 25px;">
                 <thead>
                     <tr>
                         <th style="background-color: #3498db;">Concepto</th>
-                        <th style="width: 80px; text-align: center; background-color: #3498db;">Acción</th>
+                        <th style="background-color: #3498db; text-align: right;">Precio</th>
+                        <th style="width: 150px; text-align: center; background-color: #3498db;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -353,6 +360,8 @@
         // Conceptos Gasto Campamento
         const formGastoCampamento = document.getElementById('gastoCampamentoForm');
         const nombreGastoCampamentoInput = document.getElementById('nombreGastoCampamento');
+        const precioGastoCampamentoInput = document.getElementById('precioGastoCampamento');
+        const gastoCampamentoIdInput = document.getElementById('gastoCampamentoId');
         const tablaGastosCampamento = document.getElementById('tablaGastosCampamento').getElementsByTagName('tbody')[0];
 
 
@@ -483,6 +492,14 @@
                         mostrarDuraciones();
                     }
                 });
+
+                dataManager.onSnapshot('conceptosGastoCampamento', (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataGastosCampamento) {
+                        ultimaDataGastosCampamento = dataActual;
+                        mostrarGastosCampamento();
+                    }
+                });
             } else {
                 setInterval(async function () {
                     const dataNiveles = JSON.stringify(await dataManager.get('nivelesEscuela') || []);
@@ -610,16 +627,30 @@
         // Formulario Gasto Campamento
         formGastoCampamento.addEventListener('submit', async function (e) {
             e.preventDefault();
+            const id = gastoCampamentoIdInput.value;
             const nombre = nombreGastoCampamentoInput.value.trim();
-            if (!nombre) return;
+            const precio = parseFloat(precioGastoCampamentoInput.value);
+            if (!nombre || isNaN(precio)) {
+                alert('Por favor, completa el nombre y el precio.');
+                return;
+            }
 
             let gastos = await dataManager.get('conceptosGastoCampamento') || [];
-            const existe = gastos.some(g => g.nombre.toLowerCase() === nombre.toLowerCase());
-            if (existe) { alert('Este concepto de gasto ya existe.'); return; }
 
-            gastos.push({ id: Date.now(), nombre: nombre });
+            if (id) {
+                // Editar
+                gastos = gastos.map(g => g.id === parseInt(id) ? { ...g, nombre, precio: precio.toFixed(2) } : g);
+                alert('Concepto actualizado.');
+            } else {
+                // Añadir nuevo
+                const existe = gastos.some(g => g.nombre.toLowerCase() === nombre.toLowerCase());
+                if (existe) { alert('Este concepto de gasto ya existe.'); return; }
+                gastos.push({ id: Date.now(), nombre, precio: precio.toFixed(2) });
+            }
+
             await dataManager.set('conceptosGastoCampamento', gastos);
-            nombreGastoCampamentoInput.value = '';
+            restablecerFormularioGasto();
+            await mostrarGastosCampamento(); // <-- Línea añadida para refrescar la tabla
         });
 
         async function mostrarNiveles() {
@@ -704,8 +735,32 @@
             }
             gastos.forEach(g => {
                 const fila = tablaGastosCampamento.insertRow();
-                fila.innerHTML = `<td><b>${g.nombre}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarGastoCampamento(${g.id})">Eliminar</button></td>`;
+                fila.innerHTML = `
+                    <td><b>${g.nombre}</b></td>
+                    <td style="text-align:right;">${g.precio || '0.00'} €</td>
+                    <td style="text-align:center; display:flex; gap:5px;">
+                        <button class="btn-delete" style="flex:1; background-color:#f39c12;" onclick="cargarGastoParaEditar(${g.id})">Editar</button>
+                        <button class="btn-delete" style="flex:1;" onclick="eliminarGastoCampamento(${g.id})">Eliminar</button>
+                    </td>
+                `;
             });
+        }
+
+        async function cargarGastoParaEditar(id) {
+            const gastos = await dataManager.get('conceptosGastoCampamento') || [];
+            const gasto = gastos.find(g => g.id === id);
+            if (gasto) {
+                gastoCampamentoIdInput.value = gasto.id;
+                nombreGastoCampamentoInput.value = gasto.nombre;
+                precioGastoCampamentoInput.value = gasto.precio;
+                document.getElementById('btnSubmitGasto').textContent = 'Actualizar Concepto';
+            }
+        }
+
+        function restablecerFormularioGasto() {
+            formGastoCampamento.reset();
+            gastoCampamentoIdInput.value = '';
+            document.getElementById('btnSubmitGasto').textContent = 'Añadir Concepto';
         }
 
         async function eliminarNivel(id) {
@@ -758,7 +813,7 @@
                 let gastos = await dataManager.get('conceptosGastoCampamento') || [];
                 gastos = gastos.filter(g => g.id !== id);
                 await dataManager.set('conceptosGastoCampamento', gastos);
-                // Se actualizará solo por el listener
+                restablecerFormularioGasto();
             }
         }
     </script>
