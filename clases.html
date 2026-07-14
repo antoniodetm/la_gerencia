@@ -261,15 +261,8 @@
         <form id="claseForm">
             <input type="hidden" id="claseId">
 
-            <!-- Radio buttons para elegir uno o varios días -->
-            <div class="radio-group">
-                <label><input type="radio" name="tipoClase" value="unDia" checked> Un día fijo</label>
-                <label><input type="radio" name="tipoClase" value="variosDialas"> Varios días</label>
-            </div>
-
             <!-- SECCIÓN: UN DÍA -->
-            <div id="seccionUnDia" class="section-dias active">
-                <h4 style="margin-top: 0;">Clase de un día</h4>
+            <div id="seccionUnDia">
                 <div class="form-row">
                     <div class="form-group">
                         <label for="diaSemana">Día de la semana:</label>
@@ -289,42 +282,6 @@
                         <input type="time" id="hora">
                     </div>
                 </div>
-            </div>
-
-            <!-- SECCIÓN: VARIOS DÍAS -->
-            <div id="seccionVariosDias" class="section-dias">
-                <h4 style="margin-top: 0;">Selecciona los días y horarios</h4>
-                <div class="dias-grid">
-                    <div class="dia-item">
-                        <input type="checkbox" id="chk-Lunes" value="Lunes" class="chk-dia">
-                        <label for="chk-Lunes">Lunes</label>
-                    </div>
-                    <div class="dia-item">
-                        <input type="checkbox" id="chk-Martes" value="Martes" class="chk-dia">
-                        <label for="chk-Martes">Martes</label>
-                    </div>
-                    <div class="dia-item">
-                        <input type="checkbox" id="chk-Miércoles" value="Miércoles" class="chk-dia">
-                        <label for="chk-Miércoles">Miércoles</label>
-                    </div>
-                    <div class="dia-item">
-                        <input type="checkbox" id="chk-Jueves" value="Jueves" class="chk-dia">
-                        <label for="chk-Jueves">Jueves</label>
-                    </div>
-                    <div class="dia-item">
-                        <input type="checkbox" id="chk-Viernes" value="Viernes" class="chk-dia">
-                        <label for="chk-Viernes">Viernes</label>
-                    </div>
-                    <div class="dia-item">
-                        <input type="checkbox" id="chk-Sábado" value="Sábado" class="chk-dia">
-                        <label for="chk-Sábado">Sábado</label>
-                    </div>
-                    <div class="dia-item">
-                        <input type="checkbox" id="chk-Domingo" value="Domingo" class="chk-dia">
-                        <label for="chk-Domingo">Domingo</label>
-                    </div>
-                </div>
-                <div id="horariosContainer" class="horarios-container"></div>
             </div>
 
             <!-- DURACIÓN Y TIPO (común a ambos) -->
@@ -433,52 +390,7 @@
         };
 
         function setupEventListeners() {
-            // Radio buttons para cambiar entre un día y varios días
-            const radios = document.querySelectorAll('input[name="tipoClase"]');
-            radios.forEach(radio => {
-                radio.addEventListener('change', function () {
-                    const seccionUnDia = document.getElementById('seccionUnDia');
-                    const seccionVariosDias = document.getElementById('seccionVariosDias');
-
-                    if (this.value === 'unDia') {
-                        seccionUnDia.classList.add('active');
-                        seccionVariosDias.classList.remove('active');
-                    } else {
-                        seccionUnDia.classList.remove('active');
-                        seccionVariosDias.classList.add('active');
-                    }
-                    limpiarHorarios();
-                });
-            });
-
-            // Checkboxes para seleccionar días
-            const checkboxes = document.querySelectorAll('.chk-dia');
-            checkboxes.forEach(chk => {
-                chk.addEventListener('change', actualizarHorarios);
-            });
-        }
-
-        function actualizarHorarios() {
-            const horariosContainer = document.getElementById('horariosContainer');
-            const diasSeleccionados = Array.from(document.querySelectorAll('.chk-dia:checked')).map(c => c.value);
-
-            horariosContainer.innerHTML = '';
-            diasSeleccionados.sort((a, b) => ordenDias[a] - ordenDias[b]).forEach(dia => {
-                const div = document.createElement('div');
-                div.className = 'horario-item';
-                div.innerHTML = `
-                <label style="flex: 0; margin-bottom: 0; font-weight: bold; white-space: nowrap;">${dia}:</label>
-                <input type="time" class="hora-dia" data-dia="${dia}">
-            `;
-                horariosContainer.appendChild(div);
-            });
-        }
-
-        function limpiarHorarios() {
-            const checkboxes = document.querySelectorAll('.chk-dia');
-            checkboxes.forEach(chk => chk.checked = false);
-            const horariosContainer = document.getElementById('horariosContainer');
-            if (horariosContainer) horariosContainer.innerHTML = '';
+            // No se necesitan listeners de radio/checkbox ahora
         }
 
         async function poblarDuraciones() {
@@ -514,61 +426,26 @@
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
             const id = claseIdInput.value;
-            const tipoClaseRadio = document.querySelector('input[name="tipoClase"]:checked');
-
-            if (!tipoClaseRadio) {
-                alert('Selecciona un tipo de clase');
-                return;
-            }
-
-            const tipoClase = tipoClaseRadio.value;
             const duracion = document.getElementById('duracion').value;
             const maxAlumnos = document.getElementById('maxAlumnos').value;
             const nivel = document.getElementById('nivelClase').value;
 
-            if (!duracion || !maxAlumnos || !nivel) {
-                alert('Por favor completa la duración y el número de alumnos.');
+            const diaSemana = document.getElementById('diaSemana').value;
+            const hora = document.getElementById('hora').value;
+
+            if (!diaSemana || !hora || !duracion || !maxAlumnos || !nivel) {
+                alert('Por favor, completa todos los campos del formulario.');
                 return;
             }
 
             let clases = await dataManager.get('clasesEscuela') || [];
 
-            if (tipoClase === 'unDia') {
-                const diaSemana = document.getElementById('diaSemana').value;
-                const hora = document.getElementById('hora').value;
-
-                if (!diaSemana || !hora) {
-                    alert('Por favor completa el día y la hora');
-                    return;
-                }
-
-                if (id) {
-                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos, nivel } : c);
-                    alert("¡Horario modificado!");
-                } else {
-                    clases.push({ id: Date.now(), tipo: 'unDia', diaSemana, hora, duracion, maxAlumnos, nivel });
-                    alert("¡Clase agendada!");
-                }
+            if (id) {
+                clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, diaSemana, hora, duracion, maxAlumnos, nivel } : c);
+                alert("¡Horario modificado!");
             } else {
-                const horarios = {};
-                document.querySelectorAll('.hora-dia').forEach(input => {
-                    if (input.value) {
-                        horarios[input.dataset.dia] = input.value;
-                    }
-                });
-
-                if (Object.keys(horarios).length === 0) {
-                    alert('Por favor selecciona al menos un día con su hora');
-                    return;
-                }
-
-                if (id) {
-                    clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, tipo: 'variosDias', horarios, duracion, maxAlumnos, nivel } : c);
-                    alert("¡Horario modificado!");
-                } else {
-                    clases.push({ id: Date.now(), tipo: 'variosDias', horarios, duracion, maxAlumnos, nivel });
-                    alert("¡Clase agendada!");
-                }
+                clases.push({ id: Date.now(), diaSemana, hora, duracion, maxAlumnos, nivel });
+                alert("¡Clase agendada!");
             }
 
             await dataManager.set('clasesEscuela', clases);
@@ -585,35 +462,19 @@
             }
 
             clases.sort((a, b) => {
-                const getDia1 = a.tipo === 'unDia' ? a.diaSemana : Object.keys(a.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
-                const getDia2 = b.tipo === 'unDia' ? b.diaSemana : Object.keys(b.horarios || {}).sort((x, y) => ordenDias[x] - ordenDias[y])[0];
-                return ordenDias[getDia1] - ordenDias[getDia2];
+                return ordenDias[a.diaSemana] - ordenDias[b.diaSemana];
             });
 
             clases.forEach(c => {
                 const fila = tabla.insertRow();
                 let contenidoFila = '';
 
-                if (c.tipo === 'unDia') {
-                    contenidoFila = `
+                contenidoFila = `
                     <td><b>🗓️ ${c.diaSemana}</b> a las ⏰ ${c.hora} hs</td>
                     <td>⏱️ ${c.duracion}</td>
                     <td>${c.nivel || '-'}</td>
                     <td>👥 ${c.maxAlumnos || '-'} alumnos</td>
                 `;
-                } else if (c.tipo === 'variosDias' && c.horarios) {
-                    const diasHoras = Object.entries(c.horarios).sort((a, b) => ordenDias[a[0]] - ordenDias[b[0]])
-                        .map(([dia, hora]) => `${dia} ${hora}`)
-                        .join(', ');
-                    contenidoFila = `
-                    <td><b>🗓️</b> ${diasHoras}</td>
-                    <td>${c.nivel || '-'}</td>
-                    <td>⏱️ ${c.duracion}</td>
-                    <td>👥 ${c.maxAlumnos || '-'} alumnos</td>
-                `;
-                } else {
-                    return; // Saltar clases con formato inválido
-                }
 
                 fila.innerHTML = contenidoFila + `
                 <td class="actions-cell">
@@ -633,30 +494,9 @@
                 document.getElementById('maxAlumnos').value = c.maxAlumnos || '';
                 document.getElementById('nivelClase').value = c.nivel || '';
 
-                if (c.tipo === 'unDia') {
-                    const radioUnDia = document.querySelector('input[value="unDia"]');
-                    if (radioUnDia) radioUnDia.click();
-                    document.getElementById('diaSemana').value = c.diaSemana;
-                    document.getElementById('hora').value = c.hora;
-                } else if (c.tipo === 'variosDialas') {
-                    const radioVarios = document.querySelector('input[value="variosDialas"]');
-                    if (radioVarios) radioVarios.click();
+                document.getElementById('diaSemana').value = c.diaSemana;
+                document.getElementById('hora').value = c.hora;
 
-                    setTimeout(() => {
-                        Object.keys(c.horarios || {}).forEach(dia => {
-                            const chk = document.getElementById(`chk-${dia}`);
-                            if (chk) chk.checked = true;
-                        });
-                        actualizarHorarios();
-
-                        setTimeout(() => {
-                            Object.entries(c.horarios || {}).forEach(([dia, hora]) => {
-                                const input = document.querySelector(`.hora-dia[data-dia="${dia}"]`);
-                                if (input) input.value = hora;
-                            });
-                        }, 50);
-                    }, 50);
-                }
 
                 submitBtn.textContent = 'Actualizar Clase';
                 submitBtn.classList.add('btn-update');
@@ -684,8 +524,6 @@
             claseIdInput.value = '';
             submitBtn.textContent = 'Agendar Clase';
             submitBtn.classList.remove('btn-update');
-            const radioUnDia = document.querySelector('input[value="unDia"]');
-            if (radioUnDia) radioUnDia.checked = true;
         }
     </script>
 
