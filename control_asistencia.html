@@ -273,9 +273,6 @@
                     <label for="selectTipoClase" style="font-weight:bold;">Tipo de Clase:</label>
                     <select id="selectTipoClase" required>
                     </select>
-                    <label for="selectNivelAlumno" style="font-weight:bold; margin-top:10px;">Nivel de la Clase:</label>
-                    <select id="selectNivelAlumno" required>
-                    </select>
                 </div>
             </div>
             <div class="modal-body">
@@ -486,12 +483,6 @@
             (todosLosTiposClase || []).forEach(tipo => {
                 selectTipo.innerHTML += `<option value="${tipo.nombre}">${tipo.nombre}</option>`;
             });
-            // Poblar selector de Nivel de Alumno
-            const selectNivel = document.getElementById('selectNivelAlumno');
-            selectNivel.innerHTML = '<option value="">-- Selecciona Nivel --</option>';
-            (todosLosNivelesAlumno || []).forEach(nivel => {
-                selectNivel.innerHTML += `<option value="${nivel.nombre}">${nivel.nombre}</option>`;
-            });
 
             // Poblar lista de alumnos asignados
             const alumnosAsignados = todasLasAsignaciones
@@ -523,19 +514,28 @@
             div.className = 'student-list-item';
             div.setAttribute('data-nombre-alumno', nombreAlumno);
 
-            const caballosOptions = todosLosCaballos.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
-
             const isChecked = asistenciaPrevia ? 'checked disabled' : '';
             const isSelectDisabled = asistenciaPrevia ? 'disabled' : '';
             const caballoSeleccionado = asistenciaPrevia ? asistenciaPrevia.caballo : '';
 
-            div.innerHTML = `
-                <input type="checkbox" class="att-check" ${isChecked}>
-                <span class="name">${nombreAlumno}</span>
+            let actionHtml = `
                 <select class="select-caballo" ${isSelectDisabled}>
                     <option value="">-- Caballo --</option>
                     ${todosLosCaballos.map(c => `<option value="${c.nombre}" ${c.nombre === caballoSeleccionado ? 'selected' : ''}>${c.nombre}</option>`).join('')}
                 </select>
+            `;
+
+            if (asistenciaPrevia) {
+                actionHtml = `
+                    <span style="flex-grow:1; text-align:right; color:#27ae60; font-weight:bold;">Asistió (🐴 ${asistenciaPrevia.caballo})</span>
+                    <button class="btn-quitar-inline" style="background-color:#c0392b;" onclick="eliminarAsistencia(${asistenciaPrevia.id})">X</button>
+                `;
+            }
+
+            div.innerHTML = `
+                <input type="checkbox" class="att-check" ${isChecked}>
+                <span class="name">${nombreAlumno}</span>
+                ${actionHtml}
             `;
             return div;
         }
@@ -571,15 +571,52 @@
             alert('Alumno quitado de la clase.');
         }
 
+        async function eliminarAsistencia(asistenciaId) {
+            if (!confirm('¿Eliminar este registro de asistencia? Se devolverá 1 clase al bono correspondiente si es posible.')) return;
+
+            const asistenciaAEliminar = todaLaAsistencia.find(a => a.id === asistenciaId);
+            if (!asistenciaAEliminar) return;
+
+            const alumno = todosLosAlumnos.find(a => a.id === asistenciaAEliminar.alumnoId);
+            if (!alumno) {
+                alert("Error: No se encontró al alumno para devolver la clase.");
+                return;
+            }
+
+            // Devolver la clase al bono
+            // Buscamos el pago (bono o clase suelta) que se usó para esta clase.
+            // La lógica asume que se descuenta del bono más antiguo, así que devolvemos al bono más reciente que tenga clases usadas.
+            const pagoCorrespondiente = todosLosPagos
+                .filter(p => p.alumnoId === alumno.id && (p.tipo === 'Bono' || p.tipo === 'Clase Suelta') && (p.clasesUsadas || 0) > 0)
+                .sort((a, b) => new Date(b.fechaCompra) - new Date(a.fechaCompra))[0]; // El más reciente con clases usadas
+
+            if (pagoCorrespondiente) {
+                pagoCorrespondiente.clasesUsadas = Math.max(0, (pagoCorrespondiente.clasesUsadas || 0) - 1);
+                await dataManager.set('pagosAlumnosEscuela', todosLosPagos);
+            }
+
+            // Eliminar el registro de asistencia
+            todaLaAsistencia = todaLaAsistencia.filter(a => a.id !== asistenciaId);
+            await dataManager.set('attendanceEscuela', todaLaAsistencia);
+
+            // Recargar el modal para reflejar los cambios
+            await abrirModal(asistenciaAEliminar.claseId, asistenciaAEliminar.fechaClase);
+        }
+
         async function guardarAsistencia() {
             if (!claseActivaId) return;
 
             const fecha = fechaControlInput.value;
             const tipoClase = document.getElementById('selectTipoClase').value;
-            const nivelAlumno = document.getElementById('selectNivelAlumno').value;
 
-            if (!tipoClase || !nivelAlumno) {
-                alert('Por favor, selecciona el Tipo y el Nivel de la clase antes de guardar.');
+            if (!tipoClase) {
+                alert('Por favor, selecciona el Tipo de la clase antes de guardar.');
+                return;
+            }
+
+            const clase = todasLasClases.find(c => c.id === claseActivaId);
+            if (!clase) {
+                alert("Error: No se pudo encontrar la información de la clase.");
                 return;
             }
 
@@ -625,8 +662,8 @@
                     fechaClase: fecha,
                     claseId: claseActivaId,
                     caballo: caballo,
-                    tipoClase: tipoClase,
-                    nivel: nivelAlumno,
+                    tipoClase: tipoClase, // Tipo de clase seleccionado en el modal
+                    nivel: clase.nivel, // Nivel definido en la clase original
                     asistio: true
                 };
                 todaLaAsistencia.push(registroAsistencia);
