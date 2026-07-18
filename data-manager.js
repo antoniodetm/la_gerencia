@@ -189,6 +189,10 @@ class DataManager {
                 { id: 401, alumnoId: 101, productoId: 1, productoNombre: 'Bono 10 Clases', productoPrecio: '150.00', fechaCompra: '2023-10-01', tipo: 'Bono', totalClases: 10, clasesUsadas: 3 },
                 { id: 402, alumnoId: 102, productoId: 3, productoNombre: 'Bono 5 Clases', productoPrecio: '85.00', fechaCompra: '2023-10-15', tipo: 'Bono', totalClases: 5, clasesUsadas: 1 }
             ],
+            alimentacionCaballosEscuela: [],
+            vacunasCaballosEscuela: [],
+            desparasitacionCaballosEscuela: [],
+            herrajesCaballosEscuela: [],
             attendanceEscuela: [
                 { id: 501, alumno: 'Juan Pérez', alumnoId: 101, fechaClase: '2023-10-05', claseId: 203, caballo: 'Furia', asistio: true },
                 { id: 502, alumno: 'Juan Pérez', alumnoId: 101, fechaClase: '2023-10-12', claseId: 203, caballo: 'Spirit', asistio: true },
@@ -220,7 +224,9 @@ class DataManager {
         const colecciones = [
             'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela',
             'asignacionesEscuela', 'nivelesEscuela', 'tiposClasesEscuela', 'productosEscuela',
-            'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela'
+            'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
+            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela',
+            'herrajesCaballosEscuela'
         ];
 
         const backup = {};
@@ -292,7 +298,9 @@ class DataManager {
         const colecciones = [
             'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela',
             'asignacionesEscuela', 'nivelesEscuela', 'tiposClasesEscuela', 'productosEscuela',
-            'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela'
+            'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
+            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela',
+            'herrajesCaballosEscuela'
         ];
 
         try {

@@ -164,6 +164,74 @@
         .btn-delete:hover {
             background-color: #a33226;
         }
+
+        .btn-seguimiento {
+            background-color: #3498db;
+        }
+
+        .btn-seguimiento:hover {
+            background-color: #2980b9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 25px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+            text-align: center;
+        }
+
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .btn-alimentacion {
+            background-color: #27ae60;
+        }
+
+        .btn-alimentacion:hover {
+            background-color: #229954;
+        }
+
+        .btn-medicacion {
+            background-color: #e74c3c;
+        }
+
+        .btn-medicacion:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-herrajes {
+            background-color: #e67e22;
+        }
+
+        .btn-herrajes:hover {
+            background-color: #d35400;
+        }
     </style>
 </head>
 
@@ -243,6 +311,94 @@
         </div>
     </div>
 
+    <!-- Modal para Alimentación del Caballo -->
+    <div id="modalAlimentacion" class="modal">
+        <div class="modal-content" style="width: 800px; max-width: 95%;">
+            <span class="close" onclick="cerrarAlimentacion()">&times;</span>
+            <h3 style="margin-top:0; color:#27ae60;">🌾 Alimentación de <span id="nombreCaballoAlimentacion"></span>
+            </h3>
+            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
+
+            <!-- Formulario para añadir pauta -->
+            <form id="formAddAlimentacion" style="text-align: left;">
+                <input type="hidden" id="alimentacionCaballoId">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="pautaAlimentacion">Pauta / Alimento:</label>
+                        <input type="text" id="pautaAlimentacion" placeholder="Ej. Pienso de mantenimiento, Heno..."
+                            required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="fechaAlimentacion">Fecha:</label>
+                        <input type="date" id="fechaAlimentacion" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <button type="submit" style="margin-top: 25px; background-color: #27ae60;">Añadir</button>
+                    </div>
+                </div>
+            </form>
+            <div id="alimentacionCaballoDetalles"
+                style="text-align: left; max-height: 300px; overflow-y: auto; margin-top: 20px;"></div>
+            <button onclick="cerrarAlimentacion()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal para Medicación del Caballo -->
+    <div id="modalMedicacion" class="modal">
+        <div class="modal-content" style="width: 800px; max-width: 95%;">
+            <span class="close" onclick="cerrarMedicacion()">&times;</span>
+            <h3 style="margin-top:0; color:#e74c3c;">⚕️ Medicación de <span id="nombreCaballoMedicacion"></span></h3>
+            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
+
+            <!-- Formulario para añadir pauta -->
+            <form id="formAddMedicacion" style="text-align: left;">
+                <input type="hidden" id="medicacionCaballoId">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="pautaMedicacion">Medicamento / Tratamiento:</label>
+                        <input type="text" id="pautaMedicacion" placeholder="Ej. Antiinflamatorio, Venda de descanso..."
+                            required>
+                    </div>
+                    <div class="form-group" style="flex: 1;"><label for="fechaMedicacion">Fecha:</label><input
+                            type="date" id="fechaMedicacion" required></div>
+                    <div class="form-group" style="flex: 1;"><button type="submit"
+                            style="margin-top: 25px; background-color: #e74c3c;">Añadir</button></div>
+                </div>
+            </form>
+            <div id="medicacionCaballoDetalles"
+                style="text-align: left; max-height: 300px; overflow-y: auto; margin-top: 20px;"></div>
+            <button onclick="cerrarMedicacion()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal para Herrajes del Caballo -->
+    <div id="modalHerrajes" class="modal">
+        <div class="modal-content" style="width: 800px; max-width: 95%;">
+            <span class="close" onclick="cerrarHerrajes()">&times;</span>
+            <h3 style="margin-top:0; color:#e67e22;">🛠️ Herrajes de <span id="nombreCaballoHerrajes"></span></h3>
+            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
+
+            <!-- Formulario para añadir pauta -->
+            <form id="formAddHerraje" style="text-align: left;">
+                <input type="hidden" id="herrajeCaballoId">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="pautaHerraje">Servicio / Observación:</label>
+                        <input type="text" id="pautaHerraje"
+                            placeholder="Ej. Herraje completo, Recorte, Herradura perdida..." required>
+                    </div>
+                    <div class="form-group" style="flex: 1;"><label for="fechaHerraje">Fecha:</label><input type="date"
+                            id="fechaHerraje" required></div>
+                    <div class="form-group" style="flex: 1;"><button type="submit"
+                            style="margin-top: 25px; background-color: #e67e22;">Añadir</button></div>
+                </div>
+            </form>
+            <div id="herrajesCaballoDetalles"
+                style="text-align: left; max-height: 300px; overflow-y: auto; margin-top: 20px;"></div>
+            <button onclick="cerrarHerrajes()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
+        </div>
+    </div>
+
     <script>
         const form = document.getElementById('caballoForm');
         const tabla = document.getElementById('tablaCaballos').getElementsByTagName('tbody')[0];
@@ -272,6 +428,9 @@
                 });
                 // Escuchar cambios en asistencia para que el modal se actualice si está abierto
                 dataManager.onSnapshot('attendanceEscuela', () => { });
+                dataManager.onSnapshot('alimentacionCaballosEscuela', () => { });
+                dataManager.onSnapshot('medicacionCaballosEscuela', () => { });
+                dataManager.onSnapshot('herrajesCaballosEscuela', () => { });
             } else {
                 setInterval(async function () {
                     const dataActual = JSON.stringify(await dataManager.get('caballosEscuela') || []);
@@ -319,6 +478,9 @@
                 fila.innerHTML = `
                 <td><b>${c.nombre}</b></td><td>${c.capa}</td><td>${c.estado}</td><td>${c.categoria || 'De tanda'}</td>
                 <td class="actions-cell">
+                    <button class="actions-btn btn-herrajes" onclick="verHerrajes(${c.id})">Herrajes</button>
+                    <button class="actions-btn btn-medicacion" onclick="verMedicacion(${c.id})">Medicación</button>
+                    <button class="actions-btn btn-alimentacion" onclick="verAlimentacion(${c.id})">Alimentación</button>
                     <button class="actions-btn btn-seguimiento" onclick="verSeguimientoCaballo(${c.id})">Seguimiento</button>
                     <button class="actions-btn btn-edit" onclick="cargarCaballoParaEditar(${c.id})">Editar</button>
                     <button class="actions-btn btn-delete" onclick="eliminarCaballo(${c.id})">Eliminar</button>
@@ -358,6 +520,192 @@
             caballoIdInput.value = '';
             submitBtn.textContent = 'Registrar Caballo';
             submitBtn.classList.remove('btn-update');
+        }
+
+        async function verAlimentacion(id) {
+            const caballos = await dataManager.get('caballosEscuela') || [];
+            const caballo = caballos.find(c => c.id === id);
+            if (!caballo) return;
+
+            document.getElementById('nombreCaballoAlimentacion').textContent = caballo.nombre;
+            document.getElementById('alimentacionCaballoId').value = id;
+            document.getElementById('formAddAlimentacion').reset();
+            document.getElementById('fechaAlimentacion').value = new Date().toISOString().split('T')[0];
+
+            await mostrarPautasDeAlimentacion(id);
+            document.getElementById('modalAlimentacion').style.display = 'block';
+        }
+
+        function cerrarAlimentacion() {
+            document.getElementById('modalAlimentacion').style.display = 'none';
+        }
+
+        document.getElementById('formAddAlimentacion').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const caballoId = parseInt(document.getElementById('alimentacionCaballoId').value);
+            const pauta = document.getElementById('pautaAlimentacion').value.trim();
+            const fecha = document.getElementById('fechaAlimentacion').value;
+
+            if (!pauta || !fecha) {
+                alert('Por favor, completa la pauta y la fecha.');
+                return;
+            }
+
+            let pautas = await dataManager.get('alimentacionCaballosEscuela') || [];
+            pautas.push({ id: Date.now(), caballoId, pauta, fecha });
+            await dataManager.set('alimentacionCaballosEscuela', pautas);
+
+            document.getElementById('formAddAlimentacion').reset();
+            await mostrarPautasDeAlimentacion(caballoId);
+        });
+
+        async function mostrarPautasDeAlimentacion(caballoId) {
+            const pautas = await dataManager.get('alimentacionCaballosEscuela') || [];
+            const misPautas = pautas.filter(p => p.caballoId === caballoId).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            const tablaDiv = document.getElementById('alimentacionCaballoDetalles');
+
+            if (misPautas.length === 0) {
+                tablaDiv.innerHTML = `<p style="text-align:center; color:#888; font-style:italic;">Este caballo no tiene pautas de alimentación registradas.</p>`;
+                return;
+            }
+
+            let tablaHtml = `<table style="width:100%;"><thead><tr><th style="width:120px;">Fecha</th><th>Pauta / Alimento</th><th style="text-align:center; width:80px;">Acción</th></tr></thead><tbody>`;
+            misPautas.forEach(p => {
+                const fechaFormateada = new Date(p.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                tablaHtml += `<tr><td><b>${fechaFormateada}</b></td><td>${p.pauta}</td><td style="text-align:center;"><button class="actions-btn btn-delete" style="font-size:11px;" onclick="eliminarPauta(${p.id}, ${caballoId})">X</button></td></tr>`;
+            });
+            tablaHtml += `</tbody></table>`;
+            tablaDiv.innerHTML = tablaHtml;
+        }
+
+        async function eliminarPauta(pautaId, caballoId) {
+            let pautas = await dataManager.get('alimentacionCaballosEscuela') || [];
+            await dataManager.set('alimentacionCaballosEscuela', pautas.filter(p => p.id !== pautaId));
+            await mostrarPautasDeAlimentacion(caballoId);
+        }
+
+        async function verMedicacion(id) {
+            const caballos = await dataManager.get('caballosEscuela') || [];
+            const caballo = caballos.find(c => c.id === id);
+            if (!caballo) return;
+
+            document.getElementById('nombreCaballoMedicacion').textContent = caballo.nombre;
+            document.getElementById('medicacionCaballoId').value = id;
+            document.getElementById('formAddMedicacion').reset();
+            document.getElementById('fechaMedicacion').value = new Date().toISOString().split('T')[0];
+
+            await mostrarPautasDeMedicacion(id);
+            document.getElementById('modalMedicacion').style.display = 'block';
+        }
+
+        function cerrarMedicacion() {
+            document.getElementById('modalMedicacion').style.display = 'none';
+        }
+
+        document.getElementById('formAddMedicacion').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const caballoId = parseInt(document.getElementById('medicacionCaballoId').value);
+            const pauta = document.getElementById('pautaMedicacion').value.trim();
+            const fecha = document.getElementById('fechaMedicacion').value;
+
+            if (!pauta || !fecha) {
+                alert('Por favor, completa el tratamiento y la fecha.');
+                return;
+            }
+
+            let pautas = await dataManager.get('medicacionCaballosEscuela') || [];
+            pautas.push({ id: Date.now(), caballoId, pauta, fecha });
+            await dataManager.set('medicacionCaballosEscuela', pautas);
+
+            document.getElementById('formAddMedicacion').reset();
+            await mostrarPautasDeMedicacion(caballoId);
+        });
+
+        async function mostrarPautasDeMedicacion(caballoId) {
+            const pautas = await dataManager.get('medicacionCaballosEscuela') || [];
+            const misPautas = pautas.filter(p => p.caballoId === caballoId).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            const tablaDiv = document.getElementById('medicacionCaballoDetalles');
+
+            if (misPautas.length === 0) {
+                tablaDiv.innerHTML = `<p style="text-align:center; color:#888; font-style:italic;">Este caballo no tiene medicación registrada.</p>`;
+                return;
+            }
+
+            let tablaHtml = `<table style="width:100%;"><thead><tr><th style="width:120px;">Fecha</th><th>Medicamento / Tratamiento</th><th style="text-align:center; width:80px;">Acción</th></tr></thead><tbody>`;
+            misPautas.forEach(p => {
+                const fechaFormateada = new Date(p.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                tablaHtml += `<tr><td><b>${fechaFormateada}</b></td><td>${p.pauta}</td><td style="text-align:center;"><button class="actions-btn btn-delete" style="font-size:11px;" onclick="eliminarPautaMedicacion(${p.id}, ${caballoId})">X</button></td></tr>`;
+            });
+            tablaHtml += `</tbody></table>`;
+            tablaDiv.innerHTML = tablaHtml;
+        }
+
+        async function eliminarPautaMedicacion(pautaId, caballoId) {
+            let pautas = await dataManager.get('medicacionCaballosEscuela') || [];
+            await dataManager.set('medicacionCaballosEscuela', pautas.filter(p => p.id !== pautaId));
+            await mostrarPautasDeMedicacion(caballoId);
+        }
+
+        async function verHerrajes(id) {
+            const caballos = await dataManager.get('caballosEscuela') || [];
+            const caballo = caballos.find(c => c.id === id);
+            if (!caballo) return;
+
+            document.getElementById('nombreCaballoHerrajes').textContent = caballo.nombre;
+            document.getElementById('herrajeCaballoId').value = id;
+            document.getElementById('formAddHerraje').reset();
+            document.getElementById('fechaHerraje').value = new Date().toISOString().split('T')[0];
+
+            await mostrarPautasDeHerrajes(id);
+            document.getElementById('modalHerrajes').style.display = 'block';
+        }
+
+        function cerrarHerrajes() {
+            document.getElementById('modalHerrajes').style.display = 'none';
+        }
+
+        document.getElementById('formAddHerraje').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const caballoId = parseInt(document.getElementById('herrajeCaballoId').value);
+            const pauta = document.getElementById('pautaHerraje').value.trim();
+            const fecha = document.getElementById('fechaHerraje').value;
+
+            if (!pauta || !fecha) {
+                alert('Por favor, completa el servicio y la fecha.');
+                return;
+            }
+
+            let pautas = await dataManager.get('herrajesCaballosEscuela') || [];
+            pautas.push({ id: Date.now(), caballoId, pauta, fecha });
+            await dataManager.set('herrajesCaballosEscuela', pautas);
+
+            document.getElementById('formAddHerraje').reset();
+            await mostrarPautasDeHerrajes(caballoId);
+        });
+
+        async function mostrarPautasDeHerrajes(caballoId) {
+            const pautas = await dataManager.get('herrajesCaballosEscuela') || [];
+            const misPautas = pautas.filter(p => p.caballoId === caballoId).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            const tablaDiv = document.getElementById('herrajesCaballoDetalles');
+
+            if (misPautas.length === 0) {
+                tablaDiv.innerHTML = `<p style="text-align:center; color:#888; font-style:italic;">Este caballo no tiene registros de herrajes.</p>`;
+                return;
+            }
+
+            let tablaHtml = `<table style="width:100%;"><thead><tr><th style="width:120px;">Fecha</th><th>Servicio / Observación</th><th style="text-align:center; width:80px;">Acción</th></tr></thead><tbody>`;
+            misPautas.forEach(p => {
+                const fechaFormateada = new Date(p.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                tablaHtml += `<tr><td><b>${fechaFormateada}</b></td><td>${p.pauta}</td><td style="text-align:center;"><button class="actions-btn btn-delete" style="font-size:11px;" onclick="eliminarPautaHerraje(${p.id}, ${caballoId})">X</button></td></tr>`;
+            });
+            tablaHtml += `</tbody></table>`;
+            tablaDiv.innerHTML = tablaHtml;
+        }
+
+        async function eliminarPautaHerraje(pautaId, caballoId) {
+            let pautas = await dataManager.get('herrajesCaballosEscuela') || [];
+            await dataManager.set('herrajesCaballosEscuela', pautas.filter(p => p.id !== pautaId));
+            await mostrarPautasDeHerrajes(caballoId);
         }
 
         async function verSeguimientoCaballo(id) {
@@ -414,6 +762,19 @@
 </table>
 </div>
 
+<!-- Modal para Seguimiento del Caballo -->
+<div id="modalSeguimientoCaballo" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="cerrarSeguimientoCaballo()">&times;</span>
+        <h3 style="margin-top:0; color:#3498db;">📊 Seguimiento de Trabajo del Caballo</h3>
+        <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
+        <div id="seguimientoCaballoDetalles" style="text-align: left; max-height: 400px; overflow-y: auto;"></div>
+        <button onclick="cerrarSeguimientoCaballo()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
+    </div>
+</div>
+
+
+
 <script>
     const form = document.getElementById('caballoForm');
     const tabla = document.getElementById('tablaCaballos').getElementsByTagName('tbody')[0];
@@ -441,6 +802,8 @@
                     await mostrarCaballos();
                 }
             });
+            // Escuchar cambios en asistencia para que el modal se actualice si está abierto
+            dataManager.onSnapshot('attendanceEscuela', () => { });
         } else {
             setInterval(async function () {
                 const dataActual = JSON.stringify(await dataManager.get('caballosEscuela') || []);
@@ -487,7 +850,7 @@
             const fila = tabla.insertRow();
             fila.innerHTML = `
                 <td><b>${c.nombre}</b></td><td>${c.capa}</td><td>${c.estado}</td><td>${c.categoria || 'De tanda'}</td>
-                <td class="actions-cell">
+                <td class="actions-cell">                    <button class="actions-btn btn-seguimiento" onclick="verSeguimientoCaballo(${c.id})">Seguimiento</button>
                     <button class="actions-btn btn-edit" onclick="cargarCaballoParaEditar(${c.id})">Editar</button>
                     <button class="actions-btn btn-delete" onclick="eliminarCaballo(${c.id})">Eliminar</button>
                 </td>
@@ -526,6 +889,42 @@
         caballoIdInput.value = '';
         submitBtn.textContent = 'Registrar Caballo';
         submitBtn.classList.remove('btn-update');
+    }
+
+    async function verSeguimientoCaballo(id) {
+        const caballos = await dataManager.get('caballosEscuela') || [];
+        const caballo = caballos.find(c => c.id === id);
+        if (!caballo) return;
+
+        const asistencias = await dataManager.get('attendanceEscuela') || [];
+        const misAsistencias = asistencias
+            .filter(att => att.caballo === caballo.nombre)
+            .sort((a, b) => new Date(b.fechaClase) - new Date(a.fechaClase));
+
+        let html = `<p><strong>Caballo:</strong> ${caballo.nombre}</p>`;
+        html += `<hr style="border:0; border-top:1px solid #eee; margin:15px 0;">`;
+
+        html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">🐴 Clases Realizadas (${misAsistencias.length})</h4>`;
+
+        if (misAsistencias.length > 0) {
+            html += `<div style="font-size: 0.9em;">`;
+            misAsistencias.forEach(att => {
+                const fechaFormateada = new Date(att.fechaClase + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+                html += `<div style="background:#f0f5fa; padding:5px 8px; margin-bottom:4px; border-radius:3px;">
+                        <b>${fechaFormateada}</b> - Clase de ${att.tipoClase || 'N/A'} con ${att.alumno || 'N/A'}
+                    </div>`;
+            });
+            html += `</div>`;
+        } else {
+            html += `<p style="color:#888; font-style:italic; text-align:center;">Este caballo no tiene registros de trabajo.</p>`;
+        }
+
+        document.getElementById('seguimientoCaballoDetalles').innerHTML = html;
+        document.getElementById('modalSeguimientoCaballo').style.display = 'block';
+    }
+
+    function cerrarSeguimientoCaballo() {
+        document.getElementById('modalSeguimientoCaballo').style.display = 'none';
     }
 </script>
 
