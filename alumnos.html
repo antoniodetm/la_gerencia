@@ -816,16 +816,41 @@
                 const clasesUsadas = bono.clasesUsadas || 0;
                 const clasesRestantes = totalClases - clasesUsadas;
                 const statusColor = clasesRestantes > 0 ? '#27ae60' : '#c0392b';
-                const progresoHtml = `<b>Usadas: ${clasesUsadas}</b> / <b style="color:${statusColor};">Restantes: ${clasesRestantes}</b>`;
+                const progresoHtml = `<b>${clasesUsadas}</b> usadas / <b style="color:${statusColor};">${clasesRestantes}</b> restantes`;
 
                 html += `<table style="font-size: 0.85em; margin-top:10px; width:100%; border-collapse: collapse;">
-                    <thead><tr style="background:#3498db; color:white;"><th style="padding:8px; text-align:left;">Bono</th><th style="padding:8px; text-align:center;">Progreso</th></tr></thead>
+                    <thead><tr style="background:#3498db; color:white;"><th style="padding:8px; text-align:left;">Bono Activo</th><th style="padding:8px; text-align:center;">Progreso</th></tr></thead>
                     <tbody><tr>
                         <td style="padding:8px; border-bottom:1px solid #eee;"><b>${bono.productoNombre}</b><br><small>Comprado: ${new Date(bono.fechaCompra + 'T12:00:00').toLocaleDateString('es-ES')}</small></td>
                         <td style="padding:8px; border-bottom:1px solid #eee; text-align:center; font-size:0.95em;">${progresoHtml}</td>
                     </tr></tbody></table>`;
 
-            } else if (pagosMensualesRecientes.length > 0) {
+            } else {
+                const totalClasesAsistidas = asistencia.filter(att => att.alumnoId == id && att.asistio).length;
+                const totalClasesPagadas = misPagos.reduce((sum, p) => sum + (p.clasesUsadas || 0), 0);
+                const clasesPendientes = totalClasesAsistidas - totalClasesPagadas;
+
+                if (clasesPendientes > 0) {
+                    const [servicios, bonos] = await Promise.all([dataManager.get('serviciosEscuela'), dataManager.get('bonosEscuela')]);
+                    const todosLosProductos = [...(servicios || []), ...(bonos || [])];
+                    const claseSuelta = todosLosProductos.find(p => p.nombre.toLowerCase().includes('clase suelta'));
+                    const precioClaseSuelta = claseSuelta ? parseFloat(claseSuelta.precio) : 20; // Precio por defecto si no se encuentra
+                    const deuda = clasesPendientes * precioClaseSuelta;
+
+                    html += `<div style="background:#fadbd8; color:#c0392b; padding:15px; border-radius:5px; text-align:center;">
+                        <div style="font-weight:bold; font-size:1.1em;">⚠️ SIN BONO ACTIVO</div>
+                        <p style="margin:10px 0;">Ha consumido <b>${clasesPendientes} clase(s) suelta(s)</b>.</p>
+                        <p style="font-size:1.2em; font-weight:bold; margin:5px 0;">Deuda total: <b>${deuda.toFixed(2)} €</b></p>
+                        <button onclick="abonarDeuda(${id}, ${clasesPendientes}, '${claseSuelta ? claseSuelta.nombre : 'Clase Suelta'}', ${precioClaseSuelta})" style="margin-top:15px; background-color:#27ae60; padding: 8px 15px; width:auto; font-size:14px;">Abonar ${clasesPendientes} Clase(s)</button>
+                    </div>`;
+                } else {
+                    html += `<div style="background:#eafaf1; color:#229954; padding:10px; border-radius:5px; text-align:center; font-weight:bold;">
+                        ✅ AL CORRIENTE
+                        <div style="font-size:0.8em; font-weight:normal;">No tiene bonos activos ni clases pendientes de pago.</div>
+                    </div>`;
+                }
+            }
+            /* else if (pagosMensualesRecientes.length > 0) {
                 html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">💳 Estado de la Mensualidad</h4>`;
                 const ultimoPagoMensual = pagosMensualesRecientes[0];
                 const fechaUltimoPago = new Date(ultimoPagoMensual.fechaCompra + 'T12:00:00');
@@ -844,7 +869,7 @@
             } else {
                 html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">📈 Seguimiento de Producto</h4>`;
                 html += `<p style="color:#888; font-style:italic; text-align:center;">Este alumno no tiene un producto activo para seguimiento (bono o mensualidad).</p>`;
-            }
+            } */
 
             // 2. Clases Reservadas (futuras)
             const misAsignacionesFuturas = asignaciones
@@ -883,6 +908,32 @@
 
             document.getElementById('seguimientoDetalles').innerHTML = html;
             document.getElementById('modalSeguimiento').style.display = 'block';
+        }
+
+        async function abonarDeuda(alumnoId, cantidad, productoNombre, precioUnitario) {
+            if (!confirm(`¿Confirmas el pago de ${cantidad} clase(s) suelta(s) por un total de ${(cantidad * precioUnitario).toFixed(2)} €?`)) {
+                return;
+            }
+
+            let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
+
+            for (let i = 0; i < cantidad; i++) {
+                const nuevoPago = {
+                    id: Date.now() + i,
+                    alumnoId,
+                    productoNombre: productoNombre,
+                    productoPrecio: precioUnitario.toFixed(2),
+                    fechaCompra: new Date().toISOString().split('T')[0],
+                    tipo: 'Clase Suelta',
+                    totalClases: 1,
+                    clasesUsadas: 1 // Se crea y se consume en el mismo acto
+                };
+                pagos.push(nuevoPago);
+            }
+
+            await dataManager.set('pagosAlumnosEscuela', pagos);
+            alert('¡Deuda abonada correctamente!');
+            await verSeguimiento(alumnoId); // Recargar el modal para ver los cambios
         }
 
         async function eliminarAsistencia(asistenciaId, alumnoId) {

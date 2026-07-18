@@ -232,6 +232,14 @@
         .btn-herrajes:hover {
             background-color: #d35400;
         }
+
+        .btn-agenda {
+            background-color: #8e44ad;
+        }
+
+        .btn-agenda:hover {
+            background-color: #7d3c98;
+        }
     </style>
 </head>
 
@@ -399,6 +407,42 @@
         </div>
     </div>
 
+    <!-- Modal para Agenda del Caballo -->
+    <div id="modalAgenda" class="modal">
+        <div class="modal-content" style="width: 800px; max-width: 95%;">
+            <span class="close" onclick="cerrarAgenda()">&times;</span>
+            <h3 style="margin-top:0; color:#8e44ad;">🗓️ Agenda de <span id="nombreCaballoAgenda"></span></h3>
+            <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
+
+            <!-- Formulario para añadir evento futuro -->
+            <form id="formAddAgenda" style="text-align: left; background: #f9f9f9; padding: 15px; border-radius: 5px;">
+                <h4 style="margin-top:0; color:#8e44ad;">Añadir Evento Futuro</h4>
+                <input type="hidden" id="agendaCaballoId">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;"><label for="fechaAgenda">Fecha:</label><input type="date"
+                            id="fechaAgenda" required></div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="tipoAgenda">Tipo:</label>
+                        <select id="tipoAgenda" required>
+                            <option value="Veterinario">Veterinario</option>
+                            <option value="Revisión">Revisión</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 2;"><label for="descripcionAgenda">Descripción:</label><input
+                            type="text" id="descripcionAgenda" placeholder="Ej. Vacuna anual, Revisión dental..."
+                            required></div>
+                    <div class="form-group" style="flex: 0.5;"><button type="submit"
+                            style="margin-top: 25px; background-color: #8e44ad;">+</button></div>
+                </div>
+            </form>
+
+            <div id="agendaCaballoDetalles"
+                style="text-align: left; max-height: 400px; overflow-y: auto; margin-top: 20px;"></div>
+            <button onclick="cerrarAgenda()" style="margin-top:20px; background-color:#7f8c8d;">Cerrar</button>
+        </div>
+    </div>
+
     <script>
         const form = document.getElementById('caballoForm');
         const tabla = document.getElementById('tablaCaballos').getElementsByTagName('tbody')[0];
@@ -431,6 +475,7 @@
                 dataManager.onSnapshot('alimentacionCaballosEscuela', () => { });
                 dataManager.onSnapshot('medicacionCaballosEscuela', () => { });
                 dataManager.onSnapshot('herrajesCaballosEscuela', () => { });
+                dataManager.onSnapshot('agendaCaballosEscuela', () => { });
             } else {
                 setInterval(async function () {
                     const dataActual = JSON.stringify(await dataManager.get('caballosEscuela') || []);
@@ -478,6 +523,7 @@
                 fila.innerHTML = `
                 <td><b>${c.nombre}</b></td><td>${c.capa}</td><td>${c.estado}</td><td>${c.categoria || 'De tanda'}</td>
                 <td class="actions-cell">
+                    <button class="actions-btn btn-agenda" onclick="verAgenda(${c.id})">Agenda</button>
                     <button class="actions-btn btn-herrajes" onclick="verHerrajes(${c.id})">Herrajes</button>
                     <button class="actions-btn btn-medicacion" onclick="verMedicacion(${c.id})">Medicación</button>
                     <button class="actions-btn btn-alimentacion" onclick="verAlimentacion(${c.id})">Alimentación</button>
@@ -706,6 +752,96 @@
             let pautas = await dataManager.get('herrajesCaballosEscuela') || [];
             await dataManager.set('herrajesCaballosEscuela', pautas.filter(p => p.id !== pautaId));
             await mostrarPautasDeHerrajes(caballoId);
+        }
+
+        async function verAgenda(id) {
+            const caballos = await dataManager.get('caballosEscuela') || [];
+            const caballo = caballos.find(c => c.id === id);
+            if (!caballo) return;
+
+            document.getElementById('nombreCaballoAgenda').textContent = caballo.nombre;
+            document.getElementById('agendaCaballoId').value = id;
+            document.getElementById('formAddAgenda').reset();
+            document.getElementById('fechaAgenda').value = new Date().toISOString().split('T')[0];
+
+            await mostrarAgendaCaballo(id, caballo.nombre);
+            document.getElementById('modalAgenda').style.display = 'block';
+        }
+
+        function cerrarAgenda() {
+            document.getElementById('modalAgenda').style.display = 'none';
+        }
+
+        document.getElementById('formAddAgenda').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const caballoId = parseInt(document.getElementById('agendaCaballoId').value);
+            const caballo = (await dataManager.get('caballosEscuela')).find(c => c.id === caballoId);
+            const fecha = document.getElementById('fechaAgenda').value;
+            const tipo = document.getElementById('tipoAgenda').value;
+            const descripcion = document.getElementById('descripcionAgenda').value.trim();
+
+            if (!fecha || !tipo || !descripcion) {
+                alert('Por favor, completa todos los campos del evento.');
+                return;
+            }
+
+            let eventos = await dataManager.get('agendaCaballosEscuela') || [];
+            eventos.push({ id: Date.now(), caballoId, fecha, tipo, descripcion });
+            await dataManager.set('agendaCaballosEscuela', eventos);
+
+            document.getElementById('formAddAgenda').reset();
+            document.getElementById('fechaAgenda').value = new Date().toISOString().split('T')[0];
+            await mostrarAgendaCaballo(caballoId, caballo.nombre);
+        });
+
+        async function mostrarAgendaCaballo(caballoId, caballoNombre) {
+            const [asistencias, alimentacion, medicacion, herrajes, agenda] = await Promise.all([
+                dataManager.get('attendanceEscuela'),
+                dataManager.get('alimentacionCaballosEscuela'),
+                dataManager.get('medicacionCaballosEscuela'),
+                dataManager.get('herrajesCaballosEscuela'),
+                dataManager.get('agendaCaballosEscuela')
+            ]);
+
+            let todosLosEventos = [];
+            asistencias.filter(e => e.caballo === caballoNombre).forEach(e => todosLosEventos.push({ fecha: e.fechaClase, tipo: 'Trabajo', desc: `Clase con ${e.alumno}`, icono: '🐴' }));
+            alimentacion.filter(e => e.caballoId === caballoId).forEach(e => todosLosEventos.push({ fecha: e.fecha, tipo: 'Alimentación', desc: e.pauta, icono: '🌾' }));
+            medicacion.filter(e => e.caballoId === caballoId).forEach(e => todosLosEventos.push({ fecha: e.fecha, tipo: 'Medicación', desc: e.pauta, icono: '⚕️' }));
+            herrajes.filter(e => e.caballoId === caballoId).forEach(e => todosLosEventos.push({ fecha: e.fecha, tipo: 'Herrajes', desc: e.pauta, icono: '🛠️' }));
+            agenda.filter(e => e.caballoId === caballoId).forEach(e => todosLosEventos.push({ id: e.id, fecha: e.fecha, tipo: e.tipo, desc: e.descripcion, icono: '🗓️', esAgenda: true }));
+
+            todosLosEventos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+            const detallesDiv = document.getElementById('agendaCaballoDetalles');
+            if (todosLosEventos.length === 0) {
+                detallesDiv.innerHTML = `<p style="text-align:center; color:#888; font-style:italic;">Este caballo no tiene eventos en su agenda.</p>`;
+                return;
+            }
+
+            let html = `<table style="width:100%; font-size:0.9em;"><thead><tr><th style="width:120px;">Fecha</th><th style="width:120px;">Tipo</th><th>Descripción</th><th style="width:50px;"></th></tr></thead><tbody>`;
+            todosLosEventos.forEach(e => {
+                const fechaFormateada = new Date(e.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const esFuturo = new Date(e.fecha) >= new Date(new Date().toDateString());
+                const estiloFila = esFuturo ? 'font-weight:bold; background-color: #fdf9e7;' : '';
+
+                html += `<tr style="${estiloFila}">
+                    <td>${fechaFormateada}</td>
+                    <td>${e.icono} ${e.tipo}</td>
+                    <td>${e.desc}</td>
+                    <td style="text-align:center;">
+                        ${e.esAgenda ? `<button class="actions-btn btn-delete" style="font-size:10px;" onclick="eliminarEventoAgenda(${e.id}, ${caballoId})">X</button>` : ''}
+                    </td>
+                </tr>`;
+            });
+            html += `</tbody></table>`;
+            detallesDiv.innerHTML = html;
+        }
+
+        async function eliminarEventoAgenda(eventoId, caballoId) {
+            let eventos = await dataManager.get('agendaCaballosEscuela') || [];
+            await dataManager.set('agendaCaballosEscuela', eventos.filter(e => e.id !== eventoId));
+            const caballo = (await dataManager.get('caballosEscuela')).find(c => c.id === caballoId);
+            await mostrarAgendaCaballo(caballoId, caballo.nombre);
         }
 
         async function verSeguimientoCaballo(id) {
