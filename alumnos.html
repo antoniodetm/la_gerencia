@@ -595,11 +595,13 @@
             const normalizar = (texto) => (texto || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             const filtro = normalizar(searchInput);
 
-            const alumnos = await dataManager.get('alumnosEscuela') || [];
+            const [alumnos, pagos] = await Promise.all([
+                dataManager.get('alumnosEscuela'),
+                dataManager.get('pagosAlumnosEscuela')
+            ]);
             tabla.innerHTML = '';
 
             const alumnosFiltrados = alumnos.filter(a => {
-                if (!filtro) return true;
                 return normalizar(a.dni).includes(filtro) ||
                     normalizar(a.nombre).includes(filtro) ||
                     normalizar(a.apellido).includes(filtro) ||
@@ -611,12 +613,48 @@
                 tabla.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">${mensaje}</td></tr>`;
                 return;
             }
+
+            // Actualizar cabecera de la tabla
+            const thead = tabla.closest('table').querySelector('thead tr');
+            thead.innerHTML = `
+                <th>Nombre</th>
+                <th>Apellidos</th>
+                <th>Último Producto</th>
+                <th style="text-align:center;">Al Corriente</th>
+                <th style="text-align:center;">Estado</th>
+                <th>Acciones</th>
+            `;
+
             alumnosFiltrados.forEach(a => {
+                // Lógica para "Producto Adquirido" y "Al Corriente"
+                const misPagos = (pagos || []).filter(p => p.alumnoId === a.id).sort((x, y) => new Date(y.fechaCompra) - new Date(x.fechaCompra));
+                const ultimoProducto = misPagos.length > 0 ? misPagos[0].productoNombre : '---';
+
+                let alCorrienteHtml = '<span title="Sin producto activo">⚪</span>';
+                const bonosActivos = misPagos.filter(p => p.tipo === 'Bono' && (p.totalClases - (p.clasesUsadas || 0)) > 0);
+                if (bonosActivos.length > 0) {
+                    alCorrienteHtml = '<span title="Bono activo">✅</span>';
+                } else {
+                    const pagosMensualesRecientes = misPagos.filter(p => p.tipo === 'Clase Suelta' || p.tipo === 'Otro');
+                    if (pagosMensualesRecientes.length > 0) {
+                        const hoy = new Date();
+                        const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+                        const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+                        const fechaUltimoPago = new Date(pagosMensualesRecientes[0].fechaCompra + 'T12:00:00');
+                        if (fechaUltimoPago >= primerDiaMes && fechaUltimoPago <= ultimoDiaMes) {
+                            alCorrienteHtml = '<span title="Mensualidad pagada">✅</span>';
+                        } else {
+                            alCorrienteHtml = '<span title="Mensualidad pendiente">❌</span>';
+                        }
+                    }
+                }
+
                 const fila = tabla.insertRow();
                 const badgeColor = (a.estado || 'Activo') === 'Activo' ? '#d5f4e6; color:#27ae60' : '#fadbd8; color:#c0392b';
                 fila.innerHTML = `
-                <td>${a.nombre}</td><td>${a.apellido}</td>
-                <td><span style="padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; background: ${badgeColor};">${a.estado || 'Activo'}</span></td>
+                <td>${a.nombre}</td><td>${a.apellido}</td><td>${ultimoProducto}</td>
+                <td style="text-align:center; font-size: 1.2em;">${alCorrienteHtml}</td>
+                <td style="text-align:center;"><span style="padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; background: ${badgeColor};">${a.estado || 'Activo'}</span></td>
                 <td class="actions-cell">
                     <button class="actions-btn btn-view" onclick="verFicha(${a.id})">Ver ficha</button>
                     <button class="actions-btn btn-products" onclick="abrirModalProductos(${a.id})">Productos</button>
@@ -759,38 +797,56 @@
             html += `<hr style="border:0; border-top:1px solid #eee; margin:15px 0;">`;
 
             // 1. Progreso de Bonos y Clases Sueltas
-            html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">📈 Progreso de Bonos</h4>`;
-            const bonosYClases = misPagos.filter(p => p.tipo === 'Bono' || p.tipo === 'Clase Suelta' || (p.totalClases && p.totalClases > 0));
+            const bonosActivos = misPagos
+                .filter(p => p.tipo === 'Bono' && (p.totalClases - (p.clasesUsadas || 0)) > 0)
+                .sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra));
 
-            if (bonosYClases.length === 0) {
-                html += `<p style="color:#888; font-style:italic; text-align:center;">Este alumno no ha comprado bonos o clases sueltas.</p>`;
-            } else {
+            const hoy = new Date();
+            const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+
+            const pagosMensualesRecientes = misPagos
+                .filter(p => p.tipo === 'Clase Suelta' || p.tipo === 'Otro') // Incluye 'Clases y Servicios' y 'Otros Servicios'
+                .sort((a, b) => new Date(b.fechaCompra) - new Date(a.fechaCompra));
+
+            if (bonosActivos.length > 0) {
+                html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">📈 Progreso de Bono Activo</h4>`;
+                const bono = bonosActivos[0]; // Mostramos solo el más antiguo con clases
+                const totalClases = bono.totalClases || 0;
+                const clasesUsadas = bono.clasesUsadas || 0;
+                const clasesRestantes = totalClases - clasesUsadas;
+                const statusColor = clasesRestantes > 0 ? '#27ae60' : '#c0392b';
+                const progresoHtml = `<b>Usadas: ${clasesUsadas}</b> / <b style="color:${statusColor};">Restantes: ${clasesRestantes}</b>`;
+
                 html += `<table style="font-size: 0.85em; margin-top:10px; width:100%; border-collapse: collapse;">
-                        <thead><tr style="background:#3498db; color:white;">
-                            <th style="padding:8px; text-align:left;">Bono / Producto</th>
-                            <th style="padding:8px; text-align:center;">Progreso</th>
-                        </tr></thead>
-                        <tbody>`;
-
-                const bonosOrdenados = [...bonosYClases].sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra));
-
-                bonosOrdenados.forEach(pago => {
-                    const totalClases = pago.totalClases || 0;
-                    const clasesUsadas = pago.clasesUsadas || 0; // Usar el valor guardado en la base de datos
-                    const clasesRestantes = totalClases - clasesUsadas;
-                    const statusColor = clasesRestantes > 0 ? '#27ae60' : '#c0392b';
-                    const progresoHtml = `<b>Usadas: ${clasesUsadas}</b> / <b style="color:${statusColor};">Restantes: ${clasesRestantes}</b>`;
-
-                    html += `<tr>
-                        <td style="padding:8px; border-bottom:1px solid #eee;"><b>${pago.productoNombre}</b><br><small>Comprado: ${new Date(pago.fechaCompra + 'T12:00:00').toLocaleDateString('es-ES')}</small></td>
+                    <thead><tr style="background:#3498db; color:white;"><th style="padding:8px; text-align:left;">Bono</th><th style="padding:8px; text-align:center;">Progreso</th></tr></thead>
+                    <tbody><tr>
+                        <td style="padding:8px; border-bottom:1px solid #eee;"><b>${bono.productoNombre}</b><br><small>Comprado: ${new Date(bono.fechaCompra + 'T12:00:00').toLocaleDateString('es-ES')}</small></td>
                         <td style="padding:8px; border-bottom:1px solid #eee; text-align:center; font-size:0.95em;">${progresoHtml}</td>
-                    </tr>`;
-                });
-                html += `</tbody></table>`;
+                    </tr></tbody></table>`;
+
+            } else if (pagosMensualesRecientes.length > 0) {
+                html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">💳 Estado de la Mensualidad</h4>`;
+                const ultimoPagoMensual = pagosMensualesRecientes[0];
+                const fechaUltimoPago = new Date(ultimoPagoMensual.fechaCompra + 'T12:00:00');
+
+                if (fechaUltimoPago >= primerDiaMes && fechaUltimoPago <= ultimoDiaMes) {
+                    html += `<div style="background:#d5f4e6; color:#27ae60; padding:10px; border-radius:5px; text-align:center; font-weight:bold;">
+                        ✅ Pago de este mes REALIZADO
+                        <div style="font-size:0.8em; font-weight:normal;">(Pagado el ${fechaUltimoPago.toLocaleDateString('es-ES')})</div>
+                    </div>`;
+                } else {
+                    html += `<div style="background:#fadbd8; color:#c0392b; padding:10px; border-radius:5px; text-align:center; font-weight:bold;">
+                        ❌ Pago de este mes PENDIENTE
+                        <div style="font-size:0.8em; font-weight:normal;">(Último pago registrado: ${fechaUltimoPago.toLocaleDateString('es-ES')})</div>
+                    </div>`;
+                }
+            } else {
+                html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">📈 Seguimiento de Producto</h4>`;
+                html += `<p style="color:#888; font-style:italic; text-align:center;">Este alumno no tiene un producto activo para seguimiento (bono o mensualidad).</p>`;
             }
 
             // 2. Clases Reservadas (futuras)
-            const hoy = new Date().toISOString().split('T')[0];
             const misAsignacionesFuturas = asignaciones
                 .filter(asig => asig.alumno === nombreCompleto && asig.dia >= hoy)
                 .sort((x, y) => new Date(x.dia) - new Date(y.dia));
@@ -865,12 +921,30 @@
             document.getElementById('productoAlumnoId').value = alumnoId;
 
             // Poblar dropdown de productos
-            const productos = await dataManager.get('productosEscuela') || [];
+            const [bonos, servicios, otrosServicios] = await Promise.all([
+                dataManager.get('bonosEscuela'),
+                dataManager.get('serviciosEscuela'),
+                dataManager.get('otrosServiciosEscuela')
+            ]);
+
             const selectProducto = document.getElementById('selectProducto');
             selectProducto.innerHTML = '<option value="">-- Selecciona un producto --</option>';
-            productos.forEach(p => {
-                selectProducto.innerHTML += `<option value="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio}" data-tipo="${p.tipo}" data-numclases="${p.numClases || ''}">${p.nombre} (${p.precio} €)</option>`;
-            });
+
+            const crearOpciones = (productos) => {
+                return productos.sort((a, b) => a.nombre.localeCompare(b.nombre)).map(p =>
+                    `<option value="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio}" data-tipo="${p.tipo || 'Otro'}" data-numclases="${p.numClases || '0'}">${p.nombre} (${p.precio} €)</option>`
+                ).join('');
+            };
+
+            if (bonos && bonos.length > 0) {
+                selectProducto.innerHTML += `<optgroup label="Bonos de Clases">${crearOpciones(bonos)}</optgroup>`;
+            }
+            if (servicios && servicios.length > 0) {
+                selectProducto.innerHTML += `<optgroup label="Clases y Servicios">${crearOpciones(servicios)}</optgroup>`;
+            }
+            if (otrosServicios && otrosServicios.length > 0) {
+                selectProducto.innerHTML += `<optgroup label="Otros Servicios">${crearOpciones(otrosServicios)}</optgroup>`;
+            }
 
             // Poner fecha de hoy por defecto
             fechaCompraProductoInput.value = new Date().toISOString().split('T')[0];

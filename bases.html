@@ -10,6 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script src="data-manager.js?v=1.5"></script>
 
     <style>
         body {
@@ -178,6 +179,7 @@
 
     <div class="main-layout">
 
+        <input type="hidden" id="productoId">
         <!-- COLUMNA 1: NIVELES DE ALUMNOS -->
         <div class="container">
             <h2>👤 Niveles de Alumnos</h2>
@@ -220,27 +222,35 @@
             </table>
         </div>
 
-        <!-- COLUMNA 3: PRODUCTOS Y SERVICIOS -->
+        <!-- COLUMNA 3: BONOS -->
         <div class="container" style="border-top: 5px solid #27ae60;">
-            <h2 style="color: #27ae60; border-bottom: 2px solid #a2e8c4;">🛍️ Productos y Servicios</h2>
-            <form id="productoForm">
+            <h2 style="color: #27ae60; border-bottom: 2px solid #a2e8c4;">🎟️ Bonos de Clases</h2>
+            <!-- Sub-sección de Bonos -->
+            <h3 style="color: #2c3e50; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 20px;">Bonos</h3>
+            <form id="formBono">
+                <input type="hidden" id="bonoId">
                 <div class="form-group">
-                    <label for="nombreProducto">Nombre del Producto/Servicio:</label>
-                    <input type="text" id="nombreProducto" required placeholder="Ej. Bono 10 Clases, Clase Suelta...">
+                    <label for="nombreBono">Nombre del Bono:</label>
+                    <input type="text" id="nombreBono" required placeholder="Debe empezar con 'Bono...'">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="precioProducto">Precio (€):</label>
-                        <input type="number" id="precioProducto" required min="0" step="0.01" placeholder="Ej. 150">
+                        <label for="precioBono">Precio (€):</label>
+                        <input type="number" id="precioBono" required min="0" step="0.01" placeholder="Ej. 150">
+                    </div>
+                    <div class="form-group">
+                        <label for="numClasesBono">Nº de Clases:</label>
+                        <input type="number" id="numClasesBono" required min="1" placeholder="Ej. 10">
                     </div>
                 </div>
-                <button type="submit" style="background-color: #27ae60;">Añadir Producto</button>
+                <button type="submit" id="btnSubmitBono" style="background-color: #27ae60;">Añadir Bono</button>
             </form>
-            <table id="tablaProductos" style="margin-top: 25px;">
+            <table id="tablaBonos" style="margin-top: 25px;">
                 <thead>
                     <tr>
                         <th style="background-color: #27ae60;">Producto/Servicio</th>
-                        <th style="background-color: #27ae60; width: 80px; text-align: right;">Precio (€)</th>
+                        <th style="background-color: #27ae60; width: 80px; text-align: center;">Clases</th>
+                        <th style="background-color: #27ae60; width: 90px; text-align: right;">Precio (€)</th>
                         <th style="width: 80px; text-align: center; background-color: #27ae60;">Acción</th>
                     </tr>
                 </thead>
@@ -248,7 +258,75 @@
             </table>
         </div>
 
-        <!-- COLUMNA 4: ESPECIALIDADES DE PROFESORES -->
+        <!-- COLUMNA 4: CLASES Y PAGOS MENSUALES -->
+        <div class="container" style="border-top: 5px solid #3498db;">
+            <h2 style="color: #3498db; border-bottom: 2px solid #aed6f1;">💳 Clases</h2>
+
+            <!-- Sub-sección de Clases y Pagos Mensuales -->
+            <h3 style="color: #2c3e50; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 30px;">Clases y
+                Servicios</h3>
+            <form id="formClase">
+                <input type="hidden" id="servicioId">
+                <div class="form-group">
+                    <label for="nombreClase">Nombre del Servicio:</label>
+                    <input type="text" id="nombreClase" required placeholder="Ej. Clase Suelta, Mensualidad...">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="precioClase">Precio (€):</label>
+                        <input type="number" id="precioClase" required min="0" step="0.01" placeholder="Ej. 20">
+                    </div>
+                    <div class="form-group">
+                        <label for="numClasesServicio">Nº de Clases:</label>
+                        <input type="number" id="numClasesServicio" required min="1" value="1" placeholder="Ej. 1">
+                    </div>
+                </div>
+                <button type="submit" id="btnSubmitClase" style="background-color: #3498db;">Añadir Servicio</button>
+            </form>
+            <table id="tablaClases" style="margin-top: 25px;">
+                <thead>
+                    <tr>
+                        <th style="background-color: #3498db;">Producto/Servicio</th>
+                        <th style="background-color: #3498db; width: 80px; text-align: center;">Clases</th>
+                        <th style="background-color: #3498db; width: 90px; text-align: right;">Precio (€)</th>
+                        <th style="width: 80px; text-align: center; background-color: #3498db;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- COLUMNA 8: OTROS SERVICIOS -->
+        <div class="container" style="border-top: 5px solid #f39c12;">
+            <h2 style="color: #f39c12; border-bottom: 2px solid #fbeee6;">🛎️ Otros Servicios</h2>
+            <form id="otroServicioForm">
+                <input type="hidden" id="otroServicioId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nombreOtroServicio">Nombre del Servicio:</label>
+                        <input type="text" id="nombreOtroServicio" required placeholder="Ej. Alquiler taquilla...">
+                    </div>
+                    <div class="form-group" style="flex: 0 0 100px;">
+                        <label for="precioOtroServicio">Precio (€):</label>
+                        <input type="number" id="precioOtroServicio" required step="0.01" placeholder="Ej. 10">
+                    </div>
+                </div>
+                <button type="submit" id="btnSubmitOtroServicio" style="background-color: #f39c12;">Añadir
+                    Servicio</button>
+            </form>
+            <table id="tablaOtrosServicios" style="margin-top: 25px;">
+                <thead>
+                    <tr>
+                        <th style="background-color: #f39c12;">Servicio</th>
+                        <th style="background-color: #f39c12; text-align: right;">Precio</th>
+                        <th style="width: 150px; text-align: center; background-color: #f39c12;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- COLUMNA 5: ESPECIALIDADES DE PROFESORES -->
         <div class="container" style="border-top: 5px solid #16a085;">
             <h2 style="color: #16a085; border-bottom: 2px solid #a3e4d7;">🎓 Especialidades de Profesores</h2>
             <form id="especialidadForm">
@@ -269,7 +347,7 @@
             </table>
         </div>
 
-        <!-- COLUMNA 5: DURACIONES DE CLASES -->
+        <!-- COLUMNA 6: DURACIONES DE CLASES -->
         <div class="container" style="border-top: 5px solid #9b59b6;">
             <h2 style="color: #9b59b6; border-bottom: 2px solid #d7bde2;">⏱️ Duraciones de Clases</h2>
             <form id="duracionForm">
@@ -297,7 +375,7 @@
             </table>
         </div>
 
-        <!-- COLUMNA 6: CONCEPTOS DE GASTO (CAMPAMENTO) -->
+        <!-- COLUMNA 7: CONCEPTOS DE GASTO (CAMPAMENTO) -->
         <div class="container" style="border-top: 5px solid #3498db;">
             <h2 style="color: #3498db; border-bottom: 2px solid #aed6f1;">🏦 Conceptos Gasto Campamento</h2>
             <form id="gastoCampamentoForm">
@@ -330,6 +408,13 @@
     </div>
 
     <script>
+        // Otros Servicios
+        const formOtroServicio = document.getElementById('otroServicioForm');
+        const nombreOtroServicioInput = document.getElementById('nombreOtroServicio');
+        const precioOtroServicioInput = document.getElementById('precioOtroServicio');
+        const otroServicioIdInput = document.getElementById('otroServicioId');
+        const tablaOtrosServicios = document.getElementById('tablaOtrosServicios').getElementsByTagName('tbody')[0];
+
         // Alumnos
         const formNivel = document.getElementById('nivelForm');
         const nombreNivelInput = document.getElementById('nombreNivel');
@@ -341,15 +426,26 @@
         const tablaFormaciones = document.getElementById('tablaFormaciones').getElementsByTagName('tbody')[0];
 
         // Productos
-        const formProducto = document.getElementById('productoForm');
-        const nombreProductoInput = document.getElementById('nombreProducto');
-        const precioProductoInput = document.getElementById('precioProducto');
-        const tablaProductos = document.getElementById('tablaProductos').getElementsByTagName('tbody')[0];
+        const formBono = document.getElementById('formBono');
+        const bonoIdInput = document.getElementById('bonoId');
+        const nombreBonoInput = document.getElementById('nombreBono');
+        const precioBonoInput = document.getElementById('precioBono');
+        const numClasesBonoInput = document.getElementById('numClasesBono');
+        const btnSubmitBono = document.getElementById('btnSubmitBono');
+        const tablaBonos = document.getElementById('tablaBonos').getElementsByTagName('tbody')[0];
 
-        // Especialidades
-        const formEspecialidad = document.getElementById('especialidadForm');
-        const nombreEspecialidadInput = document.getElementById('nombreEspecialidad');
-        const tablaEspecialidades = document.getElementById('tablaEspecialidades').getElementsByTagName('tbody')[0];
+        const formClase = document.getElementById('formClase');
+        const servicioIdInput = document.getElementById('servicioId');
+        const nombreClaseInput = document.getElementById('nombreClase');
+        const precioClaseInput = document.getElementById('precioClase');
+        const numClasesServicioInput = document.getElementById('numClasesServicio');
+        const btnSubmitClase = document.getElementById('btnSubmitClase');
+        const tablaClases = document.getElementById('tablaClases').getElementsByTagName('tbody')[0];
+
+
+
+        // ID oculto para productos
+        const productoIdInput = document.getElementById('productoId');
 
         // Duraciones
         const formDuracion = document.getElementById('duracionForm');
@@ -364,13 +460,19 @@
         const gastoCampamentoIdInput = document.getElementById('gastoCampamentoId');
         const tablaGastosCampamento = document.getElementById('tablaGastosCampamento').getElementsByTagName('tbody')[0];
 
+        // Especialidades
+        const formEspecialidad = document.getElementById('especialidadForm');
+        const nombreEspecialidadInput = document.getElementById('nombreEspecialidad');
+        const tablaEspecialidades = document.getElementById('tablaEspecialidades').getElementsByTagName('tbody')[0];
+
 
         let ultimaDataNiveles = JSON.stringify([]);
         let ultimaDataFormaciones = JSON.stringify([]);
-        let ultimaDataProductos = JSON.stringify([]);
+        let ultimaDataBonos = JSON.stringify([]); let ultimaDataServicios = JSON.stringify([]);
         let ultimaDataEspecialidades = JSON.stringify([]);
         let ultimaDataDuraciones = JSON.stringify([]);
         let ultimaDataGastosCampamento = JSON.stringify([]);
+        let ultimaDataOtrosServicios = JSON.stringify([]);
 
         window.onload = async function () {
             let intentos = 0;
@@ -384,10 +486,12 @@
             // Primero, intentar mostrar los datos existentes
             await mostrarNiveles();
             await mostrarFormaciones();
-            await mostrarProductos();
+            await mostrarBonos();
+            await mostrarServicios();
             await mostrarEspecialidades();
             await mostrarDuraciones();
             await mostrarGastosCampamento();
+            await mostrarOtrosServicios();
 
             // Inicializar niveles
             let niveles = await dataManager.get('nivelesEscuela') || [];
@@ -413,16 +517,22 @@
                 await mostrarFormaciones();
             }
 
-            // Inicializar productos
-            let productos = await dataManager.get('productosEscuela') || [];
-            if (productos.length === 0) {
-                productos = [
+            // Inicializar bonos
+            let bonos = await dataManager.get('bonosEscuela') || [];
+            if (bonos.length === 0) {
+                bonos = [
                     { id: 1, nombre: 'Bono 10 Clases Grupales', tipo: 'Bono', numClases: 10, precio: '150.00' },
-                    { id: 2, nombre: 'Bono 5 Clases Grupales', tipo: 'Bono', numClases: 5, precio: '85.00' },
-                    { id: 3, nombre: 'Clase Suelta', tipo: 'Clase Suelta', numClases: 1, precio: '20.00' }
+                    { id: 2, nombre: 'Bono 5 Clases Grupales', tipo: 'Bono', numClases: 5, precio: '85.00' }
                 ];
-                await dataManager.set('productosEscuela', productos);
-                await mostrarProductos(); // Volver a mostrar después de crear
+                await dataManager.set('bonosEscuela', bonos);
+                await mostrarBonos();
+            }
+            // Inicializar servicios
+            let servicios = await dataManager.get('serviciosEscuela') || [];
+            if (servicios.length === 0) {
+                servicios = [{ id: 3, nombre: 'Clase Suelta', tipo: 'Clase Suelta', numClases: 1, precio: '20.00' }];
+                await dataManager.set('serviciosEscuela', servicios);
+                await mostrarServicios();
             }
 
             // Inicializar especialidades
@@ -469,11 +579,18 @@
                     }
                 });
 
-                dataManager.onSnapshot('productosEscuela', (data) => {
+                dataManager.onSnapshot('bonosEscuela', (data) => {
                     const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataProductos) {
-                        ultimaDataProductos = dataActual;
-                        mostrarProductos();
+                    if (dataActual !== ultimaDataBonos) {
+                        ultimaDataBonos = dataActual;
+                        mostrarBonos();
+                    }
+                });
+                dataManager.onSnapshot('serviciosEscuela', (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataServicios) {
+                        ultimaDataServicios = dataActual;
+                        mostrarServicios();
                     }
                 });
 
@@ -500,6 +617,14 @@
                         mostrarGastosCampamento();
                     }
                 });
+
+                dataManager.onSnapshot('otrosServiciosEscuela', (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataOtrosServicios) {
+                        ultimaDataOtrosServicios = dataActual;
+                        mostrarOtrosServicios();
+                    }
+                });
             } else {
                 setInterval(async function () {
                     const dataNiveles = JSON.stringify(await dataManager.get('nivelesEscuela') || []);
@@ -514,11 +639,17 @@
                         mostrarFormaciones();
                     }
 
-                    const dataProductos = JSON.stringify(await dataManager.get('productosEscuela') || []);
-                    if (dataProductos !== ultimaDataProductos) {
-                        ultimaDataProductos = dataProductos;
-                        mostrarProductos();
+                    const dataBonos = JSON.stringify(await dataManager.get('bonosEscuela') || []);
+                    if (dataBonos !== ultimaDataBonos) {
+                        ultimaDataBonos = dataBonos;
+                        mostrarBonos();
                     }
+                    const dataServicios = JSON.stringify(await dataManager.get('serviciosEscuela') || []);
+                    if (dataServicios !== ultimaDataServicios) {
+                        ultimaDataServicios = dataServicios;
+                        mostrarServicios();
+                    }
+
 
                     const dataEspecialidades = JSON.stringify(await dataManager.get('especialidadesProfesoresEscuela') || []);
                     if (dataEspecialidades !== ultimaDataEspecialidades) {
@@ -536,6 +667,12 @@
                     if (dataGastos !== ultimaDataGastosCampamento) {
                         ultimaDataGastosCampamento = dataGastos;
                         mostrarGastosCampamento();
+                    }
+
+                    const dataOtrosServicios = JSON.stringify(await dataManager.get('otrosServiciosEscuela') || []);
+                    if (dataOtrosServicios !== ultimaDataOtrosServicios) {
+                        ultimaDataOtrosServicios = dataOtrosServicios;
+                        mostrarOtrosServicios();
                     }
                 }, 500);
             }
@@ -606,22 +743,63 @@
             mostrarDuraciones();
         });
 
-        // Formulario Producto
-        formProducto.addEventListener('submit', async function (e) {
+        // Formulario Bonos
+        formBono.addEventListener('submit', async function (e) {
             e.preventDefault();
-            const nombre = nombreProductoInput.value.trim();
-            const precio = parseFloat(precioProductoInput.value).toFixed(2);
-            if (!nombre || isNaN(precio)) return;
+            const id = bonoIdInput.value;
+            const nombre = nombreBonoInput.value.trim();
+            const precio = parseFloat(precioBonoInput.value).toFixed(2);
+            const numClases = parseInt(numClasesBonoInput.value);
 
-            let productos = await dataManager.get('productosEscuela') || [];
-            const existe = productos.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
-            if (existe) { alert('Este producto ya existe.'); return; }
+            if (!nombre || isNaN(precio) || isNaN(numClases)) return;
+            if (!id && !nombre.toLowerCase().startsWith('bono')) { // Solo comprobar en creación
+                alert("El nombre del producto debe empezar con la palabra 'Bono'.");
+                return;
+            }
 
-            // Se guarda solo nombre y precio. Se elimina la lógica de 'tipo' y 'numClases'.
-            productos.push({ id: Date.now(), nombre, precio });
-            await dataManager.set('productosEscuela', productos);
-            formProducto.reset();
-            mostrarProductos();
+            let bonos = await dataManager.get('bonosEscuela') || [];
+
+            if (id) {
+                bonos = bonos.map(p => p.id === parseInt(id) ? { ...p, nombre, precio, numClases, tipo: 'Bono' } : p);
+                alert('Bono actualizado.');
+            } else {
+                const existe = bonos.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
+                if (existe) { alert('Este producto ya existe.'); return; }
+                bonos.push({ id: Date.now(), nombre, precio, numClases, tipo: 'Bono' });
+            }
+
+            await dataManager.set('bonosEscuela', bonos);
+            restablecerFormularioBono();
+            mostrarBonos();
+        });
+
+        // Formulario Clases y Pagos Mensuales
+        formClase.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const id = servicioIdInput.value;
+            const nombre = nombreClaseInput.value.trim();
+            const precio = parseFloat(precioClaseInput.value).toFixed(2);
+            const numClases = parseInt(numClasesServicioInput.value);
+            if (!nombre || isNaN(precio) || isNaN(numClases)) return;
+            if (nombre.toLowerCase().startsWith('bono')) {
+                alert("Los productos de tipo 'Bono' deben crearse en la sección 'Bonos de Clases'.");
+                return;
+            }
+
+            let servicios = await dataManager.get('serviciosEscuela') || [];
+
+            if (id) {
+                servicios = servicios.map(p => p.id === parseInt(id) ? { ...p, nombre, precio, numClases, tipo: 'Clase Suelta' } : p);
+                alert('Servicio actualizado.');
+            } else {
+                const existe = servicios.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
+                if (existe) { alert('Este producto ya existe.'); return; }
+                servicios.push({ id: Date.now(), nombre, precio, numClases, tipo: 'Clase Suelta' });
+            }
+
+            await dataManager.set('serviciosEscuela', servicios);
+            restablecerFormularioServicio();
+            mostrarServicios();
         });
 
         // Formulario Gasto Campamento
@@ -653,6 +831,32 @@
             await mostrarGastosCampamento(); // <-- Línea añadida para refrescar la tabla
         });
 
+        // Formulario Otros Servicios
+        formOtroServicio.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const id = otroServicioIdInput.value;
+            const nombre = nombreOtroServicioInput.value.trim();
+            const precio = parseFloat(precioOtroServicioInput.value);
+            if (!nombre || isNaN(precio)) {
+                alert('Por favor, completa el nombre y el precio.');
+                return;
+            }
+
+            let servicios = await dataManager.get('otrosServiciosEscuela') || [];
+
+            if (id) {
+                servicios = servicios.map(s => s.id === parseInt(id) ? { ...s, nombre, precio: precio.toFixed(2) } : s);
+                alert('Servicio actualizado.');
+            } else {
+                const existe = servicios.some(s => s.nombre.toLowerCase() === nombre.toLowerCase());
+                if (existe) { alert('Este servicio ya existe.'); return; }
+                servicios.push({ id: Date.now(), nombre, precio: precio.toFixed(2) });
+            }
+
+            await dataManager.set('otrosServiciosEscuela', servicios);
+            restablecerFormularioOtroServicio();
+        });
+
         async function mostrarNiveles() {
             const niveles = await dataManager.get('nivelesEscuela') || [];
             tablaNiveles.innerHTML = '';
@@ -679,21 +883,46 @@
             });
         }
 
-        async function mostrarProductos() {
-            const productos = await dataManager.get('productosEscuela') || [];
-            tablaProductos.innerHTML = '';
-            if (productos.length === 0) {
-                tablaProductos.innerHTML = `<tr><td colspan="3" class="no-records">No hay productos registrados.</td></tr>`;
-                return;
+        async function mostrarBonos() {
+            const bonos = await dataManager.get('bonosEscuela') || [];
+
+            tablaBonos.innerHTML = '';
+            if (bonos.length === 0) {
+                tablaBonos.innerHTML = `<tr><td colspan="4" class="no-records">No hay bonos registrados.</td></tr>`;
+            } else {
+                bonos.forEach(p => {
+                    const fila = tablaBonos.insertRow();
+                    fila.innerHTML = `
+                    <td><b>${p.nombre}</b></td>
+                    <td style="text-align:center;">${p.numClases || '-'}</td>
+                    <td style="text-align:right;">${p.precio} €</td>
+                    <td style="text-align:center; display:flex; gap:5px;">
+                        <button class="btn-delete" style="flex:1; background-color:#f39c12;" onclick="cargarBonoParaEditar(${p.id})">Editar</button>
+                        <button class="btn-delete" style="flex:1;" onclick="eliminarBono(${p.id})">Eliminar</button>
+                    </td>
+                `; // Se añade un contenedor flex para los botones
+                });
             }
-            productos.forEach(p => {
-                const fila = tablaProductos.insertRow();
-                fila.innerHTML = `
-                <td><b>${p.nombre}</b></td>
-                <td style="text-align:right;">${p.precio} €</td>
-                <td style="text-align:center;"><button class="btn-delete" onclick="eliminarProducto(${p.id})">Eliminar</button></td>
-            `;
-            });
+        }
+
+        async function mostrarServicios() {
+            const clases = await dataManager.get('serviciosEscuela') || [];
+            tablaClases.innerHTML = '';
+            if (clases.length === 0) {
+                tablaClases.innerHTML = `<tr><td colspan="4" class="no-records">No hay otros servicios.</td></tr>`;
+            } else {
+                clases.forEach(p => {
+                    const fila = tablaClases.insertRow();
+                    fila.innerHTML = `
+                    <td><b>${p.nombre}</b></td>
+                    <td style="text-align:center;">${p.numClases || '1'}</td>
+                    <td style="text-align:right;">${p.precio} €</td>
+                    <td style="text-align:center; display:flex; gap:5px;">
+                        <button class="btn-delete" style="flex:1; background-color:#f39c12;" onclick="cargarServicioParaEditar(${p.id})">Editar</button>
+                        <button class="btn-delete" style="flex:1;" onclick="eliminarServicio(${p.id})">Eliminar</button>
+                    </td>`;
+                });
+            }
         }
 
         async function mostrarEspecialidades() {
@@ -725,12 +954,11 @@
                 `;
             });
         }
-
         async function mostrarGastosCampamento() {
             const gastos = await dataManager.get('conceptosGastoCampamento') || [];
             tablaGastosCampamento.innerHTML = '';
             if (gastos.length === 0) {
-                tablaGastosCampamento.innerHTML = `<tr><td colspan="2" class="no-records">No hay conceptos de gasto.</td></tr>`;
+                tablaGastosCampamento.innerHTML = `<tr><td colspan="3" class="no-records">No hay conceptos de gasto.</td></tr>`;
                 return;
             }
             gastos.forEach(g => {
@@ -745,6 +973,63 @@
                 `;
             });
         }
+
+        async function mostrarOtrosServicios() {
+            const servicios = await dataManager.get('otrosServiciosEscuela') || [];
+            tablaOtrosServicios.innerHTML = '';
+            if (servicios.length === 0) {
+                tablaOtrosServicios.innerHTML = `<tr><td colspan="3" class="no-records">No hay otros servicios.</td></tr>`;
+                return;
+            }
+            servicios.forEach(s => {
+                const fila = tablaOtrosServicios.insertRow();
+                fila.innerHTML = `
+                    <td><b>${s.nombre}</b></td>
+                    <td style="text-align:right;">${s.precio || '0.00'} €</td>
+                    <td style="text-align:center; display:flex; gap:5px;">
+                        <button class="btn-delete" style="flex:1; background-color:#f39c12;" onclick="cargarOtroServicioParaEditar(${s.id})">Editar</button>
+                        <button class="btn-delete" style="flex:1;" onclick="eliminarOtroServicio(${s.id})">Eliminar</button>
+                    </td>
+                `;
+            });
+        }
+
+
+        async function cargarBonoParaEditar(id) {
+            const bonos = await dataManager.get('bonosEscuela') || [];
+            const bono = bonos.find(p => p.id === id);
+            if (!bono) return;
+            bonoIdInput.value = bono.id;
+            nombreBonoInput.value = bono.nombre;
+            precioBonoInput.value = bono.precio;
+            numClasesBonoInput.value = bono.numClases;
+            btnSubmitBono.textContent = 'Actualizar Bono';
+            nombreBonoInput.focus();
+        }
+
+        async function cargarServicioParaEditar(id) {
+            const servicios = await dataManager.get('serviciosEscuela') || [];
+            const servicio = servicios.find(p => p.id === id);
+            if (!servicio) return;
+            servicioIdInput.value = servicio.id;
+            nombreClaseInput.value = servicio.nombre;
+            precioClaseInput.value = servicio.precio;
+            numClasesServicioInput.value = servicio.numClases || 1;
+            btnSubmitClase.textContent = 'Actualizar Servicio';
+            nombreClaseInput.focus();
+        }
+
+        function restablecerFormularioBono() {
+            bonoIdInput.value = '';
+            formBono.reset();
+            btnSubmitBono.textContent = 'Añadir Bono';
+        }
+        function restablecerFormularioServicio() {
+            servicioIdInput.value = '';
+            formClase.reset();
+            btnSubmitClase.textContent = 'Añadir Servicio';
+        }
+
 
         async function cargarGastoParaEditar(id) {
             const gastos = await dataManager.get('conceptosGastoCampamento') || [];
@@ -763,6 +1048,22 @@
             document.getElementById('btnSubmitGasto').textContent = 'Añadir Concepto';
         }
 
+        async function cargarOtroServicioParaEditar(id) {
+            const servicios = await dataManager.get('otrosServiciosEscuela') || [];
+            const servicio = servicios.find(s => s.id === id);
+            if (servicio) {
+                otroServicioIdInput.value = servicio.id;
+                nombreOtroServicioInput.value = servicio.nombre;
+                precioOtroServicioInput.value = servicio.precio;
+                document.getElementById('btnSubmitOtroServicio').textContent = 'Actualizar Servicio';
+            }
+        }
+
+        function restablecerFormularioOtroServicio() {
+            formOtroServicio.reset();
+            otroServicioIdInput.value = '';
+            document.getElementById('btnSubmitOtroServicio').textContent = 'Añadir Servicio';
+        }
         async function eliminarNivel(id) {
             if (confirm('¿Deseas eliminar este nivel de alumno?')) {
                 let niveles = await dataManager.get('nivelesEscuela') || [];
@@ -781,12 +1082,22 @@
             }
         }
 
-        async function eliminarProducto(id) {
-            if (confirm('¿Deseas eliminar este producto?')) {
-                let productos = await dataManager.get('productosEscuela') || [];
-                productos = productos.filter(p => p.id !== id);
-                await dataManager.set('productosEscuela', productos);
-                mostrarProductos();
+        async function eliminarBono(id) {
+            if (confirm('¿Deseas eliminar este bono?')) {
+                let bonos = await dataManager.get('bonosEscuela') || [];
+                bonos = bonos.filter(p => p.id !== id);
+                if (bonoIdInput.value == id) restablecerFormularioBono();
+                await dataManager.set('bonosEscuela', bonos);
+                mostrarBonos();
+            }
+        }
+        async function eliminarServicio(id) {
+            if (confirm('¿Deseas eliminar este servicio?')) {
+                let servicios = await dataManager.get('serviciosEscuela') || [];
+                servicios = servicios.filter(p => p.id !== id);
+                if (servicioIdInput.value == id) restablecerFormularioServicio();
+                await dataManager.set('serviciosEscuela', servicios);
+                mostrarServicios();
             }
         }
 
@@ -816,10 +1127,16 @@
                 restablecerFormularioGasto();
             }
         }
-    </script>
 
-    <!-- Scripts de Firebase -->
-    <script src="data-manager.js?v=1.5"></script>
+        async function eliminarOtroServicio(id) {
+            if (confirm('¿Deseas eliminar este servicio?')) {
+                let servicios = await dataManager.get('otrosServiciosEscuela') || [];
+                servicios = servicios.filter(s => s.id !== id);
+                await dataManager.set('otrosServiciosEscuela', servicios);
+                restablecerFormularioOtroServicio();
+            }
+        }
+    </script>
 
 </body>
 
