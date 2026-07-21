@@ -785,9 +785,8 @@
                 return;
             }
 
-            let eventos = await dataManager.get('agendaCaballosEscuela') || [];
-            eventos.push({ id: Date.now(), caballoId, fecha, tipo, descripcion });
-            await dataManager.set('agendaCaballosEscuela', eventos);
+            const nuevoEvento = { id: Date.now(), caballoId, fecha, tipo, descripcion };
+            await dataManager.add('agendaCaballosEscuela', nuevoEvento);
 
             document.getElementById('formAddAgenda').reset();
             document.getElementById('fechaAgenda').value = new Date().toISOString().split('T')[0];
@@ -838,8 +837,8 @@
         }
 
         async function eliminarEventoAgenda(eventoId, caballoId) {
-            let eventos = await dataManager.get('agendaCaballosEscuela') || [];
-            await dataManager.set('agendaCaballosEscuela', eventos.filter(e => e.id !== eventoId));
+            await dataManager.delete('agendaCaballosEscuela', eventoId);
+
             const caballo = (await dataManager.get('caballosEscuela')).find(c => c.id === caballoId);
             await mostrarAgendaCaballo(caballoId, caballo.nombre);
         }

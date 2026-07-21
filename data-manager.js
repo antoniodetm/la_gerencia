@@ -84,14 +84,31 @@ class DataManager {
                     const data = doc.data();
                     return Array.isArray(data.items) ? data.items : [];
                 }
-                return [];
+                // Si no existe _data, intenta el método alternativo
+                return this.getAlternate(collection);
             } catch (error) {
-                console.error(`❌ Error obteniendo de Firebase (${collection}):`, error);
+                // Fallback para colecciones que no usan el formato _data/items (como inscripcionesCampamento)
+                // Estas colecciones tienen documentos individuales en lugar de un solo documento '_data'
+                console.warn(`Documento '_data' no encontrado en '${collection}', intentando método alternativo. Error: ${error.message}`);
+                return this.getAlternate(collection);
             }
         } else {
             console.error(`No se pudo obtener ${collection}. Firebase no está disponible.`);
         }
         return []; // Devuelve un array vacío si Firebase no está disponible
+    }
+
+    async getAlternate(collection) {
+        try {
+            console.log(`(INFO) Usando método de obtención alternativo para '${collection}'`);
+            const snapshot = await this.db.collection(collection).get();
+            const items = [];
+            snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+            return items;
+        } catch (fallbackError) {
+            console.error(`❌ Error en el método de obtención alternativo para ${collection}:`, fallbackError);
+            return [];
+        }
     }
 
     // Escuchar cambios en tiempo real
@@ -110,10 +127,43 @@ class DataManager {
                     }
                 });
             } catch (error) {
-                console.error(`❌ Error en listener de Firebase (${collection}):`, error);
+                // Fallback para colecciones que no usan el formato _data/items (como inscripcionesCampamento)
+                try {
+                    console.warn(`Intentando listener alternativo para ${collection}`);
+                    return this.db.collection(collection).onSnapshot((snapshot) => {
+                        const items = [];
+                        snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+                        callback(items);
+                    });
+                } catch (fallbackError) {
+                    console.error(`❌ Error en listener alternativo para ${collection}:`, fallbackError);
+                }
             }
         }
         return null;
+    }
+
+    // Añadir un item a una colección (más eficiente que get/set)
+    async add(collection, item) {
+        await this.initPromise;
+        if (this.useFirebase && this.db) {
+            try {
+                const docRef = this.db.collection(collection).doc('_data');
+                await docRef.update({
+                    items: firebase.firestore.FieldValue.arrayUnion(item)
+                });
+                console.log(`✅ Item añadido en Firebase: ${collection}`);
+            } catch (error) {
+                // Si el documento no existe, lo crea
+                if (error.code === 'not-found') {
+                    await this.set(collection, [item]);
+                } else {
+                    console.error(`❌ Error añadiendo en Firebase (${collection}):`, error);
+                }
+            }
+        } else {
+            console.error(`No se pudo añadir en ${collection}. Firebase no está disponible.`);
+        }
     }
 
     // Borrar datos
@@ -122,17 +172,22 @@ class DataManager {
 
         if (this.useFirebase && this.db) {
             try {
+                // Nuevo método más eficiente con arrayRemove
                 const docRef = this.db.collection(collection).doc('_data');
                 const doc = await docRef.get();
                 if (doc.exists) {
-                    const data = doc.data();
-                    // Filtrar el item según la colección
-                    if (Array.isArray(data.items)) {
-                        data.items = data.items.filter(item => item.id !== itemId);
+                    const items = doc.data().items || [];
+                    const itemToRemove = items.find(item => item.id === itemId);
+                    if (itemToRemove) {
+                        await docRef.update({
+                            items: firebase.firestore.FieldValue.arrayRemove(itemToRemove)
+                        });
+                        console.log(`✅ Item borrado en Firebase: ${collection}`);
+                        return;
                     }
-                    await docRef.set(data);
                 }
-                return;
+                // Fallback para colecciones que no usan el formato _data/items
+                await this.db.collection(collection).doc(String(itemId)).delete();
             } catch (error) {
                 console.error('Error borrando en Firebase:', error);
             }
@@ -225,7 +280,7 @@ class DataManager {
             'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela',
             'asignacionesEscuela', 'nivelesEscuela', 'tiposClasesEscuela', 'productosEscuela',
             'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
-            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela',
+            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela',
             'herrajesCaballosEscuela'
         ];
 
@@ -299,7 +354,7 @@ class DataManager {
             'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela',
             'asignacionesEscuela', 'nivelesEscuela', 'tiposClasesEscuela', 'productosEscuela',
             'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
-            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela',
+            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela',
             'herrajesCaballosEscuela'
         ];
 

@@ -130,18 +130,24 @@
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
                 locale: 'es',
+                buttonText: {
+                    month: 'Mes',
+                    week: 'Semana',
+                    day: 'Día'
+                },
                 firstDay: 1,
                 slotMinTime: '08:00:00',
                 slotMaxTime: '22:00:00',
-                allDaySlot: false,
+                allDaySlot: true, // Muestra la fila de "todo el día"
+                views: {
+                    timeGridWeek: { allDaySlot: true }, // Asegura que se muestre en la vista de semana
+                    timeGridDay: { allDaySlot: true },  // Asegura que se muestre en la vista de día
+                    dayGridMonth: { allDaySlot: true }  // Asegura que se muestre en la vista de mes
+                },
                 events: await generarEventos(),
                 eventContent: function (arg) {
-                    let text = arg.event.title;
-                    // Solo añadimos los alumnos si la vista es la de día (Día/Today)
-                    if (arg.view.type === 'timeGridDay') {
-                        text += '\n' + (arg.event.extendedProps.listaAlumnos || '');
-                    }
-                    return { domNodes: [document.createTextNode(text)] };
+                    // Simplificado: solo muestra el título del evento, sin información extra.
+                    return { domNodes: [document.createTextNode(arg.event.title)] };
                 },
                 eventClick: function (info) {
                     if (info.view.type !== 'timeGridDay') {
@@ -151,7 +157,7 @@
                         // Si ya estamos en la vista de día, redirigir a la página de asignaciones
                         const claseId = info.event.extendedProps.claseId;
                         const fecha = info.event.start.toISOString().split('T')[0]; // Formato YYYY-MM-DD
-                        window.location.href = `asignaciones.html?claseId=${claseId}&fecha=${fecha}`;
+                        if (info.event.extendedProps.tipoEvento === 'clase') window.location.href = `asignaciones.html?claseId=${claseId}&fecha=${fecha}`;
                     }
                 }
             });
@@ -165,9 +171,15 @@
                 dataManager.onSnapshot('asignacionesEscuela', async () => {
                     calendar.setOption('events', await generarEventos());
                 });
-                dataManager.onSnapshot('asignacionesEscuela', async () => {
+                // Listener para campamento que faltaba
+                dataManager.onSnapshot('inscripcionesCampamento', async () => {
                     calendar.setOption('events', await generarEventos());
                 });
+                dataManager.onSnapshot('agendaCaballosEscuela', async () => {
+                    calendar.setOption('events', await generarEventos());
+                });
+                // Asistencia también es necesaria para la agenda de caballos
+                dataManager.onSnapshot('attendanceEscuela', async () => { calendar.setOption('events', await generarEventos()); });
             }
         });
 
@@ -183,20 +195,43 @@
             return `${String(finH).padStart(2, '0')}:${String(finM).padStart(2, '0')}`;
         }
 
+        // Función para generar un color consistente basado en un string (nombre del alumno/caballo)
+        function generarColorPorNombre(nombre) {
+            if (!nombre) return '#808080'; // Gris por defecto
+            let hash = 0;
+            for (let i = 0; i < nombre.length; i++) {
+                hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            // Usamos HSL para generar colores más agradables y evitar los muy claros/oscuros
+            const h = hash % 360; // Tono
+            const s = 40 + (hash % 30); // Saturación entre 40% y 70%
+            const l = 35 + (hash % 10); // Luminosidad entre 35% y 45% (colores oscuros pero visibles)
+
+            return `hsl(${h}, ${s}%, ${l}%)`;
+        }
+
         async function generarEventos() {
             const clases = await dataManager.get('clasesEscuela') || [];
             const asignaciones = await dataManager.get('asignacionesEscuela') || [];
+            // Corrección: Usar el dataManager para obtener los datos de forma consistente
+            const [inscripcionesCampamento, agendaCaballos, asistencias, caballos] = await Promise.all([
+                dataManager.get('inscripcionesCampamento'),
+                dataManager.get('agendaCaballosEscuela'),
+                dataManager.get('attendanceEscuela'),
+                dataManager.get('caballosEscuela')
+            ]);
+
             const hoy = new Date().toISOString().split('T')[0];
             const eventos = [];
 
             // Agrupar asignaciones por clase y día
             const grupos = {};
-            const asignacionesFuturas = asignaciones.filter(a => a.dia >= hoy);
+            const asignacionesFuturas = (asignaciones || []).filter(a => a.dia >= hoy);
 
             asignacionesFuturas.forEach(a => {
                 const key = `${a.claseId}-${a.dia}`;
                 if (!grupos[key]) {
-                    const claseInfo = clases.find(c => c.id == a.claseId);
+                    const claseInfo = (clases || []).find(c => c.id == a.claseId);
                     if (!claseInfo) return; // Si la clase fue borrada, no la mostramos
                     grupos[key] = { clase: claseInfo, dia: a.dia, alumnos: [] };
                 }
@@ -214,10 +249,98 @@
                     title: `Clase ${numAlumnos}/${maxAlumnos}`,
                     start: `${grupo.dia}T${grupo.clase.hora}`,
                     end: `${grupo.dia}T${calcularHoraFin(grupo.clase.hora, grupo.clase.duracion)}`,
-                    extendedProps: { listaAlumnos: listaAlumnos || '(Sin alumnos asignados)', claseId: grupo.clase.id },
-                    backgroundColor: '#3498db'
+                    allDay: false,
+                    extendedProps: { listaAlumnos: listaAlumnos || '(Sin alumnos asignados)', claseId: grupo.clase.id, tipoEvento: 'clase' },
+                    backgroundColor: '#3498db',
+                    borderColor: '#3498db'
                 });
             }
+
+            // --- Añadir eventos del CAMPAMENTO ---
+            // inscripcionesCampamento es una colección de documentos, no un único documento con 'items'
+            (inscripcionesCampamento || []).forEach(data => {
+                // --- Eventos de Inicio y Fin de Campamento (solo si no hay viaje programado) ---
+                if (data.fechaInicioCampamento && data.semanasCampamento) {
+                    const semanas = parseInt(data.semanasCampamento, 10);
+                    if (!isNaN(semanas) && semanas > 0) {
+                        const fechaInicio = new Date(data.fechaInicioCampamento + 'T12:00:00');
+                        const fechaFin = new Date(fechaInicio);
+                        fechaFin.setDate(fechaInicio.getDate() + (semanas * 7) - 1);
+                        const fechaFinISO = fechaFin.toISOString().split('T')[0];
+
+                        // Solo mostrar INICIO si no hay un viaje de recogida programado para ese día
+                        if (!(data.necesitaRecogida === 'Sí' && data.fechaRecogida === data.fechaInicioCampamento)) {
+                            eventos.push({
+                                title: `🏕️ INICIO Camp: ${data.nombre} ${data.apellido}`,
+                                start: data.fechaInicioCampamento,
+                                allDay: true,
+                                backgroundColor: '#2ecc71',
+                                borderColor: '#2ecc71'
+                            });
+                        }
+
+                        // Solo mostrar FIN si no hay un viaje de salida programado para ese día
+                        if (!(data.necesitaRecogida === 'Sí' && data.fechaSalida === fechaFinISO)) {
+                            eventos.push({
+                                title: `🏁 FIN Camp: ${data.nombre} ${data.apellido}`,
+                                start: fechaFinISO,
+                                allDay: true,
+                                backgroundColor: '#e74c3c',
+                                borderColor: '#e74c3c'
+                            });
+                        }
+                    }
+                }
+
+                // Evento de Recogida (Entrada)
+                if (data.necesitaRecogida === 'Sí' && data.fechaRecogida && data.horaRecogida) {
+                    eventos.push({
+                        title: `✈️ ${data.horaRecogida} RECOGIDA: ${data.nombre} ${data.apellido}\n📍 ${data.lugarRecogida}`,
+                        start: data.fechaRecogida,
+                        allDay: true,
+                        backgroundColor: '#27ae60',
+                        borderColor: '#27ae60'
+                    });
+                }
+
+                // Evento de Salida
+                if (data.necesitaRecogida === 'Sí' && data.fechaSalida && data.horaSalida) {
+                    eventos.push({
+                        title: `✈️ ${data.horaSalida} SALIDA: ${data.nombre} ${data.apellido}\n📍 ${data.lugarSalida}`,
+                        start: data.fechaSalida,
+                        allDay: true,
+                        backgroundColor: '#c0392b',
+                        borderColor: '#c0392b'
+                    });
+                }
+            });
+
+            // --- Añadir eventos de la AGENDA DE CABALLOS ---
+            (agendaCaballos || []).forEach(e => {
+                const caballo = caballos.find(c => c.id === e.caballoId);
+                const nombreCaballo = caballo ? caballo.nombre : 'Caballo desc.';
+                const colorCaballo = generarColorPorNombre(nombreCaballo);
+                eventos.push({
+                    title: `🗓️ ${nombreCaballo}: ${e.tipo}`,
+                    start: e.fecha,
+                    allDay: true,
+                    backgroundColor: colorCaballo,
+                    borderColor: colorCaballo,
+                    extendedProps: { description: e.descripcion }
+                });
+            });
+
+            // --- Añadir eventos de TRABAJO de caballos (desde asistencia) ---
+            (asistencias || []).filter(e => e.caballo).forEach(e => {
+                const colorTrabajo = '#7f8c8d';
+                eventos.push({
+                    title: `🐴 Trabajo: ${e.caballo}`,
+                    start: e.fechaClase,
+                    allDay: true,
+                    backgroundColor: colorTrabajo,
+                    borderColor: colorTrabajo
+                });
+            });
 
             return eventos;
         }
