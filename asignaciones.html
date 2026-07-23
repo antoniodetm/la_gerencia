@@ -45,7 +45,7 @@
         }
 
         .nav-active {
-            background-color: #d35400;
+            background-color: #4a3728;
             color: white !important;
         }
 
@@ -221,13 +221,7 @@
         let ultimaDataAlumnos = JSON.stringify([]);
 
         window.onload = async function () {
-            // Esperar a que DataManager se inicialice
-            let intentos = 0;
-            while (!dataManager.initialized && intentos < 20) {
-                await new Promise(r => setTimeout(r, 100));
-                intentos++;
-            }
-
+            await dataManager.initPromise;
             claseSelect.addEventListener('change', actualizarSelectorFecha);
             console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
 
@@ -259,22 +253,6 @@
                         await mostrarAsignacionesGrupales();
                     }
                 });
-            } else {
-                setInterval(async function () {
-                    const asignActual = JSON.stringify(await dataManager.get('asignacionesEscuela') || []);
-                    const clasesActual = JSON.stringify(await dataManager.get('clasesEscuela') || []);
-                    const alumnosActual = JSON.stringify(await dataManager.get('alumnosEscuela') || []);
-
-                    let cambios = false;
-                    if (asignActual !== ultimaDataAsignaciones) { ultimaDataAsignaciones = asignActual; cambios = true; }
-                    if (clasesActual !== ultimaDataClases) { ultimaDataClases = clasesActual; cambios = true; }
-                    if (alumnosActual !== ultimaDataAlumnos) { ultimaDataAlumnos = alumnosActual; cambios = true; }
-
-                    if (cambios) {
-                        await poblarDesplegables();
-                        await mostrarAsignacionesGrupales();
-                    }
-                }, 500);
             }
 
             // Manejar parámetros de URL para preseleccionar clase y fecha

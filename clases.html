@@ -330,12 +330,7 @@
         let ultimaDataNiveles = JSON.stringify([]);
 
         window.onload = async function () {
-            let intentos = 0;
-            while (!dataManager.initialized && intentos < 20) {
-                await new Promise(r => setTimeout(r, 100));
-                intentos++;
-            }
-
+            await dataManager.initPromise;
             console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
 
             setupEventListeners();
@@ -365,24 +360,6 @@
                         await poblarNiveles();
                     }
                 });
-            } else {
-                setInterval(async function () {
-                    const dataActual = JSON.stringify(await dataManager.get('clasesEscuela') || []);
-                    if (dataActual !== ultimaDataClases) {
-                        ultimaDataClases = dataActual;
-                        await mostrarClases();
-                    }
-                    const duracionesActual = JSON.stringify(await dataManager.get('duracionesEscuela') || []);
-                    if (duracionesActual !== ultimaDataDuraciones) {
-                        ultimaDataDuraciones = duracionesActual;
-                        await poblarDuraciones();
-                    }
-                    const nivelesActual = JSON.stringify(await dataManager.get('nivelesEscuela') || []);
-                    if (nivelesActual !== ultimaDataNiveles) {
-                        ultimaDataNiveles = nivelesActual;
-                        await poblarNiveles();
-                    }
-                }, 500);
             }
         };
 

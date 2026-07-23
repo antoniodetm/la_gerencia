@@ -183,8 +183,16 @@
 <body>
     <div class="nav-bar">
         <a href="inicio.html" class="nav-link">🏠 Inicio</a>
-        <a href="campamento_hub.html" class="nav-link">🏕️ Campamento</a>
+        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
+        <a href="clases.html" class="nav-link">📅 Clases</a>
+        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
+        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
+        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
+        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
+        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
+        <a href="bases.html" class="nav-link">🏆 Bases</a>
     </div>
+    <script src="data-manager.js?v=1.5"></script>
 
     <div class="container">
         <h2>🏕️ Gestión de Inscripciones al Campamento
@@ -421,6 +429,19 @@
             messagingSenderId: "331472649600",
             appId: "1:331472649600:web:10030d6a03d1215f1d5565"
         };
+        // const firebaseConfig = {
+        //     apiKey: "AIzaSyCEtMPhIhuDH2GDMo0HDs8bs9o1EGBOfYM",
+        //     authDomain: "la-gerencia-51fdf.firebaseapp.com",
+        //     projectId: "la-gerencia-51fdf",
+        //     storageBucket: "la-gerencia-51fdf.firebasestorage.app",
+        //     messagingSenderId: "331472649600",
+        //     appId: "1:331472649600:web:10030d6a03d1215f1d5565"
+        // };
+        // if (!firebase.apps.length) {
+        //     firebase.initializeApp(firebaseConfig);
+        // }
+        // const db = firebase.firestore();
+        // firebase.auth().signInAnonymously().catch((error) => { console.error("Error en autenticación anónima:", error); });
 
         // Inicializar Firebase
         if (!firebase.apps.length) {
@@ -550,12 +571,10 @@
         }
 
         window.onload = async function () {
+            await dataManager.initPromise;
             console.log('🏕️ Página de gestión de campamento cargada.');
-            mostrarInscripciones();
             setupEventListeners();
-
-            // Escuchar cambios en tiempo real
-            db.collection('inscripcionesCampamento').onSnapshot(snapshot => {
+            dataManager.onSnapshot('inscripcionesCampamento', () => {
                 mostrarInscripciones();
             });
         };
@@ -670,15 +689,12 @@
             const tabla = document.getElementById('tablaInscripciones').getElementsByTagName('tbody')[0];
             const searchInput = document.getElementById('buscadorInscripcion').value || '';
             const normalizar = (texto) => (texto || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            const filtro = normalizar(searchInput);
+            const filtro = normalizar(searchInput); // Removed the stray 'ca' that caused a JavaScript error.
 
-            const snapshot = await db.collection('inscripcionesCampamento').orderBy('fechaInscripcion', 'desc').get();
+            const inscripciones = await dataManager.get('inscripcionesCampamento') || [];
             tabla.innerHTML = '';
 
-            const inscripciones = [];
-            snapshot.forEach(doc => inscripciones.push({ id: doc.id, ...doc.data() }));
-
-            const inscripcionesFiltradas = inscripciones.filter(i => {
+            const inscripcionesFiltradas = (inscripciones || []).filter(i => {
                 if (!filtro) return true;
                 return normalizar(i.nombre).includes(filtro) ||
                     normalizar(i.apellido).includes(filtro) ||
@@ -727,10 +743,16 @@
         }
 
         async function actualizarPagoReserva(id, pagado) {
+            let inscripciones = await dataManager.get('inscripcionesCampamento') || [];
+            const inscripcion = inscripciones.find(i => i.id === id);
             try {
                 await db.collection('inscripcionesCampamento').doc(id).update({
                     reservaPagada: pagado
                 });
+                if (inscripcion) {
+                    inscripcion.reservaPagada = pagado;
+                    await dataManager.set('inscripcionesCampamento', inscripciones);
+                }
                 console.log(`Estado de pago de reserva actualizado para ${id} a ${pagado}`);
             } catch (error) {
                 console.error("Error al actualizar el pago de la reserva: ", error);
@@ -739,12 +761,13 @@
         }
 
         async function cargarInscripcionParaEditar(id) {
-            const doc = await db.collection('inscripcionesCampamento').doc(id).get();
-            if (!doc.exists) {
+            const inscripciones = await dataManager.get('inscripcionesCampamento') || [];
+            const data = inscripciones.find(i => i.id === id);
+            if (!data) {
                 alert("Error: No se encontró la inscripción.");
                 return;
             }
-            const data = doc.data();
+
             inscripcionIdInput.value = id;
 
             // Rellenar todos los campos del formulario
@@ -787,9 +810,10 @@
         }
 
         async function verFicha(id) {
-            const doc = await db.collection('inscripcionesCampamento').doc(id).get();
-            if (!doc.exists) return;
-            const data = doc.data();
+            const inscripciones = await dataManager.get('inscripcionesCampamento') || [];
+            const data = inscripciones.find(i => i.id === id);
+            if (!data) return;
+
             const detallesDiv = document.getElementById('fichaDetalles');
 
             let html = '<h4>Datos del Niño/a</h4>';
@@ -835,7 +859,6 @@
         function cerrarFicha() {
             document.getElementById('modalFicha').style.display = 'none';
         }
-
     </script>
 
 </body>

@@ -1,12 +1,12 @@
 // Sistema híbrido: Firebase + localStorage como fallback
 class DataManager {
     constructor() {
-        this.useFirebase = false;
+        this.useFirebase = true; // Forzar el uso de Firebase
         this.db = null;
         this.initialized = false; // Mantenemos esto por compatibilidad con el código existente
+        this.collectionsWithIndividualDocs = ['inscripcionesCampamento']; // Colecciones que almacenan documentos individuales directamente
         this.initPromise = this.initializeFirebase(); // Guardamos la promesa de inicialización
     }
-
     async initializeFirebase() {
         try {
             // Configuración de Firebase directamente en el código
@@ -41,11 +41,9 @@ class DataManager {
             } catch (authError) {
                 console.warn('Error en autenticación:', authError);
             }
-
-            this.useFirebase = true;
             console.log('✅ Firebase inicializado correctamente');
-
         } catch (error) {
+            this.useFirebase = false;
             console.error('❌ Error crítico inicializando Firebase:', error);
             alert(`Error crítico al conectar con Firebase. Por favor, verifica tu configuración.\n\nDetalles: ${error.message}`);
         } finally {
@@ -59,16 +57,23 @@ class DataManager {
 
         if (this.useFirebase && this.db) {
             try {
-                // Guardar directamente el array como campo 'data'
-                const docRef = this.db.collection(collection).doc('_data');
-                await docRef.set({ items: data });
+                if (this.collectionsWithIndividualDocs.includes(collection)) {
+                    // Para colecciones con documentos individuales, borrar los existentes y añadir los nuevos
+                    const snapshot = await this.db.collection(collection).get();
+                    const batch = this.db.batch();
+                    snapshot.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit(); // Borrar todos los documentos existentes
+                    for (const item of data) { await this.db.collection(collection).add(item); } // Añadir cada item como un nuevo documento
+                } else {
+                    // Guardar el array como campo 'items' en el documento '_data'
+                    const docRef = this.db.collection(collection).doc('_data');
+                    await docRef.set({ items: data });
+                }
                 console.log(`✅ Guardado en Firebase: ${collection}`);
                 return;
             } catch (error) {
                 console.error(`❌ Error guardando en Firebase (${collection}):`, error);
             }
-        } else {
-            console.error(`No se pudo guardar en ${collection}. Firebase no está disponible.`);
         }
     }
 
@@ -78,22 +83,27 @@ class DataManager {
 
         if (this.useFirebase && this.db) {
             try {
-                const docRef = this.db.collection(collection).doc('_data');
-                const doc = await docRef.get();
-                if (doc.exists) {
-                    const data = doc.data();
-                    return Array.isArray(data.items) ? data.items : [];
+                if (this.collectionsWithIndividualDocs.includes(collection)) {
+                    // Para colecciones con documentos individuales, obtener todos los documentos
+                    return this.getAlternate(collection);
+                } else {
+                    const docRef = this.db.collection(collection).doc('_data');
+                    const doc = await docRef.get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        return Array.isArray(data.items) ? data.items : [];
+                    } else {
+                        // Si el documento _data no existe, puede ser una colección con documentos individuales
+                        console.log(`(INFO) Documento '_data' no encontrado en '${collection}'. Intentando método alternativo.`);
+                        return this.getAlternate(collection);
+                    }
                 }
-                // Si no existe _data, intenta el método alternativo
-                return this.getAlternate(collection);
             } catch (error) {
                 // Fallback para colecciones que no usan el formato _data/items (como inscripcionesCampamento)
                 // Estas colecciones tienen documentos individuales en lugar de un solo documento '_data'
                 console.warn(`Documento '_data' no encontrado en '${collection}', intentando método alternativo. Error: ${error.message}`);
                 return this.getAlternate(collection);
             }
-        } else {
-            console.error(`No se pudo obtener ${collection}. Firebase no está disponible.`);
         }
         return []; // Devuelve un array vacío si Firebase no está disponible
     }
@@ -117,27 +127,31 @@ class DataManager {
 
         if (this.useFirebase && this.db) {
             try {
-                return this.db.collection(collection).doc('_data').onSnapshot((doc) => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        const items = Array.isArray(data.items) ? data.items : [];
-                        callback(items);
-                    } else {
-                        callback([]);
-                    }
-                });
-            } catch (error) {
-                // Fallback para colecciones que no usan el formato _data/items (como inscripcionesCampamento)
-                try {
-                    console.warn(`Intentando listener alternativo para ${collection}`);
+                if (this.collectionsWithIndividualDocs.includes(collection)) {
+                    // Para colecciones con documentos individuales, escuchar directamente la colección
                     return this.db.collection(collection).onSnapshot((snapshot) => {
                         const items = [];
                         snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
                         callback(items);
                     });
-                } catch (fallbackError) {
-                    console.error(`❌ Error en listener alternativo para ${collection}:`, fallbackError);
+                } else {
+                    return this.db.collection(collection).doc('_data').onSnapshot((doc) => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            const items = Array.isArray(data.items) ? data.items : [];
+                            callback(items);
+                        } else {
+                            console.warn(`(INFO) Documento '_data' no encontrado en listener para '${collection}'. Intentando listener alternativo.`);
+                            this.db.collection(collection).onSnapshot((snapshot) => {
+                                const items = [];
+                                snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+                                callback(items);
+                            });
+                        }
+                    });
                 }
+            } catch (error) {
+                console.error(`❌ Error crítico en listener para ${collection}:`, error);
             }
         }
         return null;
@@ -148,21 +162,23 @@ class DataManager {
         await this.initPromise;
         if (this.useFirebase && this.db) {
             try {
-                const docRef = this.db.collection(collection).doc('_data');
-                await docRef.update({
-                    items: firebase.firestore.FieldValue.arrayUnion(item)
-                });
+                if (this.collectionsWithIndividualDocs.includes(collection)) {
+                    await this.db.collection(collection).add(item); // Añadir directamente el documento
+                } else {
+                    const docRef = this.db.collection(collection).doc('_data');
+                    await docRef.update({
+                        items: firebase.firestore.FieldValue.arrayUnion(item)
+                    });
+                }
                 console.log(`✅ Item añadido en Firebase: ${collection}`);
             } catch (error) {
                 // Si el documento no existe, lo crea
-                if (error.code === 'not-found') {
+                if (error.code === 'not-found' && !this.collectionsWithIndividualDocs.includes(collection)) {
                     await this.set(collection, [item]);
                 } else {
                     console.error(`❌ Error añadiendo en Firebase (${collection}):`, error);
                 }
             }
-        } else {
-            console.error(`No se pudo añadir en ${collection}. Firebase no está disponible.`);
         }
     }
 
@@ -172,18 +188,22 @@ class DataManager {
 
         if (this.useFirebase && this.db) {
             try {
-                // Nuevo método más eficiente con arrayRemove
-                const docRef = this.db.collection(collection).doc('_data');
-                const doc = await docRef.get();
-                if (doc.exists) {
-                    const items = doc.data().items || [];
-                    const itemToRemove = items.find(item => item.id === itemId);
-                    if (itemToRemove) {
-                        await docRef.update({
-                            items: firebase.firestore.FieldValue.arrayRemove(itemToRemove)
-                        });
-                        console.log(`✅ Item borrado en Firebase: ${collection}`);
-                        return;
+                if (this.collectionsWithIndividualDocs.includes(collection)) {
+                    await this.db.collection(collection).doc(String(itemId)).delete(); // Borrar directamente el documento
+                } else {
+                    // Nuevo método más eficiente con arrayRemove
+                    const docRef = this.db.collection(collection).doc('_data');
+                    const doc = await docRef.get();
+                    if (doc.exists) {
+                        const items = doc.data().items || [];
+                        const itemToRemove = items.find(item => item.id === itemId);
+                        if (itemToRemove) {
+                            await docRef.update({
+                                items: firebase.firestore.FieldValue.arrayRemove(itemToRemove)
+                            });
+                            console.log(`✅ Item borrado en Firebase: ${collection}`);
+                            return;
+                        }
                     }
                 }
                 // Fallback para colecciones que no usan el formato _data/items
@@ -191,8 +211,6 @@ class DataManager {
             } catch (error) {
                 console.error('Error borrando en Firebase:', error);
             }
-        } else {
-            console.error(`No se pudo borrar en ${collection}. Firebase no está disponible.`);
         }
     }
 
@@ -243,6 +261,32 @@ class DataManager {
             pagosAlumnosEscuela: [
                 { id: 401, alumnoId: 101, productoId: 1, productoNombre: 'Bono 10 Clases', productoPrecio: '150.00', fechaCompra: '2023-10-01', tipo: 'Bono', totalClases: 10, clasesUsadas: 3 },
                 { id: 402, alumnoId: 102, productoId: 3, productoNombre: 'Bono 5 Clases', productoPrecio: '85.00', fechaCompra: '2023-10-15', tipo: 'Bono', totalClases: 5, clasesUsadas: 1 }
+            ],
+            inscripcionesCampamento: [
+                {
+                    id: 1, dni: '12345678A', nombre: 'Juan', apellido: 'Pérez', fechaNacimiento: '2010-01-01', direccion: 'Calle Falsa 123', poblacion: 'Madrid', provincia: 'Madrid', cp: '28001',
+                    numLicencia: '', numSegSocial: '', otrosSeguros: '',
+                    tutorNombre: 'Padre Juan', tutorApellidos: 'Pérez', tutorDni: '87654321B', telefono: '600112233', email: 'padre@example.com',
+                    semanasCampamento: '2', fechaInicioCampamento: '2024-07-01',
+                    tiempoMontando: '3 años', horasSemana: '2', clubAnterior: 'Club Hípico A',
+                    participadoConcursos: 'No', categoriaConcurso: '', caballoPropio: 'No', traeCaballo: 'No',
+                    comoNosConociste: 'Internet', enfermedadesObservaciones: 'Ninguna', necesitaRecogida: 'Sí',
+                    fechaRecogida: '2024-07-01', horaRecogida: '10:00', lugarRecogida: 'Aeropuerto T4',
+                    fechaSalida: '2024-07-15', horaSalida: '18:00', lugarSalida: 'Estación Atocha',
+                    fechaInscripcion: '2024-05-01T10:00:00.000Z', reservaPagada: true
+                },
+                {
+                    id: 2, dni: '98765432Z', nombre: 'Ana', apellido: 'Gómez', fechaNacimiento: '2008-03-15', direccion: 'Avenida Siempre Viva 45', poblacion: 'Barcelona', provincia: 'Barcelona', cp: '08001',
+                    numLicencia: 'B-54321', numSegSocial: '08/9876543210/01', otrosSeguros: 'Mapfre Poliza 123',
+                    tutorNombre: '', tutorApellidos: '', tutorDni: '', telefono: '600998877', email: 'ana@example.com',
+                    semanasCampamento: '1', fechaInicioCampamento: '2024-07-08',
+                    tiempoMontando: '5 años', horasSemana: '4', clubAnterior: 'Club Hípico B',
+                    participadoConcursos: 'Sí', categoriaConcurso: 'Salto 1.00m', caballoPropio: 'No', traeCaballo: 'No',
+                    comoNosConociste: 'Recomendación', enfermedadesObservaciones: 'Alergia al polen', necesitaRecogida: 'No',
+                    fechaRecogida: '', horaRecogida: '', lugarRecogida: '',
+                    fechaSalida: '', horaSalida: '', lugarSalida: '',
+                    fechaInscripcion: '2024-05-10T11:30:00.000Z', reservaPagada: false
+                }
             ],
             alimentacionCaballosEscuela: [],
             vacunasCaballosEscuela: [],

@@ -46,7 +46,7 @@
         }
 
         .nav-active {
-            background-color: #d35400;
+            background-color: #4a3728;
             color: white !important;
         }
 
@@ -475,12 +475,7 @@
         let ultimaDataOtrosServicios = JSON.stringify([]);
 
         window.onload = async function () {
-            let intentos = 0;
-            while (!dataManager.initialized && intentos < 20) {
-                await new Promise(r => setTimeout(r, 100));
-                intentos++;
-            }
-
+            await dataManager.initPromise;
             console.log('DataManager inicializado');
 
             // Primero, intentar mostrar los datos existentes
@@ -625,56 +620,6 @@
                         mostrarOtrosServicios();
                     }
                 });
-            } else {
-                setInterval(async function () {
-                    const dataNiveles = JSON.stringify(await dataManager.get('nivelesEscuela') || []);
-                    if (dataNiveles !== ultimaDataNiveles) {
-                        ultimaDataNiveles = dataNiveles;
-                        mostrarNiveles();
-                    }
-
-                    const dataFormaciones = JSON.stringify(await dataManager.get('formacionesEscuela') || []);
-                    if (dataFormaciones !== ultimaDataFormaciones) {
-                        ultimaDataFormaciones = dataFormaciones;
-                        mostrarFormaciones();
-                    }
-
-                    const dataBonos = JSON.stringify(await dataManager.get('bonosEscuela') || []);
-                    if (dataBonos !== ultimaDataBonos) {
-                        ultimaDataBonos = dataBonos;
-                        mostrarBonos();
-                    }
-                    const dataServicios = JSON.stringify(await dataManager.get('serviciosEscuela') || []);
-                    if (dataServicios !== ultimaDataServicios) {
-                        ultimaDataServicios = dataServicios;
-                        mostrarServicios();
-                    }
-
-
-                    const dataEspecialidades = JSON.stringify(await dataManager.get('especialidadesProfesoresEscuela') || []);
-                    if (dataEspecialidades !== ultimaDataEspecialidades) {
-                        ultimaDataEspecialidades = dataEspecialidades;
-                        mostrarEspecialidades();
-                    }
-
-                    const dataDuraciones = JSON.stringify(await dataManager.get('duracionesEscuela') || []);
-                    if (dataDuraciones !== ultimaDataDuraciones) {
-                        ultimaDataDuraciones = dataDuraciones;
-                        mostrarDuraciones();
-                    }
-
-                    const dataGastos = JSON.stringify(await dataManager.get('conceptosGastoCampamento') || []);
-                    if (dataGastos !== ultimaDataGastosCampamento) {
-                        ultimaDataGastosCampamento = dataGastos;
-                        mostrarGastosCampamento();
-                    }
-
-                    const dataOtrosServicios = JSON.stringify(await dataManager.get('otrosServiciosEscuela') || []);
-                    if (dataOtrosServicios !== ultimaDataOtrosServicios) {
-                        ultimaDataOtrosServicios = dataOtrosServicios;
-                        mostrarOtrosServicios();
-                    }
-                }, 500);
             }
         };
 

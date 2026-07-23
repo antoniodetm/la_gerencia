@@ -342,6 +342,21 @@
                 });
             });
 
+            // --- Añadir eventos de la AGENDA DE CABALLOS ---
+            (agendaCaballos || []).forEach(e => {
+                const caballo = caballos.find(c => c.id === e.caballoId);
+                const nombreCaballo = caballo ? caballo.nombre : 'Caballo desc.';
+                const colorCaballo = generarColorPorNombre(nombreCaballo);
+                eventos.push({
+                    title: `🗓️ ${nombreCaballo}: ${e.tipo}`,
+                    start: e.fecha,
+                    allDay: true,
+                    backgroundColor: colorCaballo,
+                    borderColor: colorCaballo,
+                    extendedProps: { description: e.descripcion }
+                });
+            });
+
             return eventos;
         }
 

@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión del Campamento</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -100,13 +105,51 @@
             font-size: 0.9rem;
             margin: 0;
         }
+
+        .info-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid #eee;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .info-card h3 {
+            margin-top: 0;
+            color: #4a3728;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #d4c5b9;
+            padding-bottom: 8px;
+        }
+
+        .info-card ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .info-card li {
+            background-color: #f9f9f9;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 
 <body>
     <div class="nav-bar">
         <a href="inicio.html" class="nav-link">🏠 Inicio</a>
-        <a href="campamento_hub.html" class="nav-link nav-active">🏕️ Campamento</a>
+        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
+        <a href="clases.html" class="nav-link">📅 Clases</a>
+        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
+        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
+        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
+        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
+        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
+        <a href="bases.html" class="nav-link">🏆 Bases</a>
+        <!-- <a href="campamento_hub.html" class="nav-link nav-active">🏕️ Campamento</a> -->
     </div>
 
     <div class="container">
@@ -128,7 +171,79 @@
                 <p>Calendario de entradas y salidas.</p>
             </a>
         </div>
+
+        <div class="info-card">
+            <h3>🚐 Próximos Viajes</h3>
+            <div id="proximosViajesContainer">
+                <p>Cargando información de viajes...</p>
+            </div>
+        </div>
     </div>
+
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEtMPhIhuDH2GDMo0HDs8bs9o1EGBOfYM",
+            authDomain: "la-gerencia-51fdf.firebaseapp.com",
+            projectId: "la-gerencia-51fdf",
+            storageBucket: "la-gerencia-51fdf.firebasestorage.app",
+            messagingSenderId: "331472649600",
+            appId: "1:331472649600:web:10030d6a03d1215f1d5565"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        firebase.auth().signInAnonymously().catch((error) => {
+            console.error("Error en autenticación anónima:", error);
+        });
+
+        async function consultarViajes() {
+            const contenedor = document.getElementById('proximosViajesContainer');
+            contenedor.innerHTML = '';
+
+            const manana = new Date();
+            manana.setDate(manana.getDate() + 1);
+            const fechaManana = manana.toISOString().split('T')[0];
+
+            const pasadoManana = new Date();
+            pasadoManana.setDate(pasadoManana.getDate() + 2);
+            const fechaPasadoManana = pasadoManana.toISOString().split('T')[0];
+
+            try {
+                const llegadasSnapshot = await db.collection('inscripcionesCampamento')
+                    .where('necesitaRecogida', '==', 'Sí')
+                    .where('fechaRecogida', '==', fechaManana)
+                    .get();
+
+                let html = '<h4>Llegadas Mañana</h4>';
+                if (llegadasSnapshot.empty) {
+                    html += '<p>No hay llegadas programadas para mañana.</p>';
+                } else {
+                    html += '<ul>';
+                    llegadasSnapshot.forEach(doc => {
+                        const alumno = doc.data();
+                        html += `<li><b>${alumno.nombre} ${alumno.apellido}</b> - ${alumno.lugarRecogida} a las ${alumno.horaRecogida}</li>`;
+                    });
+                    html += '</ul>';
+                }
+
+                contenedor.innerHTML = html;
+
+            } catch (error) {
+                console.error("Error al consultar los viajes: ", error);
+                contenedor.innerHTML = '<p style="color: red;">Error al cargar la información de viajes.</p>';
+            }
+        }
+
+        window.onload = function () {
+            consultarViajes();
+            // Escuchar cambios en tiempo real para mantener la lista actualizada
+            db.collection('inscripcionesCampamento').onSnapshot(consultarViajes);
+        };
+    </script>
 
 </body>
 

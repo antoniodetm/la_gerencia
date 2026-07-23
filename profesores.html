@@ -236,12 +236,7 @@
         let ultimaDataEspecialidades = JSON.stringify([]);
 
         window.onload = async function () {
-            let intentos = 0;
-            while (!dataManager.initialized && intentos < 20) {
-                await new Promise(r => setTimeout(r, 100));
-                intentos++;
-            }
-
+            await dataManager.initPromise;
             console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
 
             await poblarEspecialidades();
@@ -262,20 +257,6 @@
                         await poblarEspecialidades();
                     }
                 });
-            } else {
-                setInterval(async function () {
-                    const dataActual = JSON.stringify(await dataManager.get('profesoresEscuela') || []);
-                    if (dataActual !== ultimaDataProfesores) {
-                        ultimaDataProfesores = dataActual;
-                        await mostrarProfesores();
-                    }
-                }, 500);
-                // No es ideal para localStorage, pero para mantener la consistencia
-                const dataEspecialidades = JSON.stringify(await dataManager.get('especialidadesProfesoresEscuela') || []);
-                if (dataEspecialidades !== ultimaDataEspecialidades) {
-                    ultimaDataEspecialidades = dataEspecialidades;
-                    await poblarEspecialidades();
-                }
             }
         };
 

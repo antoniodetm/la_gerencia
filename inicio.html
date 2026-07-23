@@ -123,57 +123,53 @@
     </div>
 
     <div class="container">
-        <h1>🐴 Panel de Gestión Escuela Ecuestre</h1>
+        <h1>🐴 La Gerencia</h1>
         <div class="menu-grid">
             <a href="calendario.html" class="menu-card" style="grid-column: 1 / -1; background: #34495e; color: white;">
                 <div class="icon">🗓️</div>
                 <h3 style="color: white;">Calendario General</h3>
                 <p style="color: #bdc3c7;">Vista semanal y mensual de todas las clases programadas</p>
             </a>
-            <a href="control_asistencia.html" class="menu-card" style="background: #2980b9; color: white;">
-                <div class="icon">🛂</div>
-                <h3 style="color: white;">Control Asistencia</h3>
-                <p style="color: #ecf0f1;">Nuevo sistema de check-in diario</p>
-            </a>
-            <a href="asignaciones.html" class="menu-card">
-                <div class="icon">🔗</div>
-                <h3>Asignaciones</h3>
-                <p>Organizar binomios alumno/caballo</p>
+            <a href="alumnos.html" class="menu-card">
+                <div class="icon">👤</div>
+                <h3>Alumnos</h3>
+                <p>Fichas, niveles y notas médicas</p>
             </a>
             <a href="clases.html" class="menu-card">
                 <div class="icon">📅</div>
                 <h3>Clases</h3>
                 <p>Programación y horarios semanales</p>
             </a>
-            <a href="campamento_hub.html" class="menu-card" style="background: #5c674e; color: white;">
-                <div class="icon">🏕️</div>
-                <h3 style="color: white;">Campamento</h3>
-                <p style="color: #f0ede5;">Inscripciones y agenda de viajes</p>
-            </a>
-            <a href="alumnos.html" class="menu-card">
-                <div class="icon">👤</div>
-                <h3>Alumnos</h3>
-                <p>Fichas, niveles y notas médicas</p>
-            </a>
             <a href="caballos.html" class="menu-card">
                 <div class="icon">🐴</div>
                 <h3>Caballos</h3>
                 <p>Inventario, capas y disponibilidad</p>
+            </a>
+            <a href="asignaciones.html" class="menu-card">
+                <div class="icon">🔗</div>
+                <h3>Asignaciones</h3>
+                <p>Organizar binomios alumno/caballo</p>
             </a>
             <a href="profesores.html" class="menu-card">
                 <div class="icon">🎓</div>
                 <h3>Profesores</h3>
                 <p>Gestión del equipo técnico</p>
             </a>
+            <a href="control_asistencia.html" class="menu-card" style="background: #2980b9; color: white;">
+                <div class="icon">🛂</div>
+                <h3 style="color: white;">Control Asistencia</h3>
+                <p style="color: #ecf0f1;">Nuevo sistema de check-in diario</p>
+            </a>
+            <a href="campamento_hub.html" class="menu-card"
+                style="grid-column: 1 / -1; background: #5c674e; color: white;">
+                <div class="icon">🏕️</div>
+                <h3 style="color: white;">Campamento</h3>
+                <p style="color: #f0ede5;">Inscripciones y agenda de viajes</p>
+            </a>
             <a href="bases.html" class="menu-card" style="background: #e67e22; color: white;">
                 <div class="icon">🏆</div>
-                <h3 style="color: white;">Niveles (Bases)</h3>
+                <h3 style="color: white;">Bases</h3>
                 <p style="color: #fbeee6;">Configurar niveles, productos, etc.</p>
-            </a>
-            <a href="#" onclick="exportarDatos()" class="menu-card" style="background: #8e44ad; color: white;">
-                <div class="icon">💾</div>
-                <h3 style="color: white;">Exportar Backup</h3>
-                <p style="color: #e5d5eb;">Guardar todo en un fichero local.</p>
             </a>
             <a href="#" onclick="document.getElementById('importFile').click()" class="menu-card"
                 style="background: #2c3e50; color: white;">
@@ -182,6 +178,11 @@
                 <p style="color: #bdc3c7;">Restaurar desde un fichero local.</p>
                 <input type="file" id="importFile" style="display: none;" accept=".json"
                     onchange="importarDatos(this.files[0])">
+            </a>
+            <a href="#" onclick="exportarDatos()" class="menu-card" style="background: #8e44ad; color: white;">
+                <div class="icon">💾</div>
+                <h3 style="color: white;">Exportar Backup</h3>
+                <p style="color: #e5d5eb;">Guardar todo en un fichero local.</p>
             </a>
             <a href="#" onclick="borrarTodosLosDatos()" class="menu-card" style="background: #c0392b; color: white;">
                 <div class="icon">🗑️</div>

@@ -459,40 +459,28 @@
         edadInput.addEventListener('change', actualizarCamposTutor);
 
         let ultimaDataAlumnos = JSON.stringify(JSON.parse(localStorage.getItem('alumnosEscuela')) || []);
-        let ultimaDataNiveles = JSON.stringify([]);
+        let ultimaDataNiveles = JSON.stringify(JSON.parse(localStorage.getItem('nivelesEscuela')) || []);
 
         async function poblarNiveles() {
             const selectNivel = document.getElementById('nivel');
             const valorActual = selectNivel.value;
 
             let niveles = await dataManager.get('nivelesEscuela') || [];
-            if (niveles.length === 0) {
-                niveles = [
-                    { id: 1, nombre: 'Iniciación' },
-                    { id: 2, nombre: 'Intermedio' },
-                    { id: 3, nombre: 'Avanzado' }
-                ];
-                await dataManager.set('nivelesEscuela', niveles);
-            }
 
             selectNivel.innerHTML = niveles.map(n => `<option value="${n.nombre}">${n.nombre}</option>`).join('');
             if (valorActual && niveles.some(n => n.nombre === valorActual)) {
                 selectNivel.value = valorActual;
             }
+            if (niveles.length === 0) {
+                selectNivel.innerHTML = '<option value="">⚠️ Crea niveles en "Bases"</option>';
+            }
         }
 
         window.onload = async function () {
-            // Esperar a que DataManager se inicialice
-            let intentos = 0;
-            while (!dataManager.initialized && intentos < 20) {
-                await new Promise(r => setTimeout(r, 100));
-                intentos++;
-            }
+            await dataManager.initPromise; // Esperar a que la inicialización de Firebase se complete
 
-            console.log('DataManager inicializado:', dataManager.useFirebase ? 'Firebase' : 'localStorage');
-
-            await poblarNiveles();
-            mostrarAlumnos();
+            await poblarNiveles(); // Poblar desplegables
+            await mostrarAlumnos(); // Mostrar la lista inicial
 
             // Escuchar cambios en tiempo real de Firebase o localStorage
             if (dataManager.useFirebase) {
@@ -595,10 +583,12 @@
             const normalizar = (texto) => (texto || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             const filtro = normalizar(searchInput);
 
-            const [alumnos, pagos] = await Promise.all([
+            const [alumnos, pagos, asistencia] = await Promise.all([
                 dataManager.get('alumnosEscuela'),
-                dataManager.get('pagosAlumnosEscuela')
+                dataManager.get('pagosAlumnosEscuela'),
+                dataManager.get('attendanceEscuela')
             ]);
+
             tabla.innerHTML = '';
 
             const alumnosFiltrados = alumnos.filter(a => {
@@ -630,23 +620,18 @@
                 const misPagos = (pagos || []).filter(p => p.alumnoId === a.id).sort((x, y) => new Date(y.fechaCompra) - new Date(x.fechaCompra));
                 const ultimoProducto = misPagos.length > 0 ? misPagos[0].productoNombre : '---';
 
-                let alCorrienteHtml = '<span title="Sin producto activo">⚪</span>';
+                // Lógica para "Al Corriente"
+                let alCorrienteHtml = '<span title="Sin producto activo y sin deuda">⚪</span>'; // Por defecto, gris si no hay bono ni deuda.
                 const bonosActivos = misPagos.filter(p => p.tipo === 'Bono' && (p.totalClases - (p.clasesUsadas || 0)) > 0);
-                if (bonosActivos.length > 0) {
+
+                const totalClasesAsistidas = asistencia.filter(att => att.alumnoId === a.id && att.asistio).length;
+                const totalClasesPagadas = misPagos.reduce((sum, p) => sum + (p.clasesUsadas || 0), 0);
+                const clasesPendientes = totalClasesAsistidas - totalClasesPagadas;
+
+                if (clasesPendientes > 0) {
+                    alCorrienteHtml = `<span title="${clasesPendientes} clase(s) pendiente(s) de pago" style="color: #c0392b;">❌</span>`;
+                } else if (bonosActivos.length > 0) {
                     alCorrienteHtml = '<span title="Bono activo">✅</span>';
-                } else {
-                    const pagosMensualesRecientes = misPagos.filter(p => p.tipo === 'Clase Suelta' || p.tipo === 'Otro');
-                    if (pagosMensualesRecientes.length > 0) {
-                        const hoy = new Date();
-                        const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-                        const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-                        const fechaUltimoPago = new Date(pagosMensualesRecientes[0].fechaCompra + 'T12:00:00');
-                        if (fechaUltimoPago >= primerDiaMes && fechaUltimoPago <= ultimoDiaMes) {
-                            alCorrienteHtml = '<span title="Mensualidad pagada">✅</span>';
-                        } else {
-                            alCorrienteHtml = '<span title="Mensualidad pendiente">❌</span>';
-                        }
-                    }
                 }
 
                 const fila = tabla.insertRow();
