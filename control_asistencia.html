@@ -233,6 +233,44 @@
             font-style: italic;
             padding: 20px;
         }
+
+        /* --- Estilos para Móviles --- */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .main-container {
+                max-width: 100%;
+            }
+
+            .header-controls {
+                padding: 15px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+                padding: 15px;
+            }
+
+            .modal-body {
+                grid-template-columns: 1fr;
+                /* Apila las columnas en móvil */
+                gap: 20px;
+            }
+
+            .student-list-item {
+                flex-wrap: wrap;
+                /* Permite que los elementos internos se reorganicen */
+            }
+
+            .student-list-item .select-caballo {
+                flex-basis: 100%;
+                /* El selector de caballo ocupa todo el ancho en una nueva línea */
+                margin-top: 8px;
+            }
+        }
     </style>
 </head>
 
