@@ -488,7 +488,7 @@
                 return;
             }
 
-            const dniIntroducido = prompt("Para confirmar que quieres borrarte de esta clase, por favor, introduce tu DNI:");
+            const dniIntroducido = prompt("Para confirmar que quieres borrarte de esta clase, por favor, introduce tu DNI (o el del tutor si eres menor):");
 
             if (dniIntroducido && dniIntroducido.trim().toUpperCase() === infoAlumno.dni.toUpperCase()) {
                 let asignaciones = await dataManager.get('asignacionesEscuela') || [];

@@ -182,10 +182,10 @@
         <input type="hidden" id="productoId">
         <!-- COLUMNA 1: NIVELES DE ALUMNOS -->
         <div class="container">
-            <h2>👤 Niveles de Alumnos</h2>
+            <h2>👤 Niveles de Clase</h2>
             <form id="nivelForm">
                 <div class="form-group">
-                    <label for="nombreNivel">Nuevo Nivel de Alumno:</label>
+                    <label for="nombreNivel">Nuevo Nivel de Clase:</label>
                     <input type="text" id="nombreNivel" required placeholder="Ej. Iniciación, Intermedio...">
                 </div>
                 <button type="submit">Añadir Nivel</button>
@@ -195,6 +195,27 @@
                     <tr>
                         <th>Nivel</th>
                         <th style="width: 80px; text-align: center;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- COLUMNA 2: TIPOS DE CLASE (PARA ASISTENCIA) -->
+        <div class="container" style="border-top: 5px solid #2980b9;">
+            <h2 style="color: #2980b9; border-bottom: 2px solid #a9cce3;">📝 Tipos de Clase (Asistencia)</h2>
+            <form id="tipoClaseForm">
+                <div class="form-group">
+                    <label for="nombreTipoClase">Nuevo Tipo de Clase:</label>
+                    <input type="text" id="nombreTipoClase" required placeholder="Ej. Tanda, Particular, Ruta...">
+                </div>
+                <button type="submit" style="background-color: #2980b9;">Añadir Tipo</button>
+            </form>
+            <table id="tablaTiposClase" style="margin-top: 25px;">
+                <thead>
+                    <tr>
+                        <th style="background-color: #2980b9;">Tipo de Clase</th>
+                        <th style="width: 80px; text-align: center; background-color: #2980b9;">Acción</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -423,6 +444,11 @@
         const nombreNivelInput = document.getElementById('nombreNivel');
         const tablaNiveles = document.getElementById('tablaNiveles').getElementsByTagName('tbody')[0];
 
+        // Tipos de Clase
+        const formTipoClase = document.getElementById('tipoClaseForm');
+        const nombreTipoClaseInput = document.getElementById('nombreTipoClase');
+        const tablaTiposClase = document.getElementById('tablaTiposClase').getElementsByTagName('tbody')[0];
+
         // Formación
         const formFormacion = document.getElementById('formacionForm');
         const nombreFormacionInput = document.getElementById('nombreFormacion');
@@ -470,6 +496,7 @@
 
 
         let ultimaDataNiveles = JSON.stringify([]);
+        let ultimaDataTiposClase = JSON.stringify([]);
         let ultimaDataFormaciones = JSON.stringify([]);
         let ultimaDataBonos = JSON.stringify([]); let ultimaDataServicios = JSON.stringify([]);
         let ultimaDataEspecialidades = JSON.stringify([]);
@@ -483,6 +510,7 @@
 
             // Primero, intentar mostrar los datos existentes
             await mostrarNiveles();
+            await mostrarTiposClase();
             await mostrarFormaciones();
             await mostrarBonos();
             await mostrarServicios();
@@ -501,6 +529,19 @@
                 ];
                 await dataManager.set('nivelesEscuela', niveles);
                 await mostrarNiveles(); // Volver a mostrar después de crear
+            }
+
+            // Inicializar tipos de clase
+            let tiposClase = await dataManager.get('tiposClasesEscuela') || [];
+            if (tiposClase.length === 0) {
+                tiposClase = [
+                    { id: 1, nombre: 'Clase de Tanda' },
+                    { id: 2, nombre: 'Clase Particular' },
+                    { id: 3, nombre: 'Salida al Campo' },
+                    { id: 4, nombre: 'Pony Club' }
+                ];
+                await dataManager.set('tiposClasesEscuela', tiposClase);
+                await mostrarTiposClase();
             }
 
             // Inicializar formaciones
@@ -566,6 +607,14 @@
                     if (dataActual !== ultimaDataNiveles) {
                         ultimaDataNiveles = dataActual;
                         mostrarNiveles();
+                    }
+                });
+
+                dataManager.onSnapshot('tiposClasesEscuela', (data) => {
+                    const dataActual = JSON.stringify(data || []);
+                    if (dataActual !== ultimaDataTiposClase) {
+                        ultimaDataTiposClase = dataActual;
+                        mostrarTiposClase();
                     }
                 });
 
@@ -640,6 +689,22 @@
             await dataManager.set('nivelesEscuela', niveles);
             nombreNivelInput.value = '';
             mostrarNiveles();
+        });
+
+        // Formulario Tipo Clase
+        formTipoClase.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const nombre = nombreTipoClaseInput.value.trim();
+            if (!nombre) return;
+
+            let tipos = await dataManager.get('tiposClasesEscuela') || [];
+            const existe = tipos.some(t => t.nombre.toLowerCase() === nombre.toLowerCase());
+            if (existe) { alert('Este tipo de clase ya existe.'); return; }
+
+            tipos.push({ id: Date.now(), nombre: nombre });
+            await dataManager.set('tiposClasesEscuela', tipos);
+            nombreTipoClaseInput.value = '';
+            mostrarTiposClase();
         });
 
         // Formulario Formación
@@ -817,6 +882,20 @@
                 fila.innerHTML = `<td><b>${n.nombre}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarNivel(${n.id})">Eliminar</button></td>`;
             });
         }
+
+        async function mostrarTiposClase() {
+            const tipos = await dataManager.get('tiposClasesEscuela') || [];
+            tablaTiposClase.innerHTML = '';
+            if (tipos.length === 0) {
+                tablaTiposClase.innerHTML = `<tr><td colspan="2" class="no-records">No hay tipos de clase registrados.</td></tr>`;
+                return;
+            }
+            tipos.forEach(t => {
+                const fila = tablaTiposClase.insertRow();
+                fila.innerHTML = `<td><b>${t.nombre}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarTipoClase(${t.id})">Eliminar</button></td>`;
+            });
+        }
+
 
         async function mostrarFormaciones() {
             const formaciones = await dataManager.get('formacionesEscuela') || [];
@@ -1013,11 +1092,20 @@
             document.getElementById('btnSubmitOtroServicio').textContent = 'Añadir Servicio';
         }
         async function eliminarNivel(id) {
-            if (confirm('¿Deseas eliminar este nivel de alumno?')) {
+            if (confirm('¿Deseas eliminar este nivel de clase?')) {
                 let niveles = await dataManager.get('nivelesEscuela') || [];
                 niveles = niveles.filter(n => n.id !== id);
                 await dataManager.set('nivelesEscuela', niveles);
                 mostrarNiveles();
+            }
+        }
+
+        async function eliminarTipoClase(id) {
+            if (confirm('¿Deseas eliminar este tipo de clase?')) {
+                let tipos = await dataManager.get('tiposClasesEscuela') || [];
+                tipos = tipos.filter(t => t.id !== id);
+                await dataManager.set('tiposClasesEscuela', tipos);
+                mostrarTiposClase();
             }
         }
 
