@@ -669,8 +669,16 @@
                 todaLaAsistencia.push(registroAsistencia);
 
                 // 2. Descontar clase de un bono/clase suelta
+                const hoy = new Date();
+                const mesActual = hoy.getMonth();
+                const anioActual = hoy.getFullYear();
+
                 const bonosActivos = todosLosPagos
-                    .filter(p => p.alumnoId === alumno.id && (p.tipo === 'Bono' || p.tipo === 'Clase Suelta') && (p.totalClases - (p.clasesUsadas || 0)) > 0)
+                    .filter(p => {
+                        const fechaCompra = new Date(p.fechaCompra + 'T12:00:00');
+                        return p.alumnoId === alumno.id && (p.tipo === 'Bono' || p.tipo === 'Clase Suelta') && (p.totalClases - (p.clasesUsadas || 0)) > 0 &&
+                            fechaCompra.getMonth() === mesActual && fechaCompra.getFullYear() === anioActual;
+                    })
                     .sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra)); // Usar el más antiguo primero
 
                 if (bonosActivos.length > 0) {

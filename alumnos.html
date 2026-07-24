@@ -591,7 +591,7 @@
 
             tabla.innerHTML = '';
 
-            const alumnosFiltrados = alumnos.filter(a => {
+            const alumnosFiltrados = (alumnos || []).filter(a => {
                 return normalizar(a.dni).includes(filtro) ||
                     normalizar(a.nombre).includes(filtro) ||
                     normalizar(a.apellido).includes(filtro) ||
@@ -622,7 +622,15 @@
 
                 // Lógica para "Al Corriente"
                 let alCorrienteHtml = '<span title="Sin producto activo y sin deuda">⚪</span>'; // Por defecto, gris si no hay bono ni deuda.
-                const bonosActivos = misPagos.filter(p => p.tipo === 'Bono' && (p.totalClases - (p.clasesUsadas || 0)) > 0);
+
+                const hoy = new Date();
+                const mesActual = hoy.getMonth();
+                const anioActual = hoy.getFullYear();
+                const bonosActivos = misPagos.filter(p => {
+                    const fechaCompra = new Date(p.fechaCompra + 'T12:00:00');
+                    return p.tipo === 'Bono' && (p.totalClases - (p.clasesUsadas || 0)) > 0 &&
+                        fechaCompra.getMonth() === mesActual && fechaCompra.getFullYear() === anioActual;
+                });
 
                 const totalClasesAsistidas = asistencia.filter(att => att.alumnoId === a.id && att.asistio).length;
                 const totalClasesPagadas = misPagos.reduce((sum, p) => sum + (p.clasesUsadas || 0), 0);
@@ -782,13 +790,20 @@
             html += `<hr style="border:0; border-top:1px solid #eee; margin:15px 0;">`;
 
             // 1. Progreso de Bonos y Clases Sueltas
+            const hoy = new Date();
+            const mesActual = hoy.getMonth();
+            const anioActual = hoy.getFullYear();
+
             const bonosActivos = misPagos
-                .filter(p => p.tipo === 'Bono' && (p.totalClases - (p.clasesUsadas || 0)) > 0)
+                .filter(p => {
+                    const fechaCompra = new Date(p.fechaCompra + 'T12:00:00');
+                    return p.tipo === 'Bono' && (p.totalClases - (p.clasesUsadas || 0)) > 0 &&
+                        fechaCompra.getMonth() === mesActual && fechaCompra.getFullYear() === anioActual;
+                })
                 .sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra));
 
-            const hoy = new Date();
-            const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-            const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            const bonosExpirados = misPagos
+                .filter(p => p.tipo === 'Bono' && (p.totalClases - (p.clasesUsadas || 0)) > 0 && !bonosActivos.includes(p));
 
             const pagosMensualesRecientes = misPagos
                 .filter(p => p.tipo === 'Clase Suelta' || p.tipo === 'Otro') // Incluye 'Clases y Servicios' y 'Otros Servicios'
@@ -834,6 +849,19 @@
                         <div style="font-size:0.8em; font-weight:normal;">No tiene bonos activos ni clases pendientes de pago.</div>
                     </div>`;
                 }
+            }
+
+            // Mostrar bonos expirados si existen
+            if (bonosExpirados.length > 0) {
+                html += `<h4 style="color:#e67e22; margin-top: 20px; margin-bottom: 10px;">🎫 Bonos Expirados con Clases Restantes</h4>`;
+                html += `<div style="font-size: 0.9em;">`;
+                bonosExpirados.forEach(bono => {
+                    const clasesRestantes = (bono.totalClases || 0) - (bono.clasesUsadas || 0);
+                    html += `<div style="background:#fef5e7; padding:5px 8px; margin-bottom:4px; border-radius:3px; color:#b9770e;">
+                        <b>${bono.productoNombre}</b> - ${clasesRestantes} clase(s) restante(s) <small>(Comprado: ${new Date(bono.fechaCompra + 'T12:00:00').toLocaleDateString('es-ES')})</small>
+                    </div>`;
+                });
+                html += `</div>`;
             }
             /* else if (pagosMensualesRecientes.length > 0) {
                 html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">💳 Estado de la Mensualidad</h4>`;
