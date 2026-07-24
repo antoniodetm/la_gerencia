@@ -406,6 +406,23 @@
                 return;
             }
 
+            // ---- INICIO: Solicitar DNI para confirmar ----
+            const dniAlumno = alumnoSeleccionado.dni;
+            if (!dniAlumno) {
+                alert("Error: Tu ficha no tiene un DNI asociado. Por favor, contacta con la administración.");
+                return;
+            }
+
+            const dniIntroducido = prompt("Para confirmar, por favor, introduce tu DNI (o el del tutor si eres menor):");
+
+            if (dniIntroducido === null) return; // El usuario canceló el prompt
+
+            if (dniIntroducido.trim().toUpperCase() !== dniAlumno.toUpperCase()) {
+                alert("❌ DNI incorrecto. La asignación ha sido cancelada.");
+                return;
+            }
+            // ---- FIN de la comprobación de DNI ----
+
             let asignaciones = await dataManager.get('asignacionesEscuela') || [];
 
             // Contar alumnos para esa clase y día específicos
