@@ -175,7 +175,6 @@
         .actions-cell {
             display: flex;
             gap: 5px;
-            flex-wrap: wrap;
         }
     </style>
 </head>
@@ -194,6 +193,32 @@
     </div>
     <script src="data-manager.js?v=1.5"></script>
 
+    <!-- LISTA DE INSCRITOS -->
+    <div class="container" style="max-width: 95%;">
+        <h3>🏕️ Inscripciones Recibidas</h3>
+        <div style="margin-bottom: 20px; border-left: 5px solid #5c674e; padding-left: 10px;">
+            <h3 style="margin-top: 0; color: #5c674e; border-bottom: none; padding-bottom: 0;">🔍 Buscar Inscripción
+            </h3>
+            <input type="text" id="buscadorInscripcion" placeholder="Buscar por nombre, apellidos, DNI, teléfono..."
+                oninput="mostrarInscripciones()" style="margin-top: 10px; border: 2px solid #5c674e; font-size: 1.1em;">
+        </div>
+        <table id="tablaInscripciones">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Apellidos</th>
+                    <th>Fecha Nac.</th>
+                    <th>Fecha Entrada</th>
+                    <th>Teléfono Tutor</th>
+                    <th>Reserva Pagada</th>
+                    <th>Viaje</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
     <div class="container">
         <h2>🏕️ Gestión de Inscripciones al Campamento
             <span style="font-size: 0.6em; vertical-align: middle; margin-left: 10px;">
@@ -202,12 +227,6 @@
                     style="display:none; margin-left: 10px; color: #c0392b;">(Cancelar Edición)</a>
             </span>
         </h2>
-        <div style="margin-bottom: 20px; border-left: 5px solid #5c674e; padding-left: 10px;">
-            <h3 style="margin-top: 0; color: #5c674e; border-bottom: none; padding-bottom: 0;">🔍 Buscar Inscripción
-            </h3>
-            <input type="text" id="buscadorInscripcion" placeholder="Buscar por nombre, apellidos, DNI, teléfono..."
-                oninput="mostrarInscripciones()" style="margin-top: 10px; border: 2px solid #5c674e; font-size: 1.1em;">
-        </div>
 
         <form id="alumnoForm">
             <input type="hidden" id="inscripcionId">
@@ -372,26 +391,6 @@
 
             <button type="submit" id="submitBtn">Añadir/Actualizar Inscripción</button>
         </form>
-    </div>
-
-    <!-- LISTA DE INSCRITOS -->
-    <div class="container" style="max-width: 95%;">
-        <h3>🏕️ Inscripciones Recibidas</h3>
-        <table id="tablaInscripciones">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Apellidos</th>
-                    <th>Fecha Nac.</th>
-                    <th>Fecha Entrada</th>
-                    <th>Teléfono Tutor</th>
-                    <th>Reserva Pagada</th>
-                    <th>Viaje</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
     </div>
 
     <!-- Modal para ver Ficha -->
