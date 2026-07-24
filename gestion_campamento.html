@@ -306,8 +306,10 @@
                         <option value="6">6 Semanas</option>
                     </select>
                 </div>
-                <div class="form-group"><label for="fechaInicioCampamento">Fecha de inicio:</label><input type="date"
-                        id="fechaInicioCampamento" required></div>
+                <div class="form-group">
+                    <label for="fechaInicioCampamento">Fecha de inicio:</label>
+                    <select id="fechaInicioCampamento" required></select>
+                </div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label for="tiempoMontando">¿Cuánto tiempo llevas montando?</label><input
@@ -569,10 +571,26 @@
             }
         }
 
+        async function poblarFechasInicio() {
+            const select = document.getElementById('fechaInicioCampamento');
+            const fechas = await dataManager.get('fechasCampamento') || [];
+
+            if (fechas.length === 0) {
+                select.innerHTML = '<option value="">⚠️ Define fechas en "Bases del Campamento"</option>';
+                return;
+            }
+
+            select.innerHTML = '<option value="">-- Selecciona una fecha --</option>' + fechas.map(fecha => {
+                const fechaFormateada = new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' });
+                return `<option value="${fecha}">${fechaFormateada}</option>`;
+            }).join('');
+        }
+
         window.onload = async function () {
             await dataManager.initPromise;
             console.log('🏕️ Página de gestión de campamento cargada.');
             setupEventListeners();
+            poblarFechasInicio();
             dataManager.onSnapshot('inscripcionesCampamento', () => {
                 mostrarInscripciones();
             });

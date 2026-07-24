@@ -267,8 +267,10 @@
                         <option value="6">6 Semanas</option>
                     </select>
                 </div>
-                <div class="form-group"><label for="fechaInicioCampamento">Fecha de inicio:</label><input type="date"
-                        id="fechaInicioCampamento" required></div>
+                <div class="form-group">
+                    <label for="fechaInicioCampamento">Fecha de inicio:</label>
+                    <select id="fechaInicioCampamento" required></select>
+                </div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label for="tiempoMontando">¿Cuánto tiempo llevas montando?</label><input
@@ -390,6 +392,27 @@
         firebase.auth().signInAnonymously().catch((error) => {
             console.error("Error en autenticación anónima:", error);
         });
+
+        async function poblarFechasInicio() {
+            const select = document.getElementById('fechaInicioCampamento');
+            try {
+                const doc = await db.collection('fechasCampamento').doc('_data').get();
+                if (doc.exists) {
+                    const fechas = doc.data().items || [];
+                    if (fechas.length > 0) {
+                        select.innerHTML = '<option value="">-- Selecciona una fecha --</option>' + fechas.map(fecha => {
+                            const fechaFormateada = new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' });
+                            return `<option value="${fecha}">${fechaFormateada}</option>`;
+                        }).join('');
+                    } else {
+                        select.innerHTML = '<option value="">No hay fechas disponibles</option>';
+                    }
+                }
+            } catch (error) {
+                console.error("Error cargando fechas de campamento: ", error);
+                select.innerHTML = '<option value="">Error al cargar fechas</option>';
+            }
+        }
 
         function rellenarDatosDePrueba() {
             // Datos del Niño/a
@@ -522,6 +545,7 @@
         window.onload = async function () {
             console.log('🏕️ Página de inscripción de campamento cargada.');
             setupEventListeners();
+            poblarFechasInicio();
         };
 
         form.addEventListener('submit', async function (e) {
