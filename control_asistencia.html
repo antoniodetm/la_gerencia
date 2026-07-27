@@ -665,28 +665,24 @@
                 todaLaAsistencia.push(registroAsistencia);
 
                 // 2. Descontar clase de un bono/clase suelta
-                const hoy = new Date();
-                const mesActual = hoy.getMonth();
-                const anioActual = hoy.getFullYear();
-
-                const bonosActivos = todosLosPagos
+                // Se busca cualquier producto (bono, clase suelta, etc.) que tenga clases disponibles.
+                const productosConClases = todosLosPagos
                     .filter(p => {
-                        const fechaCompra = new Date(p.fechaCompra + 'T12:00:00');
-                        return p.alumnoId === alumno.id && (p.tipo === 'Bono' || p.tipo === 'Clase Suelta') && (p.totalClases - (p.clasesUsadas || 0)) > 0 &&
-                            fechaCompra.getMonth() === mesActual && fechaCompra.getFullYear() === anioActual;
+                        // El producto debe tener un total de clases definido y clases restantes.
+                        return p.alumnoId === alumno.id && p.totalClases && (p.totalClases - (p.clasesUsadas || 0)) > 0;
                     })
                     .sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra)); // Usar el más antiguo primero
 
-                if (bonosActivos.length > 0) {
-                    const bonoIdADescontar = bonosActivos[0].id;
+                if (productosConClases.length > 0) {
+                    const bonoIdADescontar = productosConClases[0].id;
                     // Encontrar el bono original en el array principal para modificarlo
                     const bonoOriginal = todosLosPagos.find(p => p.id === bonoIdADescontar);
                     if (bonoOriginal) {
                         bonoOriginal.clasesUsadas = (bonoOriginal.clasesUsadas || 0) + 1;
-                        mensajesAlerta.push(`- ✅ ${nombreAlumno}: Asistencia OK. Se descuenta 1 clase de "${bonoOriginal.productoNombre}".`);
+                        mensajesAlerta.push(`- ✅ ${nombreAlumno}: Asistencia OK. Se descuenta 1 clase de "${bonoOriginal.productoNombre}" (${bonoOriginal.tipo}).`);
                     }
                 } else {
-                    mensajesAlerta.push(`- 🚫 ${nombreAlumno}: Asistencia OK, pero ¡SIN BONO ACTIVO! No se pudo descontar la clase.`);
+                    mensajesAlerta.push(`- 🚫 ${nombreAlumno}: Asistencia OK, pero ¡SIN CLASES DISPONIBLES! No se pudo descontar la clase.`);
                 }
             }
 

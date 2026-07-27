@@ -592,27 +592,51 @@
                 let alCorrienteHtml = '<span title="Sin producto activo y sin deuda">⚪</span>'; // Por defecto, gris si no hay bono ni deuda.
 
                 const hoy = new Date();
+                // Considera cualquier producto con clases restantes como "activo"
+                const productosActivos = misPagos.filter(p => p.totalClases && (p.totalClases - (p.clasesUsadas || 0)) > 0);
+
+                // --- NUEVA LÓGICA DE CÁLCULO DE DEUDA ---
+                let clasesDeuda = 0;
                 const mesActual = hoy.getMonth();
                 const anioActual = hoy.getFullYear();
-                const bonosActivos = misPagos.filter(p => {
-                    const fechaCompra = new Date(p.fechaCompra + 'T12:00:00');
-                    return p.tipo === 'Bono' && (p.totalClases - (p.clasesUsadas || 0)) > 0 &&
-                        fechaCompra.getMonth() === mesActual && fechaCompra.getFullYear() === anioActual;
-                });
+                // Unificamos la lógica: cualquier producto (Bono o Clase Suelta) que contenga "semana" en su nombre
+                // y haya sido comprado en el mes actual, se considera un plan semanal.
+                const pagoSemanal = misPagos.find(p =>
+                    p.productoNombre.toLowerCase().includes('semana') &&
+                    new Date(p.fechaCompra + 'T12:00:00').getMonth() === mesActual &&
+                    new Date(p.fechaCompra + 'T12:00:00').getFullYear() === anioActual);
 
-                const totalClasesAsistidas = asistencia.filter(att => att.alumnoId === a.id && att.asistio).length;
-                const totalClasesPagadas = misPagos.reduce((sum, p) => sum + (p.clasesUsadas || 0), 0);
-                const clasesPendientes = totalClasesAsistidas - totalClasesPagadas;
+                if (pagoSemanal) {
+                    // Lógica para alumnos con plan semanal
+                    const diaSemana = hoy.getDay();
+                    const primerDiaSemana = new Date(hoy);
+                    primerDiaSemana.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1));
+                    primerDiaSemana.setHours(0, 0, 0, 0);
 
-                if (clasesPendientes > 0) {
+                    const ultimoDiaSemana = new Date(primerDiaSemana);
+                    ultimoDiaSemana.setDate(primerDiaSemana.getDate() + 6);
+                    ultimoDiaSemana.setHours(23, 59, 59, 999);
+
+                    const clasesEstaSemana = asistencia.filter(att => att.alumnoId === a.id && att.asistio && new Date(att.fechaClase + 'T12:00:00') >= primerDiaSemana && new Date(att.fechaClase + 'T12:00:00') <= ultimoDiaSemana).length;
+                    const clasesSemanalesContratadas = pagoSemanal.totalClases;
+                    clasesDeuda = Math.max(0, clasesEstaSemana - clasesSemanalesContratadas);
+                } else {
+                    // Lógica para alumnos con bonos o clases sueltas
+                    const totalClasesAsistidas = asistencia.filter(att => att.alumnoId === a.id && att.asistio).length;
+                    const totalClasesPagadas = misPagos.reduce((sum, p) => sum + (p.clasesUsadas || 0), 0);
+                    clasesDeuda = Math.max(0, totalClasesAsistidas - totalClasesPagadas);
+                }
+
+                // --- Renderizado del estado ---
+                if (clasesDeuda > 0) {
                     const claseSuelta = (clasesSueltas || []).find(p => p.nombre.toLowerCase().includes('clase suelta'));
                     const precioClaseSuelta = claseSuelta ? parseFloat(claseSuelta.precio) : 20; // Precio por defecto
-                    const deuda = clasesPendientes * precioClaseSuelta;
-                    alCorrienteHtml = `<span title="${clasesPendientes} clase(s) pendiente(s) de pago. Deuda estimada: ${deuda.toFixed(2)}€" style="color: #c0392b;">❌</span>`;
-                } else if (bonosActivos.length > 0) {
+                    const deudaTotal = clasesDeuda * precioClaseSuelta;
+                    alCorrienteHtml = `<span title="${clasesDeuda} clase(s) pendiente(s) de pago. Deuda: ${deudaTotal.toFixed(2)}€" style="color: #c0392b;">❌</span>`;
+                } else if (productosActivos.length > 0) { // Si no hay deuda, y tiene un producto con clases, está al corriente.
                     alCorrienteHtml = '<span title="Bono activo">✅</span>';
-                } else if (bonosActivos.length === 0) {
-                    // Si no hay deuda y no hay bono activo, comprobar si tiene clases futuras
+                } else { // Si no hay deuda y no tiene bono activo...
+                    // ...comprobar si tiene clases futuras para mostrar una advertencia.
                     const tieneClasesFuturas = (asignaciones || []).some(asig => asig.alumno === nombreCompleto && asig.dia >= hoyStr);
                     if (tieneClasesFuturas) {
                         alCorrienteHtml = '<span title="Tiene clases futuras reservadas sin un bono activo para este mes." style="color: #f39c12;">⚠️</span>';
@@ -815,6 +839,56 @@
             const mesActual = hoy.getMonth();
             const anioActual = hoy.getFullYear();
 
+            // --- Lógica para Clases Semanales (Mensualidades) ---
+            const pagoSemanal = misPagos
+                .filter(p => {
+                    const fechaCompra = new Date(p.fechaCompra + 'T12:00:00');
+                    // Identifica productos semanales (ej. "2 clases/semana") comprados en el mes actual.
+                    return p.tipo === 'Clase Suelta' && p.productoNombre.toLowerCase().includes('semana') &&
+                        fechaCompra.getMonth() === mesActual && fechaCompra.getFullYear() === anioActual;
+                })
+                .sort((a, b) => new Date(b.fechaCompra) - new Date(a.fechaCompra))[0]; // El más reciente del mes
+
+            if (pagoSemanal) {
+                // Calcular inicio y fin de la semana actual (Lunes a Domingo)
+                const diaSemana = hoy.getDay(); // Domingo=0, Lunes=1...
+                const primerDiaSemana = new Date(hoy);
+                primerDiaSemana.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1));
+                primerDiaSemana.setHours(0, 0, 0, 0);
+
+                const ultimoDiaSemana = new Date(primerDiaSemana);
+                ultimoDiaSemana.setDate(primerDiaSemana.getDate() + 6);
+                ultimoDiaSemana.setHours(23, 59, 59, 999);
+
+                const clasesEstaSemana = asistencia.filter(att => {
+                    const fechaClase = new Date(att.fechaClase + 'T12:00:00');
+                    return att.alumnoId === a.id && att.asistio && fechaClase >= primerDiaSemana && fechaClase <= ultimoDiaSemana;
+                }).length;
+
+                const clasesSemanalesContratadas = pagoSemanal.totalClases; // El total de clases del producto es el límite semanal.
+
+                const clasesExtra = clasesEstaSemana - clasesSemanalesContratadas;
+
+                html += `<h4 style="color:#16a085; margin-top: 20px; margin-bottom: 10px;">📅 Progreso Semanal</h4>`;
+                html += `<div style="background:#e8f8f5; color:#117a65; padding:15px; border-radius:5px; text-align:center;">
+                            <div style="font-size:0.9em;">Producto: <b>${pagoSemanal.productoNombre}</b></div>
+                            <p style="margin:10px 0; font-size:1.2em;">Clases consumidas esta semana:</p>
+                            <p style="font-size:1.8em; font-weight:bold; margin:5px 0;">${clasesEstaSemana} de ${clasesSemanalesContratadas.toFixed(0)}</p>
+                         </div>`;
+
+                if (clasesExtra > 0) {
+                    const clasesSueltas = await dataManager.get('clasesSueltasEscuela') || [];
+                    const claseSuelta = clasesSueltas.find(p => p.nombre.toLowerCase().includes('clase suelta'));
+                    const precioClaseSuelta = claseSuelta ? parseFloat(claseSuelta.precio) : 20;
+                    const deuda = clasesExtra * precioClaseSuelta;
+
+                    html += `<div style="background:#fadbd8; color:#c0392b; padding:15px; border-radius:5px; text-align:center; margin-top:15px;">
+                                <p style="font-size:1.2em; font-weight:bold; margin:5px 0;">Deuda por clases extra: <b>${deuda.toFixed(2)} €</b> (${clasesExtra} clase/s)</p><button onclick="abonarDeuda(${a.id}, ${clasesExtra}, ${claseSuelta ? claseSuelta.id : null}, '${claseSuelta ? claseSuelta.nombre : 'Clase Suelta'}', ${precioClaseSuelta})" style="margin-top:15px; background-color:#27ae60; padding: 8px 15px; width:auto; font-size:14px;">Abonar ${clasesExtra} Clase(s)</button>
+                             </div>`;
+                }
+            }
+
+            // --- Lógica para Bonos ---
             const bonosActivos = misPagos
                 .filter(p => {
                     const fechaCompra = new Date(p.fechaCompra + 'T12:00:00');
@@ -827,7 +901,7 @@
                 .filter(p => p.tipo === 'Bono' && (p.totalClases - (p.clasesUsadas || 0)) > 0 && !bonosActivos.includes(p));
 
             const pagosMensualesRecientes = misPagos
-                .filter(p => p.tipo === 'Clase Suelta' || p.tipo === 'Otro') // Incluye 'Clases y Servicios' y 'Otros Servicios'
+                .filter(p => p.tipo === 'Clase Suelta' || p.tipo === 'Otro')
                 .sort((a, b) => new Date(b.fechaCompra) - new Date(a.fechaCompra));
 
             if (bonosActivos.length > 0) {
@@ -846,7 +920,7 @@
                         <td style="padding:8px; border-bottom:1px solid #eee; text-align:center; font-size:0.95em;">${progresoHtml}</td>
                     </tr></tbody></table>`;
 
-            } else {
+            } else if (!pagoSemanal) { // Solo mostrar deuda o "al corriente" si no es un alumno con plan semanal.
                 const totalClasesAsistidas = asistencia.filter(att => att.alumnoId == id && att.asistio).length;
                 const totalClasesPagadas = misPagos.reduce((sum, p) => sum + (p.clasesUsadas || 0), 0);
                 const clasesPendientes = totalClasesAsistidas - totalClasesPagadas;
@@ -926,14 +1000,21 @@
                     fechaCompra: fechaHoy,
                     tipo: 'Clase Suelta',
                     totalClases: 1,
-                    clasesUsadas: 1 // Se crea y se consume en el mismo acto
+                    clasesUsadas: 0 // Se crea para saldar una deuda, no para ser consumida de nuevo.
                 };
                 pagos.push(nuevoPago);
             }
 
-            await dataManager.set('pagosAlumnosEscuela', pagos);
-            alert('¡Deuda abonada correctamente!');
-            await verSeguimiento(alumnoId); // Recargar el modal para ver los cambios
+            try {
+                await dataManager.set('pagosAlumnosEscuela', pagos);
+                alert(`¡Pago de ${cantidad} clase(s) extra registrado correctamente! La información se actualizará.`);
+                // Forzamos la recarga del modal y la tabla para que reflejen el pago
+                verSeguimiento(alumnoId); // Recarga el modal de seguimiento
+                mostrarAlumnos(); // Recarga la tabla principal de alumnos
+            } catch (error) {
+                console.error("Error al abonar la deuda:", error);
+                alert("Hubo un error al procesar el pago.");
+            }
         }
 
         async function eliminarAsistencia(asistenciaId, alumnoId) {
