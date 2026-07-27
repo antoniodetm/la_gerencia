@@ -165,14 +165,11 @@
 <body>
     <div class="nav-bar">
         <a href="inicio.html" class="nav-link">🏠 Inicio</a>
-        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
-        <a href="clases.html" class="nav-link">📅 Clases</a>
-        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
-        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
-        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
-        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
-        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
-        <a href="bases.html" class="nav-link">🏆 Bases</a>
+        <a href="campamento_hub.html" class="nav-link">🏕️ Hub Campamento</a>
+        <a href="gestion_campamento.html" class="nav-link">📝 Inscripciones</a>
+        <a href="banco_campamento.html" class="nav-link nav-active">🏦 Banco</a>
+        <a href="agenda_campamento.html" class="nav-link">🚐 Agenda Viajes</a>
+        <a href="bases_campamento.html" class="nav-link">⚙️ Bases Campamento</a>
     </div>
 
     <div class="container">
@@ -231,35 +228,23 @@
         </div>
     </div>
 
+    <script src="data-manager.js?v=1.5"></script>
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCEtMPhIhuDH2GDMo0HDs8bs9o1EGBOfYM",
-            authDomain: "la-gerencia-51fdf.firebaseapp.com",
-            projectId: "la-gerencia-51fdf",
-            storageBucket: "la-gerencia-51fdf.firebasestorage.app",
-            messagingSenderId: "331472649600",
-            appId: "1:331472649600:web:10030d6a03d1215f1d5565"
-        };
-
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.firestore();
-        firebase.auth().signInAnonymously().catch(console.error);
-
         let inscripciones = [];
         let cuentasBanco = [];
         let conceptosGasto = [];
 
         window.onload = async () => {
+            await dataManager.initPromise; // Esperar a que Firebase esté listo
+
             await fetchData();
             renderTabla();
 
-            db.collection('inscripcionesCampamento').onSnapshot(async () => {
+            dataManager.onSnapshot('inscripcionesCampamento', async () => {
                 await fetchData();
                 renderTabla();
             });
-            db.collection('bancoCampamento').onSnapshot(async () => {
+            dataManager.onSnapshot('bancoCampamento', async () => {
                 await fetchData();
                 renderTabla();
             });
@@ -267,14 +252,14 @@
 
         async function fetchData() {
             const [inscripcionesSnapshot, bancoSnapshot, conceptosSnapshot] = await Promise.all([
-                db.collection('inscripcionesCampamento').get(),
-                db.collection('bancoCampamento').get(),
-                db.collection('conceptosGastoCampamento').doc('_data').get()
+                dataManager.get('inscripcionesCampamento'),
+                dataManager.get('bancoCampamento'),
+                dataManager.get('conceptosGastoCampamento')
             ]);
 
-            inscripciones = inscripcionesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            cuentasBanco = bancoSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            conceptosGasto = conceptosSnapshot.exists ? conceptosSnapshot.data().items : [];
+            inscripciones = inscripcionesSnapshot || [];
+            cuentasBanco = bancoSnapshot || [];
+            conceptosGasto = conceptosSnapshot || [];
         }
 
         function renderTabla() {
@@ -386,7 +371,7 @@
                 importe = Math.abs(importe);
             }
 
-            const cuentaRef = db.collection('bancoCampamento').doc(inscripcionId);
+            const cuentaRef = dataManager.db.collection('bancoCampamento').doc(inscripcionId);
             const cuentaDoc = await cuentaRef.get();
 
             const nuevaTransaccion = {
@@ -398,8 +383,8 @@
 
             if (cuentaDoc.exists) {
                 await cuentaRef.update({
-                    saldoActual: firebase.firestore.FieldValue.increment(importe),
-                    transacciones: firebase.firestore.FieldValue.arrayUnion(nuevaTransaccion)
+                    saldoActual: dataManager.db.constructor.FieldValue.increment(importe),
+                    transacciones: dataManager.db.constructor.FieldValue.arrayUnion(nuevaTransaccion)
                 });
             } else {
                 const inscripcion = inscripciones.find(i => i.id === inscripcionId);

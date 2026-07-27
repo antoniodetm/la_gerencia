@@ -349,48 +349,6 @@
         let todosLosNivelesAlumno = [];
         let claseActivaId = null;
 
-        window.onload = async () => {
-            await dataManager.initPromise; // Esperar a que DataManager esté listo
-
-            // Cargar todos los datos una vez y luego escuchar cambios
-            [
-                todosLosAlumnos,
-                todosLosCaballos,
-                todasLasClases,
-                todasLasAsignaciones,
-                todaLaAsistencia,
-                todosLosPagos,
-                todosLosTiposClase,
-                todosLosNivelesAlumno
-            ] = await Promise.all([
-                dataManager.get('alumnosEscuela'),
-                dataManager.get('caballosEscuela'),
-                dataManager.get('clasesEscuela'),
-                dataManager.get('asignacionesEscuela'),
-                dataManager.get('attendanceEscuela'),
-                dataManager.get('pagosAlumnosEscuela'),
-                dataManager.get('tiposClasesEscuela'),
-                dataManager.get('nivelesEscuela')
-            ]);
-
-            cargarProximasClases();
-            fechaControlInput.addEventListener('change', () => cargarClasesDeFechaEspecifica(fechaControlInput.value));
-
-            // Listeners para actualizaciones en tiempo real
-            dataManager.onSnapshot('alumnosEscuela', data => { todosLosAlumnos = data || []; });
-            dataManager.onSnapshot('caballosEscuela', data => { todosLosCaballos = data || []; });
-            dataManager.onSnapshot('pagosAlumnosEscuela', data => { todosLosPagos = data || []; });
-            dataManager.onSnapshot('attendanceEscuela', data => { todaLaAsistencia = data || []; });
-            dataManager.onSnapshot('tiposClasesEscuela', data => { todosLosTiposClase = data || []; });
-            dataManager.onSnapshot('nivelesEscuela', data => { todosLosNivelesAlumno = data || []; });
-
-            dataManager.onSnapshot('clasesEscuela', data => { todasLasClases = data || []; cargarProximasClases(); });
-            dataManager.onSnapshot('asignacionesEscuela', data => { todasLasAsignaciones = data || []; cargarProximasClases(); });
-
-
-
-        };
-
         async function cargarClasesDeFechaEspecifica(fecha) {
             if (!fecha) return;
 
@@ -743,6 +701,39 @@
             cerrarModal();
         }
 
+        // Único punto de entrada al cargar la página
+        window.onload = async () => {
+            await dataManager.initPromise; // Esperar a que DataManager esté listo
+
+            // Cargar todos los datos una vez y luego escuchar cambios
+            [
+                todosLosAlumnos,
+                todosLosCaballos,
+                todasLasClases,
+                todasLasAsignaciones,
+                todaLaAsistencia,
+                todosLosPagos,
+                todosLosTiposClase,
+                todosLosNivelesAlumno
+            ] = await Promise.all([
+                dataManager.get('alumnosEscuela'),
+                dataManager.get('caballosEscuela'),
+                dataManager.get('clasesEscuela'),
+                dataManager.get('asignacionesEscuela'),
+                dataManager.get('attendanceEscuela'),
+                dataManager.get('pagosAlumnosEscuela'),
+                dataManager.get('tiposClasesEscuela'),
+                dataManager.get('nivelesEscuela')
+            ]);
+
+            await cargarProximasClases();
+            fechaControlInput.addEventListener('change', () => cargarClasesDeFechaEspecifica(fechaControlInput.value));
+
+            // Listeners para actualizaciones en tiempo real que afectan a la vista
+            dataManager.onSnapshot('clasesEscuela', async (data) => { todasLasClases = data || []; await cargarProximasClases(); });
+            dataManager.onSnapshot('asignacionesEscuela', async (data) => { todasLasAsignaciones = data || []; await cargarProximasClases(); });
+            dataManager.onSnapshot('attendanceEscuela', (data) => { todaLaAsistencia = data || []; }); // Actualizar en segundo plano
+        };
     </script>
 </body>
 

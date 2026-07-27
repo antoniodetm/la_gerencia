@@ -87,14 +87,11 @@
 
     <div class="nav-bar">
         <a href="inicio.html" class="nav-link">🏠 Inicio</a>
-        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
-        <a href="clases.html" class="nav-link">📅 Clases</a>
-        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
-        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
-        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
-        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
-        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
-        <a href="bases.html" class="nav-link">🏆 Bases</a>
+        <a href="campamento_hub.html" class="nav-link">🏕️ Hub Campamento</a>
+        <a href="gestion_campamento.html" class="nav-link">📝 Inscripciones</a>
+        <a href="banco_campamento.html" class="nav-link">🏦 Banco</a>
+        <a href="agenda_campamento.html" class="nav-link nav-active">🚐 Agenda Viajes</a>
+        <a href="bases_campamento.html" class="nav-link">⚙️ Bases Campamento</a>
     </div>
 
     <div class="container">
@@ -104,23 +101,8 @@
         <div id='calendar'></div>
     </div>
 
+    <script src="data-manager.js?v=1.5"></script>
     <script>
-        // Configuración de Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyCEtMPhIhuDH2GDMo0HDs8bs9o1EGBOfYM",
-            authDomain: "la-gerencia-51fdf.firebaseapp.com",
-            projectId: "la-gerencia-51fdf",
-            storageBucket: "la-gerencia-51fdf.firebasestorage.app",
-            messagingSenderId: "331472649600",
-            appId: "1:331472649600:web:10030d6a03d1215f1d5565"
-        };
-
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.firestore();
-        firebase.auth().signInAnonymously().catch(console.error);
-
         // Función para generar un color consistente basado en un string (nombre del alumno)
         function generarColorPorNombre(nombre) {
             let hash = 0;
@@ -135,7 +117,8 @@
             return `hsl(${h}, ${s}%, ${l}%)`;
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', async function () {
+            await dataManager.initPromise;
             const calendarEl = document.getElementById('calendar');
             const calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
@@ -156,10 +139,9 @@
             calendar.render();
 
             // Cargar y escuchar cambios en las inscripciones
-            db.collection('inscripcionesCampamento').onSnapshot(snapshot => {
+            dataManager.onSnapshot('inscripcionesCampamento', inscripciones => {
                 const eventos = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
+                (inscripciones || []).forEach(data => {
                     const colorAlumno = generarColorPorNombre(`${data.nombre} ${data.apellido}`);
 
                     // Evento de Estancia (dura varias semanas)

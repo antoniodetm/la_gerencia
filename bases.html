@@ -471,11 +471,6 @@
         const btnSubmitClase = document.getElementById('btnSubmitClase');
         const tablaClases = document.getElementById('tablaClases').getElementsByTagName('tbody')[0];
 
-
-
-        // ID oculto para productos
-        const productoIdInput = document.getElementById('productoId');
-
         // Duraciones
         const formDuracion = document.getElementById('duracionForm');
         const nombreDuracionInput = document.getElementById('nombreDuracion');
@@ -498,7 +493,6 @@
         let ultimaDataNiveles = JSON.stringify([]);
         let ultimaDataTiposClase = JSON.stringify([]);
         let ultimaDataFormaciones = JSON.stringify([]);
-        let ultimaDataBonos = JSON.stringify([]); let ultimaDataServicios = JSON.stringify([]);
         let ultimaDataEspecialidades = JSON.stringify([]);
         let ultimaDataDuraciones = JSON.stringify([]);
         let ultimaDataGastosCampamento = JSON.stringify([]);
@@ -508,169 +502,42 @@
             await dataManager.initPromise;
             console.log('DataManager inicializado');
 
-            // Primero, intentar mostrar los datos existentes
-            await mostrarNiveles();
-            await mostrarTiposClase();
-            await mostrarFormaciones();
-            await mostrarBonos();
-            await mostrarServicios();
-            await mostrarEspecialidades();
-            await mostrarDuraciones();
-            await mostrarGastosCampamento();
-            await mostrarOtrosServicios();
-
-            // Inicializar niveles
-            let niveles = await dataManager.get('nivelesEscuela') || [];
-            if (niveles.length === 0) {
-                niveles = [
-                    { id: 1, nombre: 'Iniciación' },
-                    { id: 2, nombre: 'Intermedio' },
-                    { id: 3, nombre: 'Avanzado' }
-                ];
-                await dataManager.set('nivelesEscuela', niveles);
-                await mostrarNiveles(); // Volver a mostrar después de crear
-            }
-
-            // Inicializar tipos de clase
-            let tiposClase = await dataManager.get('tiposClasesEscuela') || [];
-            if (tiposClase.length === 0) {
-                tiposClase = [
-                    { id: 1, nombre: 'Clase de Tanda' },
-                    { id: 2, nombre: 'Clase Particular' },
-                    { id: 3, nombre: 'Salida al Campo' },
-                    { id: 4, nombre: 'Pony Club' }
-                ];
-                await dataManager.set('tiposClasesEscuela', tiposClase);
-                await mostrarTiposClase();
-            }
-
-            // Inicializar formaciones
-            let formaciones = await dataManager.get('formacionesEscuela') || [];
-            if (formaciones.length === 0) {
-                formaciones = [
-                    { id: 1, nombre: 'Primaria' },
-                    { id: 2, nombre: 'ESO' },
-                    { id: 3, nombre: 'Bachillerato' }
-                ];
-                await dataManager.set('formacionesEscuela', formaciones);
-                await mostrarFormaciones();
-            }
-
-            // Inicializar bonos
-            let bonos = await dataManager.get('bonosEscuela') || [];
-            if (bonos.length === 0) {
-                bonos = [
-                    { id: 1, nombre: 'Bono 10 Clases Grupales', tipo: 'Bono', numClases: 10, precio: '150.00' },
-                    { id: 2, nombre: 'Bono 5 Clases Grupales', tipo: 'Bono', numClases: 5, precio: '85.00' }
-                ];
-                await dataManager.set('bonosEscuela', bonos);
-                await mostrarBonos();
-            }
-            // Inicializar servicios
-            let servicios = await dataManager.get('serviciosEscuela') || [];
-            if (servicios.length === 0) {
-                servicios = [{ id: 3, nombre: 'Clase Suelta', tipo: 'Clase Suelta', numClases: 1, precio: '20.00' }];
-                await dataManager.set('serviciosEscuela', servicios);
-                await mostrarServicios();
-            }
-
-            // Inicializar especialidades
-            let especialidades = await dataManager.get('especialidadesProfesoresEscuela') || [];
-            if (especialidades.length === 0) {
-                especialidades = [
-                    { id: 1, nombre: 'Iniciación / Poni Club' },
-                    { id: 2, nombre: 'Doma Clásica' },
-                    { id: 3, nombre: 'Salto de Obstáculos' },
-                    { id: 4, nombre: 'Rutas y Campo' }
-                ];
-                await dataManager.set('especialidadesProfesoresEscuela', especialidades);
-                await mostrarEspecialidades();
-            }
-
-            // Inicializar duraciones
-            let duraciones = await dataManager.get('duracionesEscuela') || [];
-            if (duraciones.length === 0) {
-                duraciones = [
-                    { id: 1, nombre: '45 minutos', valor: 45 },
-                    { id: 2, nombre: '1 hora', valor: 60 },
-                    { id: 3, nombre: '1 hora y media', valor: 90 },
-                    { id: 4, nombre: '2 horas', valor: 120 }
-                ];
-                await dataManager.set('duracionesEscuela', duraciones);
-                await mostrarDuraciones();
-            }
-
             // Listeners para sincronización en tiempo real
             if (dataManager.useFirebase) {
                 dataManager.onSnapshot('nivelesEscuela', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataNiveles) {
-                        ultimaDataNiveles = dataActual;
-                        mostrarNiveles();
-                    }
+                    mostrarNiveles(data);
                 });
 
                 dataManager.onSnapshot('tiposClasesEscuela', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataTiposClase) {
-                        ultimaDataTiposClase = dataActual;
-                        mostrarTiposClase();
-                    }
+                    mostrarTiposClase(data);
                 });
 
                 dataManager.onSnapshot('formacionesEscuela', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataFormaciones) {
-                        ultimaDataFormaciones = dataActual;
-                        mostrarFormaciones();
-                    }
+                    mostrarFormaciones(data);
                 });
 
                 dataManager.onSnapshot('bonosEscuela', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataBonos) {
-                        ultimaDataBonos = dataActual;
-                        mostrarBonos();
-                    }
+                    mostrarBonos(data);
                 });
-                dataManager.onSnapshot('serviciosEscuela', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataServicios) {
-                        ultimaDataServicios = dataActual;
-                        mostrarServicios();
-                    }
+                dataManager.onSnapshot('clasesSueltasEscuela', (data) => {
+                    mostrarClasesSueltas(data);
                 });
 
+
                 dataManager.onSnapshot('especialidadesProfesoresEscuela', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataEspecialidades) {
-                        ultimaDataEspecialidades = dataActual;
-                        mostrarEspecialidades();
-                    }
+                    mostrarEspecialidades(data);
                 });
 
                 dataManager.onSnapshot('duracionesEscuela', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataDuraciones) {
-                        ultimaDataDuraciones = dataActual;
-                        mostrarDuraciones();
-                    }
+                    mostrarDuraciones(data);
                 });
 
                 dataManager.onSnapshot('conceptosGastoCampamento', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataGastosCampamento) {
-                        ultimaDataGastosCampamento = dataActual;
-                        mostrarGastosCampamento();
-                    }
+                    mostrarGastosCampamento(data);
                 });
 
                 dataManager.onSnapshot('otrosServiciosEscuela', (data) => {
-                    const dataActual = JSON.stringify(data || []);
-                    if (dataActual !== ultimaDataOtrosServicios) {
-                        ultimaDataOtrosServicios = dataActual;
-                        mostrarOtrosServicios();
-                    }
+                    mostrarOtrosServicios(data);
                 });
             }
         };
@@ -680,15 +547,9 @@
             e.preventDefault();
             const nombre = nombreNivelInput.value.trim();
             if (!nombre) return;
-
-            let niveles = await dataManager.get('nivelesEscuela') || [];
-            const existe = niveles.some(n => n.nombre.toLowerCase() === nombre.toLowerCase());
-            if (existe) { alert('Este nivel ya existe.'); return; }
-
-            niveles.push({ id: Date.now(), nombre: nombre });
-            await dataManager.set('nivelesEscuela', niveles);
+            // Usamos .add() que es más eficiente para añadir un solo elemento
+            await dataManager.add('nivelesEscuela', { id: Date.now(), nombre: nombre });
             nombreNivelInput.value = '';
-            mostrarNiveles();
         });
 
         // Formulario Tipo Clase
@@ -696,15 +557,9 @@
             e.preventDefault();
             const nombre = nombreTipoClaseInput.value.trim();
             if (!nombre) return;
-
-            let tipos = await dataManager.get('tiposClasesEscuela') || [];
-            const existe = tipos.some(t => t.nombre.toLowerCase() === nombre.toLowerCase());
-            if (existe) { alert('Este tipo de clase ya existe.'); return; }
-
-            tipos.push({ id: Date.now(), nombre: nombre });
-            await dataManager.set('tiposClasesEscuela', tipos);
+            // Usamos .add() que es más eficiente
+            await dataManager.add('tiposClasesEscuela', { id: Date.now(), nombre: nombre });
             nombreTipoClaseInput.value = '';
-            mostrarTiposClase();
         });
 
         // Formulario Formación
@@ -712,15 +567,9 @@
             e.preventDefault();
             const nombre = nombreFormacionInput.value.trim();
             if (!nombre) return;
-
-            let formaciones = await dataManager.get('formacionesEscuela') || [];
-            const existe = formaciones.some(f => f.nombre.toLowerCase() === nombre.toLowerCase());
-            if (existe) { alert('Esta formación ya existe.'); return; }
-
-            formaciones.push({ id: Date.now(), nombre: nombre });
-            await dataManager.set('formacionesEscuela', formaciones);
+            // Usamos .add() que es más eficiente
+            await dataManager.add('formacionesEscuela', { id: Date.now(), nombre: nombre });
             nombreFormacionInput.value = '';
-            mostrarFormaciones();
         });
 
         // Formulario Especialidad
@@ -728,15 +577,9 @@
             e.preventDefault();
             const nombre = nombreEspecialidadInput.value.trim();
             if (!nombre) return;
-
-            let especialidades = await dataManager.get('especialidadesProfesoresEscuela') || [];
-            const existe = especialidades.some(e => e.nombre.toLowerCase() === nombre.toLowerCase());
-            if (existe) { alert('Esta especialidad ya existe.'); return; }
-
-            especialidades.push({ id: Date.now(), nombre: nombre });
-            await dataManager.set('especialidadesProfesoresEscuela', especialidades);
+            // Usamos .add() que es más eficiente
+            await dataManager.add('especialidadesProfesoresEscuela', { id: Date.now(), nombre: nombre });
             nombreEspecialidadInput.value = '';
-            mostrarEspecialidades();
         });
 
         // Formulario Duracion
@@ -745,15 +588,9 @@
             const nombre = nombreDuracionInput.value.trim();
             const valor = parseInt(valorDuracionInput.value);
             if (!nombre || isNaN(valor)) return;
-
-            let duraciones = await dataManager.get('duracionesEscuela') || [];
-            const existe = duraciones.some(d => d.nombre.toLowerCase() === nombre.toLowerCase() || d.valor === valor);
-            if (existe) { alert('Esta duración ya existe.'); return; }
-
-            duraciones.push({ id: Date.now(), nombre: nombre, valor: valor });
-            await dataManager.set('duracionesEscuela', duraciones);
+            // Usamos .add() que es más eficiente
+            await dataManager.add('duracionesEscuela', { id: Date.now(), nombre: nombre, valor: valor });
             formDuracion.reset();
-            mostrarDuraciones();
         });
 
         // Formulario Bonos
@@ -770,20 +607,13 @@
                 return;
             }
 
-            let bonos = await dataManager.get('bonosEscuela') || [];
-
             if (id) {
-                bonos = bonos.map(p => p.id === parseInt(id) ? { ...p, nombre, precio, numClases, tipo: 'Bono' } : p);
+                await dataManager.update('bonosEscuela', id, { nombre, precio, numClases });
                 alert('Bono actualizado.');
             } else {
-                const existe = bonos.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
-                if (existe) { alert('Este producto ya existe.'); return; }
-                bonos.push({ id: Date.now(), nombre, precio, numClases, tipo: 'Bono' });
+                await dataManager.add('bonosEscuela', { id: Date.now(), nombre, precio, numClases });
             }
-
-            await dataManager.set('bonosEscuela', bonos);
             restablecerFormularioBono();
-            mostrarBonos();
         });
 
         // Formulario Clases y Pagos Mensuales
@@ -799,22 +629,16 @@
                 return;
             }
 
-            let servicios = await dataManager.get('serviciosEscuela') || [];
-
             if (id) {
-                servicios = servicios.map(p => p.id === parseInt(id) ? { ...p, nombre, precio, numClases, tipo: 'Clase Suelta' } : p);
+                await dataManager.update('clasesSueltasEscuela', id, { nombre, precio, numClases });
                 alert('Servicio actualizado.');
             } else {
-                const existe = servicios.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
-                if (existe) { alert('Este producto ya existe.'); return; }
-                servicios.push({ id: Date.now(), nombre, precio, numClases, tipo: 'Clase Suelta' });
+                let clases = await dataManager.get('clasesSueltasEscuela') || [];
+                clases.push({ id: Date.now(), nombre, precio, numClases });
+                await dataManager.set('clasesSueltasEscuela', clases);
             }
-
-            await dataManager.set('serviciosEscuela', servicios);
             restablecerFormularioServicio();
-            mostrarServicios();
         });
-
         // Formulario Gasto Campamento
         formGastoCampamento.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -826,22 +650,15 @@
                 return;
             }
 
-            let gastos = await dataManager.get('conceptosGastoCampamento') || [];
-
             if (id) {
                 // Editar
-                gastos = gastos.map(g => g.id === parseInt(id) ? { ...g, nombre, precio: precio.toFixed(2) } : g);
+                await dataManager.update('conceptosGastoCampamento', id, { nombre, precio: precio.toFixed(2) });
                 alert('Concepto actualizado.');
             } else {
                 // Añadir nuevo
-                const existe = gastos.some(g => g.nombre.toLowerCase() === nombre.toLowerCase());
-                if (existe) { alert('Este concepto de gasto ya existe.'); return; }
-                gastos.push({ id: Date.now(), nombre, precio: precio.toFixed(2) });
+                await dataManager.add('conceptosGastoCampamento', { id: Date.now(), nombre, precio: precio.toFixed(2) });
             }
-
-            await dataManager.set('conceptosGastoCampamento', gastos);
             restablecerFormularioGasto();
-            await mostrarGastosCampamento(); // <-- Línea añadida para refrescar la tabla
         });
 
         // Formulario Otros Servicios
@@ -855,23 +672,17 @@
                 return;
             }
 
-            let servicios = await dataManager.get('otrosServiciosEscuela') || [];
-
             if (id) {
-                servicios = servicios.map(s => s.id === parseInt(id) ? { ...s, nombre, precio: precio.toFixed(2) } : s);
+                await dataManager.update('otrosServiciosEscuela', id, { nombre, precio: precio.toFixed(2) });
                 alert('Servicio actualizado.');
             } else {
-                const existe = servicios.some(s => s.nombre.toLowerCase() === nombre.toLowerCase());
-                if (existe) { alert('Este servicio ya existe.'); return; }
-                servicios.push({ id: Date.now(), nombre, precio: precio.toFixed(2) });
+                await dataManager.add('otrosServiciosEscuela', { id: Date.now(), nombre, precio: precio.toFixed(2) });
             }
-
-            await dataManager.set('otrosServiciosEscuela', servicios);
             restablecerFormularioOtroServicio();
         });
 
-        async function mostrarNiveles() {
-            const niveles = await dataManager.get('nivelesEscuela') || [];
+        async function mostrarNiveles(niveles) {
+            if (!niveles) niveles = await dataManager.get('nivelesEscuela') || [];
             tablaNiveles.innerHTML = '';
             if (niveles.length === 0) {
                 tablaNiveles.innerHTML = `<tr><td colspan="2" class="no-records">No hay niveles registrados.</td></tr>`;
@@ -883,8 +694,8 @@
             });
         }
 
-        async function mostrarTiposClase() {
-            const tipos = await dataManager.get('tiposClasesEscuela') || [];
+        async function mostrarTiposClase(tipos) {
+            if (!tipos) tipos = await dataManager.get('tiposClasesEscuela') || [];
             tablaTiposClase.innerHTML = '';
             if (tipos.length === 0) {
                 tablaTiposClase.innerHTML = `<tr><td colspan="2" class="no-records">No hay tipos de clase registrados.</td></tr>`;
@@ -897,8 +708,8 @@
         }
 
 
-        async function mostrarFormaciones() {
-            const formaciones = await dataManager.get('formacionesEscuela') || [];
+        async function mostrarFormaciones(formaciones) {
+            if (!formaciones) formaciones = await dataManager.get('formacionesEscuela') || [];
             tablaFormaciones.innerHTML = '';
             if (formaciones.length === 0) {
                 tablaFormaciones.innerHTML = `<tr><td colspan="2" class="no-records">No hay formaciones registradas.</td></tr>`;
@@ -910,16 +721,16 @@
             });
         }
 
-        async function mostrarBonos() {
-            const bonos = await dataManager.get('bonosEscuela') || [];
-
+        async function mostrarBonos(bonos) {
+            if (!bonos) bonos = await dataManager.get('bonosEscuela') || [];
             tablaBonos.innerHTML = '';
             if (bonos.length === 0) {
                 tablaBonos.innerHTML = `<tr><td colspan="4" class="no-records">No hay bonos registrados.</td></tr>`;
-            } else {
-                bonos.forEach(p => {
-                    const fila = tablaBonos.insertRow();
-                    fila.innerHTML = `
+                return;
+            }
+            bonos.forEach(p => {
+                const fila = tablaBonos.insertRow();
+                fila.innerHTML = `
                     <td><b>${p.nombre}</b></td>
                     <td style="text-align:center;">${p.numClases || '-'}</td>
                     <td style="text-align:right;">${p.precio} €</td>
@@ -927,33 +738,33 @@
                         <button class="btn-delete" style="flex:1; background-color:#f39c12;" onclick="cargarBonoParaEditar(${p.id})">Editar</button>
                         <button class="btn-delete" style="flex:1;" onclick="eliminarBono(${p.id})">Eliminar</button>
                     </td>
-                `; // Se añade un contenedor flex para los botones
-                });
-            }
+                `;
+            });
         }
 
-        async function mostrarServicios() {
-            const clases = await dataManager.get('serviciosEscuela') || [];
+        async function mostrarClasesSueltas(clases) {
+            if (!clases) clases = await dataManager.get('clasesSueltasEscuela') || [];
             tablaClases.innerHTML = '';
             if (clases.length === 0) {
-                tablaClases.innerHTML = `<tr><td colspan="4" class="no-records">No hay otros servicios.</td></tr>`;
-            } else {
-                clases.forEach(p => {
-                    const fila = tablaClases.insertRow();
-                    fila.innerHTML = `
+                tablaClases.innerHTML = `<tr><td colspan="4" class="no-records">No hay clases sueltas.</td></tr>`;
+                return;
+            }
+            clases.forEach(p => {
+                const fila = tablaClases.insertRow();
+                fila.innerHTML = `
                     <td><b>${p.nombre}</b></td>
-                    <td style="text-align:center;">${p.numClases || '1'}</td>
+                    <td style="text-align:center;">${p.numClases || '-'}</td>
                     <td style="text-align:right;">${p.precio} €</td>
                     <td style="text-align:center; display:flex; gap:5px;">
-                        <button class="btn-delete" style="flex:1; background-color:#f39c12;" onclick="cargarServicioParaEditar(${p.id})">Editar</button>
-                        <button class="btn-delete" style="flex:1;" onclick="eliminarServicio(${p.id})">Eliminar</button>
-                    </td>`;
-                });
-            }
+                        <button class="btn-delete" style="flex:1; background-color:#f39c12;" onclick="cargarClaseSueltasParaEditar(${p.id})">Editar</button>
+                        <button class="btn-delete" style="flex:1;" onclick="eliminarClaseSueltas(${p.id})">Eliminar</button>
+                    </td>
+                `;
+            });
         }
 
-        async function mostrarEspecialidades() {
-            const especialidades = await dataManager.get('especialidadesProfesoresEscuela') || [];
+        async function mostrarEspecialidades(especialidades) {
+            if (!especialidades) especialidades = await dataManager.get('especialidadesProfesoresEscuela') || [];
             tablaEspecialidades.innerHTML = '';
             if (especialidades.length === 0) {
                 tablaEspecialidades.innerHTML = `<tr><td colspan="2" class="no-records">No hay especialidades.</td></tr>`;
@@ -965,8 +776,8 @@
             });
         }
 
-        async function mostrarDuraciones() {
-            const duraciones = await dataManager.get('duracionesEscuela') || [];
+        async function mostrarDuraciones(duraciones) {
+            if (!duraciones) duraciones = await dataManager.get('duracionesEscuela') || [];
             tablaDuraciones.innerHTML = '';
             if (duraciones.length === 0) {
                 tablaDuraciones.innerHTML = `<tr><td colspan="3" class="no-records">No hay duraciones registradas.</td></tr>`;
@@ -981,8 +792,8 @@
                 `;
             });
         }
-        async function mostrarGastosCampamento() {
-            const gastos = await dataManager.get('conceptosGastoCampamento') || [];
+        async function mostrarGastosCampamento(gastos) {
+            if (!gastos) gastos = await dataManager.get('conceptosGastoCampamento') || [];
             tablaGastosCampamento.innerHTML = '';
             if (gastos.length === 0) {
                 tablaGastosCampamento.innerHTML = `<tr><td colspan="3" class="no-records">No hay conceptos de gasto.</td></tr>`;
@@ -1001,8 +812,8 @@
             });
         }
 
-        async function mostrarOtrosServicios() {
-            const servicios = await dataManager.get('otrosServiciosEscuela') || [];
+        async function mostrarOtrosServicios(servicios) {
+            if (!servicios) servicios = await dataManager.get('otrosServiciosEscuela') || [];
             tablaOtrosServicios.innerHTML = '';
             if (servicios.length === 0) {
                 tablaOtrosServicios.innerHTML = `<tr><td colspan="3" class="no-records">No hay otros servicios.</td></tr>`;
@@ -1021,7 +832,6 @@
             });
         }
 
-
         async function cargarBonoParaEditar(id) {
             const bonos = await dataManager.get('bonosEscuela') || [];
             const bono = bonos.find(p => p.id === id);
@@ -1031,19 +841,17 @@
             precioBonoInput.value = bono.precio;
             numClasesBonoInput.value = bono.numClases;
             btnSubmitBono.textContent = 'Actualizar Bono';
-            nombreBonoInput.focus();
         }
 
-        async function cargarServicioParaEditar(id) {
-            const servicios = await dataManager.get('serviciosEscuela') || [];
-            const servicio = servicios.find(p => p.id === id);
-            if (!servicio) return;
-            servicioIdInput.value = servicio.id;
-            nombreClaseInput.value = servicio.nombre;
-            precioClaseInput.value = servicio.precio;
-            numClasesServicioInput.value = servicio.numClases || 1;
+        async function cargarClaseSueltasParaEditar(id) {
+            const clases = await dataManager.get('clasesSueltasEscuela') || [];
+            const clase = clases.find(p => p.id === id);
+            if (!clase) return;
+            servicioIdInput.value = clase.id;
+            nombreClaseInput.value = clase.nombre;
+            precioClaseInput.value = clase.precio;
+            numClasesServicioInput.value = clase.numClases || 1;
             btnSubmitClase.textContent = 'Actualizar Servicio';
-            nombreClaseInput.focus();
         }
 
         function restablecerFormularioBono() {
@@ -1093,82 +901,58 @@
         }
         async function eliminarNivel(id) {
             if (confirm('¿Deseas eliminar este nivel de clase?')) {
-                let niveles = await dataManager.get('nivelesEscuela') || [];
-                niveles = niveles.filter(n => n.id !== id);
-                await dataManager.set('nivelesEscuela', niveles);
-                mostrarNiveles();
+                await dataManager.delete('nivelesEscuela', id);
             }
         }
 
         async function eliminarTipoClase(id) {
             if (confirm('¿Deseas eliminar este tipo de clase?')) {
-                let tipos = await dataManager.get('tiposClasesEscuela') || [];
-                tipos = tipos.filter(t => t.id !== id);
-                await dataManager.set('tiposClasesEscuela', tipos);
-                mostrarTiposClase();
+                await dataManager.delete('tiposClasesEscuela', id);
             }
         }
 
         async function eliminarFormacion(id) {
             if (confirm('¿Deseas eliminar esta formación?')) {
-                let formaciones = await dataManager.get('formacionesEscuela') || [];
-                formaciones = formaciones.filter(f => f.id !== id);
-                await dataManager.set('formacionesEscuela', formaciones);
-                mostrarFormaciones();
+                await dataManager.delete('formacionesEscuela', id);
             }
         }
 
         async function eliminarBono(id) {
             if (confirm('¿Deseas eliminar este bono?')) {
-                let bonos = await dataManager.get('bonosEscuela') || [];
-                bonos = bonos.filter(p => p.id !== id);
-                if (bonoIdInput.value == id) restablecerFormularioBono();
-                await dataManager.set('bonosEscuela', bonos);
-                mostrarBonos();
+                await dataManager.delete('bonosEscuela', id);
+                restablecerFormularioBono();
             }
         }
-        async function eliminarServicio(id) {
-            if (confirm('¿Deseas eliminar este servicio?')) {
-                let servicios = await dataManager.get('serviciosEscuela') || [];
-                servicios = servicios.filter(p => p.id !== id);
-                if (servicioIdInput.value == id) restablecerFormularioServicio();
-                await dataManager.set('serviciosEscuela', servicios);
-                mostrarServicios();
+
+        async function eliminarClaseSueltas(id) {
+            if (confirm('¿Deseas eliminar esta clase suelta?')) {
+                await dataManager.delete('clasesSueltasEscuela', id);
+                restablecerFormularioServicio();
             }
         }
 
         async function eliminarEspecialidad(id) {
             if (confirm('¿Deseas eliminar esta especialidad?')) {
-                let especialidades = await dataManager.get('especialidadesProfesoresEscuela') || [];
-                especialidades = especialidades.filter(e => e.id !== id);
-                await dataManager.set('especialidadesProfesoresEscuela', especialidades);
-                mostrarEspecialidades();
+                await dataManager.delete('especialidadesProfesoresEscuela', id);
             }
         }
 
         async function eliminarDuracion(id) {
             if (confirm('¿Deseas eliminar esta duración?')) {
-                let duraciones = await dataManager.get('duracionesEscuela') || [];
-                duraciones = duraciones.filter(d => d.id !== id);
-                await dataManager.set('duracionesEscuela', duraciones);
-                mostrarEspecialidades();
+                await dataManager.delete('duracionesEscuela', id);
             }
         }
 
         async function eliminarGastoCampamento(id) {
             if (confirm('¿Deseas eliminar este concepto de gasto?')) {
-                let gastos = await dataManager.get('conceptosGastoCampamento') || [];
-                gastos = gastos.filter(g => g.id !== id);
-                await dataManager.set('conceptosGastoCampamento', gastos);
+                await dataManager.delete('conceptosGastoCampamento', id);
                 restablecerFormularioGasto();
             }
         }
 
         async function eliminarOtroServicio(id) {
             if (confirm('¿Deseas eliminar este servicio?')) {
-                let servicios = await dataManager.get('otrosServiciosEscuela') || [];
-                servicios = servicios.filter(s => s.id !== id);
-                await dataManager.set('otrosServiciosEscuela', servicios);
+                await dataManager.delete('otrosServiciosEscuela', id);
                 restablecerFormularioOtroServicio();
             }
         }

@@ -141,15 +141,11 @@
 <body>
     <div class="nav-bar">
         <a href="inicio.html" class="nav-link">🏠 Inicio</a>
-        <a href="asignaciones.html" class="nav-link">🔗 Asignaciones</a>
-        <a href="clases.html" class="nav-link">📅 Clases</a>
-        <a href="alumnos.html" class="nav-link">👤 Alumnos</a>
-        <a href="caballos.html" class="nav-link">🐴 Caballos</a>
-        <a href="profesores.html" class="nav-link">🎓 Profesores</a>
-        <a href="calendario.html" class="nav-link">🗓️ Calendario</a>
-        <a href="control_asistencia.html" class="nav-link">🛂 Control Asistencia</a>
-        <a href="bases.html" class="nav-link">🏆 Bases</a>
-        <!-- <a href="campamento_hub.html" class="nav-link nav-active">🏕️ Campamento</a> -->
+        <a href="campamento_hub.html" class="nav-link nav-active">🏕️ Hub Campamento</a>
+        <a href="gestion_campamento.html" class="nav-link">📝 Inscripciones</a>
+        <a href="banco_campamento.html" class="nav-link">🏦 Banco</a>
+        <a href="agenda_campamento.html" class="nav-link">🚐 Agenda Viajes</a>
+        <a href="bases_campamento.html" class="nav-link">⚙️ Bases Campamento</a>
     </div>
 
     <div class="container">
@@ -185,26 +181,8 @@
         </div>
     </div>
 
+    <script src="data-manager.js?v=1.5"></script>
     <script>
-        // Configuración de Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyCEtMPhIhuDH2GDMo0HDs8bs9o1EGBOfYM",
-            authDomain: "la-gerencia-51fdf.firebaseapp.com",
-            projectId: "la-gerencia-51fdf",
-            storageBucket: "la-gerencia-51fdf.firebasestorage.app",
-            messagingSenderId: "331472649600",
-            appId: "1:331472649600:web:10030d6a03d1215f1d5565"
-        };
-
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.firestore();
-
-        firebase.auth().signInAnonymously().catch((error) => {
-            console.error("Error en autenticación anónima:", error);
-        });
-
         async function consultarViajes() {
             const contenedor = document.getElementById('proximosViajesContainer');
             contenedor.innerHTML = '';
@@ -218,7 +196,7 @@
             const fechaPasadoManana = pasadoManana.toISOString().split('T')[0];
 
             try {
-                const llegadasSnapshot = await db.collection('inscripcionesCampamento')
+                const llegadasSnapshot = await dataManager.db.collection('inscripcionesCampamento')
                     .where('necesitaRecogida', '==', 'Sí')
                     .where('fechaRecogida', '==', fechaManana)
                     .get();
@@ -243,10 +221,10 @@
             }
         }
 
-        window.onload = function () {
-            consultarViajes();
+        window.onload = async function () {
+            await dataManager.initPromise;
             // Escuchar cambios en tiempo real para mantener la lista actualizada
-            db.collection('inscripcionesCampamento').onSnapshot(consultarViajes);
+            dataManager.onSnapshot('inscripcionesCampamento', consultarViajes);
         };
     </script>
 

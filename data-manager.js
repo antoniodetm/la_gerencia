@@ -4,7 +4,6 @@ class DataManager {
         this.useFirebase = true; // Forzar el uso de Firebase
         this.db = null;
         this.initialized = false; // Mantenemos esto por compatibilidad con el código existente
-        this.collectionsWithIndividualDocs = ['inscripcionesCampamento']; // Colecciones que almacenan documentos individuales directamente
         this.initPromise = this.initializeFirebase(); // Guardamos la promesa de inicialización
     }
     async initializeFirebase() {
@@ -39,7 +38,8 @@ class DataManager {
             try {
                 await firebase.auth().signInAnonymously();
             } catch (authError) {
-                console.warn('Error en autenticación:', authError);
+                console.error('❌ Error fatal en autenticación anónima:', authError);
+                throw new Error('No se pudo autenticar al usuario de forma anónima. La app no puede continuar.');
             }
             console.log('✅ Firebase inicializado correctamente');
         } catch (error) {
@@ -57,18 +57,22 @@ class DataManager {
 
         if (this.useFirebase && this.db) {
             try {
-                if (this.collectionsWithIndividualDocs.includes(collection)) {
-                    // Para colecciones con documentos individuales, borrar los existentes y añadir los nuevos
-                    const snapshot = await this.db.collection(collection).get();
-                    const batch = this.db.batch();
-                    snapshot.forEach(doc => batch.delete(doc.ref));
-                    await batch.commit(); // Borrar todos los documentos existentes
-                    for (const item of data) { await this.db.collection(collection).add(item); } // Añadir cada item como un nuevo documento
-                } else {
-                    // Guardar el array como campo 'items' en el documento '_data'
-                    const docRef = this.db.collection(collection).doc('_data');
-                    await docRef.set({ items: data });
-                }
+                // Borrar todos los documentos existentes en la colección
+                const snapshot = await this.db.collection(collection).get();
+                const deleteBatch = this.db.batch();
+                snapshot.forEach(doc => deleteBatch.delete(doc.ref));
+                await deleteBatch.commit();
+
+                // Añadir los nuevos datos como documentos individuales
+                const addBatch = this.db.batch();
+                data.forEach(item => {
+                    // Usar el ID del item si existe, si no, generar uno nuevo.
+                    // El ID debe ser un string para Firestore.
+                    const docRef = item.id ? this.db.collection(collection).doc(String(item.id)) : this.db.collection(collection).doc();
+                    addBatch.set(docRef, item);
+                });
+                await addBatch.commit();
+
                 console.log(`✅ Guardado en Firebase: ${collection}`);
                 return;
             } catch (error) {
@@ -83,42 +87,15 @@ class DataManager {
 
         if (this.useFirebase && this.db) {
             try {
-                if (this.collectionsWithIndividualDocs.includes(collection)) {
-                    // Para colecciones con documentos individuales, obtener todos los documentos
-                    return this.getAlternate(collection);
-                } else {
-                    const docRef = this.db.collection(collection).doc('_data');
-                    const doc = await docRef.get();
-                    if (doc.exists) {
-                        const data = doc.data();
-                        return Array.isArray(data.items) ? data.items : [];
-                    } else {
-                        // Si el documento _data no existe, puede ser una colección con documentos individuales
-                        console.log(`(INFO) Documento '_data' no encontrado en '${collection}'. Intentando método alternativo.`);
-                        return this.getAlternate(collection);
-                    }
-                }
+                const snapshot = await this.db.collection(collection).get();
+                const items = [];
+                snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+                return items;
             } catch (error) {
-                // Fallback para colecciones que no usan el formato _data/items (como inscripcionesCampamento)
-                // Estas colecciones tienen documentos individuales en lugar de un solo documento '_data'
-                console.warn(`Documento '_data' no encontrado en '${collection}', intentando método alternativo. Error: ${error.message}`);
-                return this.getAlternate(collection);
+                console.error(`❌ Error obteniendo de Firebase (${collection}):`, error);
             }
         }
-        return []; // Devuelve un array vacío si Firebase no está disponible
-    }
-
-    async getAlternate(collection) {
-        try {
-            console.log(`(INFO) Usando método de obtención alternativo para '${collection}'`);
-            const snapshot = await this.db.collection(collection).get();
-            const items = [];
-            snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
-            return items;
-        } catch (fallbackError) {
-            console.error(`❌ Error en el método de obtención alternativo para ${collection}:`, fallbackError);
-            return [];
-        }
+        return [];
     }
 
     // Escuchar cambios en tiempo real
@@ -127,29 +104,11 @@ class DataManager {
 
         if (this.useFirebase && this.db) {
             try {
-                if (this.collectionsWithIndividualDocs.includes(collection)) {
-                    // Para colecciones con documentos individuales, escuchar directamente la colección
-                    return this.db.collection(collection).onSnapshot((snapshot) => {
-                        const items = [];
-                        snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
-                        callback(items);
-                    });
-                } else {
-                    return this.db.collection(collection).doc('_data').onSnapshot((doc) => {
-                        if (doc.exists) {
-                            const data = doc.data();
-                            const items = Array.isArray(data.items) ? data.items : [];
-                            callback(items);
-                        } else {
-                            console.warn(`(INFO) Documento '_data' no encontrado en listener para '${collection}'. Intentando listener alternativo.`);
-                            this.db.collection(collection).onSnapshot((snapshot) => {
-                                const items = [];
-                                snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
-                                callback(items);
-                            });
-                        }
-                    });
-                }
+                return this.db.collection(collection).onSnapshot((snapshot) => {
+                    const items = [];
+                    snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+                    callback(items);
+                });
             } catch (error) {
                 console.error(`❌ Error crítico en listener para ${collection}:`, error);
             }
@@ -162,22 +121,29 @@ class DataManager {
         await this.initPromise;
         if (this.useFirebase && this.db) {
             try {
-                if (this.collectionsWithIndividualDocs.includes(collection)) {
-                    await this.db.collection(collection).add(item); // Añadir directamente el documento
-                } else {
-                    const docRef = this.db.collection(collection).doc('_data');
-                    await docRef.update({
-                        items: firebase.firestore.FieldValue.arrayUnion(item)
-                    });
-                }
+                // Si el item tiene un ID, lo usamos. Si no, Firestore genera uno.
+                // El ID debe ser un string.
+                const docRef = item.id ? this.db.collection(collection).doc(String(item.id)) : this.db.collection(collection).doc();
+                await docRef.set(item);
                 console.log(`✅ Item añadido en Firebase: ${collection}`);
             } catch (error) {
-                // Si el documento no existe, lo crea
-                if (error.code === 'not-found' && !this.collectionsWithIndividualDocs.includes(collection)) {
-                    await this.set(collection, [item]);
-                } else {
-                    console.error(`❌ Error añadiendo en Firebase (${collection}):`, error);
-                }
+                console.error(`❌ Error añadiendo en Firebase (${collection}):`, error);
+            }
+        }
+    }
+
+    // Actualizar un item
+    async update(collection, itemId, data) {
+        await this.initPromise;
+        if (this.useFirebase && this.db) {
+            try {
+                // Aseguramos que no se intente sobreescribir el id
+                const dataToUpdate = { ...data };
+                delete dataToUpdate.id;
+                await this.db.collection(collection).doc(String(itemId)).update(dataToUpdate);
+                console.log(`✅ Item actualizado en Firebase: ${collection}`);
+            } catch (error) {
+                console.error(`❌ Error actualizando en Firebase (${collection}):`, error);
             }
         }
     }
@@ -188,26 +154,9 @@ class DataManager {
 
         if (this.useFirebase && this.db) {
             try {
-                if (this.collectionsWithIndividualDocs.includes(collection)) {
-                    await this.db.collection(collection).doc(String(itemId)).delete(); // Borrar directamente el documento
-                } else {
-                    // Nuevo método más eficiente con arrayRemove
-                    const docRef = this.db.collection(collection).doc('_data');
-                    const doc = await docRef.get();
-                    if (doc.exists) {
-                        const items = doc.data().items || [];
-                        const itemToRemove = items.find(item => item.id === itemId);
-                        if (itemToRemove) {
-                            await docRef.update({
-                                items: firebase.firestore.FieldValue.arrayRemove(itemToRemove)
-                            });
-                            console.log(`✅ Item borrado en Firebase: ${collection}`);
-                            return;
-                        }
-                    }
-                }
-                // Fallback para colecciones que no usan el formato _data/items
+                // Borra un documento por su ID
                 await this.db.collection(collection).doc(String(itemId)).delete();
+                console.log(`✅ Item borrado en Firebase: ${collection}`);
             } catch (error) {
                 console.error('Error borrando en Firebase:', error);
             }
@@ -229,11 +178,6 @@ class DataManager {
             tiposClasesEscuela: [
                 { id: 1, nombre: 'Iniciación' }, { id: 2, nombre: 'Intermedio' }, { id: 3, nombre: 'Avanzado / Competición' }, { id: 4, nombre: 'Clase Particular' }, { id: 5, nombre: 'Salida al Campo' }
             ],
-            productosEscuela: [
-                { id: 1, nombre: 'Bono 10 Clases', tipo: 'Bono', numClases: 10, precio: '150.00' },
-                { id: 2, nombre: 'Clase Suelta', tipo: 'Clase Suelta', numClases: 1, precio: '20.00' },
-                { id: 3, nombre: 'Bono 5 Clases', tipo: 'Bono', numClases: 5, precio: '85.00' }
-            ],
             profesoresEscuela: [
                 { id: 1, nombre: 'Ana', apellido: 'García', telefono: '611223344', especialidad: 'Doma Clásica' },
                 { id: 2, nombre: 'Carlos', apellido: 'Ruiz', telefono: '655667788', especialidad: 'Salto de Obstáculos' }
@@ -253,6 +197,13 @@ class DataManager {
                 { id: 201, tipo: 'unDia', diaSemana: 'Martes', hora: '18:00', duracion: '1 hora', maxAlumnos: 6, nivel: 'Iniciación' },
                 { id: 202, tipo: 'unDia', diaSemana: 'Jueves', hora: '18:00', duracion: '1 hora', maxAlumnos: 6, nivel: 'Iniciación' },
                 { id: 203, tipo: 'unDia', diaSemana: 'Sábado', hora: '11:00', duracion: '1 hora', maxAlumnos: 5, nivel: 'Intermedio' }
+            ],
+            bonosEscuela: [
+                { id: 1, nombre: 'Bono 10 Clases', numClases: 10, precio: '150.00' },
+                { id: 3, nombre: 'Bono 5 Clases', numClases: 5, precio: '85.00' }
+            ],
+            clasesSueltasEscuela: [
+                { id: 2, nombre: 'Clase Suelta', numClases: 1, precio: '20.00' }
             ],
             asignacionesEscuela: [
                 { id: 301, claseId: 201, alumno: 'María López' },
@@ -321,11 +272,12 @@ class DataManager {
 
         console.log('⏳ Exportando datos...');
         const colecciones = [
-            'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela',
-            'asignacionesEscuela', 'nivelesEscuela', 'tiposClasesEscuela', 'productosEscuela',
+            'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela', 'asignacionesEscuela',
+            'nivelesEscuela', 'tiposClasesEscuela', 'bonosEscuela', 'clasesSueltasEscuela',
             'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
             'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela',
-            'herrajesCaballosEscuela'
+            'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela',
+            'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento'
         ];
 
         const backup = {};
@@ -395,11 +347,12 @@ class DataManager {
         console.log('🗑️ Borrando todos los datos...');
 
         const colecciones = [
-            'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela',
-            'asignacionesEscuela', 'nivelesEscuela', 'tiposClasesEscuela', 'productosEscuela',
+            'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela', 'asignacionesEscuela',
+            'nivelesEscuela', 'tiposClasesEscuela', 'bonosEscuela', 'clasesSueltasEscuela',
             'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
             'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela',
-            'herrajesCaballosEscuela'
+            'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela',
+            'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento'
         ];
 
         try {

@@ -275,7 +275,11 @@
 
 
         async function poblarDesplegables() {
-            const clases = await dataManager.get('clasesEscuela') || [];
+            const [clases, duraciones] = await Promise.all([
+                dataManager.get('clasesEscuela'),
+                dataManager.get('duracionesEscuela')
+            ]);
+            const duracionMap = new Map((duraciones || []).map(d => [String(d.valor), d.nombre]));
 
             let opcionesClases = '<option value="">-- Selecciona una Clase --</option>';
 
@@ -290,14 +294,15 @@
 
                 clases.forEach(c => {
                     let etiqueta = '';
+                    const duracionTexto = duracionMap.get(String(c.duracion)) || c.duracion;
                     const nivelClase = c.nivel ? `(${c.nivel})` : '(Nivel Abierto)';
                     if (c.tipo === 'unDia') {
-                        etiqueta = `${c.diaSemana} a las ${c.hora} hs ${nivelClase}`;
+                        etiqueta = `${c.diaSemana} a las ${c.hora} hs ${nivelClase} - ${duracionTexto}`;
                     } else {
                         const diasHoras = Object.entries(c.horarios || {}).sort((a, b) => ordenDias[a[0]] - ordenDias[b[0]])
                             .map(([dia, hora]) => `${dia} ${hora}`)
                             .join(', ');
-                        etiqueta = `${diasHoras} ${nivelClase}`;
+                        etiqueta = `${diasHoras} ${nivelClase} - ${duracionTexto}`;
                     }
                     opcionesClases += `<option value="${c.id}">${etiqueta}</option>`;
                 });
@@ -347,7 +352,7 @@
                 const fechas = getProximasFechas(claseSeleccionada.diaSemana);
                 opcionesFechas += fechas.map(f => {
                     const valor = f.toISOString().split('T')[0];
-                    const texto = f.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+                    const texto = f.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                     return `<option value="${valor}">${texto}</option>`;
                 }).join('');
             }

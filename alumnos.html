@@ -391,24 +391,20 @@
             <h3 style="margin-top:0; color:#27ae60;">🛍️ Productos y Pagos de <span id="nombreAlumnoProductos"></span>
             </h3>
             <hr style="border:0; border-top:1px solid #eee; margin-bottom:15px;">
-
-            <!-- Formulario para añadir producto -->
-            <form id="formAddProductoAlumno" style="text-align: left;">
-                <input type="hidden" id="productoAlumnoId">
-                <div class="form-row">
-                    <div class="form-group" style="flex: 3;">
-                        <label for="selectProducto">Añadir Producto:</label>
-                        <select id="selectProducto" required></select>
-                    </div>
-                    <div class="form-group" style="flex: 2;">
-                        <label for="fechaCompraProducto">Fecha Compra:</label>
-                        <input type="date" id="fechaCompraProducto" required>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <button type="submit" style="margin-top: 25px; background-color: #27ae60;">Añadir</button>
-                    </div>
-                </div>
-            </form>
+            <input type="hidden" id="productoAlumnoId">
+            <div class="form-group">
+                <label for="categoriaProductoSelect" style="font-weight:bold;">1. Selecciona una categoría de
+                    producto:</label>
+                <select id="categoriaProductoSelect">
+                    <option value="">-- Elige una categoría --</option>
+                    <option value="bonos">Bonos de Clases</option>
+                    <option value="clases">Clases</option>
+                    <option value="otros">Otros Servicios</option>
+                </select>
+            </div>
+            <div id="tablaProductosDisponibles"
+                style="max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 20px; display: none;">
+            </div>
 
             <!-- Tabla de productos del alumno -->
             <div id="productosAlumnoDetalles"
@@ -432,8 +428,6 @@
         const telefonoInput = document.getElementById('telefono');
 
         // Elementos del modal de productos
-        const formAddProductoAlumno = document.getElementById('formAddProductoAlumno');
-        const fechaCompraProductoInput = document.getElementById('fechaCompraProducto');
 
         function actualizarCamposTutor() {
             const edad = parseInt(edadInput.value);
@@ -545,48 +539,19 @@
             mostrarAlumnos();
         });
 
-        formAddProductoAlumno.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const alumnoId = parseInt(document.getElementById('productoAlumnoId').value);
-            const selectProducto = document.getElementById('selectProducto');
-            const productoSeleccionado = selectProducto.options[selectProducto.selectedIndex];
-            const productoId = parseInt(productoSeleccionado.value);
-            const productoNombre = productoSeleccionado.dataset.nombre;
-            const productoTipo = productoSeleccionado.dataset.tipo;
-            const productoNumClases = productoSeleccionado.dataset.numclases;
-            const productoPrecio = productoSeleccionado.dataset.precio;
-            const fechaCompra = fechaCompraProductoInput.value;
-
-            if (!alumnoId || !productoId || !fechaCompra) {
-                alert('Por favor, complete todos los campos.');
-                return;
-            }
-
-            const nuevoPago = {
-                id: Date.now(), alumnoId, productoId, productoNombre, productoPrecio, fechaCompra,
-                tipo: productoTipo,
-                totalClases: productoTipo === 'Bono' || productoTipo === 'Clase Suelta' ? parseInt(productoNumClases) : null,
-                clasesUsadas: 0
-            };
-
-            let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
-            pagos.push(nuevoPago);
-            await dataManager.set('pagosAlumnosEscuela', pagos);
-
-            // Recargar la tabla de productos del modal
-            await mostrarProductosDeAlumno(alumnoId);
-        });
-
         async function mostrarAlumnos() {
             const searchInput = document.getElementById('buscadorAlumno')?.value || '';
             // Función para normalizar texto: quita mayúsculas y acentos/tildes
             const normalizar = (texto) => (texto || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             const filtro = normalizar(searchInput);
 
-            const [alumnos, pagos, asistencia] = await Promise.all([
+            const [alumnos, pagos, asistencia, asignaciones, clasesSueltas, todasLasClases] = await Promise.all([
                 dataManager.get('alumnosEscuela'),
                 dataManager.get('pagosAlumnosEscuela'),
-                dataManager.get('attendanceEscuela')
+                dataManager.get('attendanceEscuela'),
+                dataManager.get('asignacionesEscuela'),
+                dataManager.get('clasesSueltasEscuela'), // Necesario para calcular deuda
+                dataManager.get('clasesEscuela')
             ]);
 
             tabla.innerHTML = '';
@@ -609,6 +574,7 @@
             thead.innerHTML = `
                 <th>Nombre</th>
                 <th>Apellidos</th>
+                <th>Próxima Clase</th>
                 <th>Último Producto</th>
                 <th style="text-align:center;">Al Corriente</th>
                 <th style="text-align:center;">Estado</th>
@@ -617,10 +583,12 @@
 
             alumnosFiltrados.forEach(a => {
                 // Lógica para "Producto Adquirido" y "Al Corriente"
+                const nombreCompleto = `${a.nombre} ${a.apellido}`;
                 const misPagos = (pagos || []).filter(p => p.alumnoId === a.id).sort((x, y) => new Date(y.fechaCompra) - new Date(x.fechaCompra));
                 const ultimoProducto = misPagos.length > 0 ? misPagos[0].productoNombre : '---';
 
                 // Lógica para "Al Corriente"
+                const hoyStr = new Date().toISOString().split('T')[0];
                 let alCorrienteHtml = '<span title="Sin producto activo y sin deuda">⚪</span>'; // Por defecto, gris si no hay bono ni deuda.
 
                 const hoy = new Date();
@@ -637,15 +605,38 @@
                 const clasesPendientes = totalClasesAsistidas - totalClasesPagadas;
 
                 if (clasesPendientes > 0) {
-                    alCorrienteHtml = `<span title="${clasesPendientes} clase(s) pendiente(s) de pago" style="color: #c0392b;">❌</span>`;
+                    const claseSuelta = (clasesSueltas || []).find(p => p.nombre.toLowerCase().includes('clase suelta'));
+                    const precioClaseSuelta = claseSuelta ? parseFloat(claseSuelta.precio) : 20; // Precio por defecto
+                    const deuda = clasesPendientes * precioClaseSuelta;
+                    alCorrienteHtml = `<span title="${clasesPendientes} clase(s) pendiente(s) de pago. Deuda estimada: ${deuda.toFixed(2)}€" style="color: #c0392b;">❌</span>`;
                 } else if (bonosActivos.length > 0) {
                     alCorrienteHtml = '<span title="Bono activo">✅</span>';
+                } else if (bonosActivos.length === 0) {
+                    // Si no hay deuda y no hay bono activo, comprobar si tiene clases futuras
+                    const tieneClasesFuturas = (asignaciones || []).some(asig => asig.alumno === nombreCompleto && asig.dia >= hoyStr);
+                    if (tieneClasesFuturas) {
+                        alCorrienteHtml = '<span title="Tiene clases futuras reservadas sin un bono activo para este mes." style="color: #f39c12;">⚠️</span>';
+                    }
                 }
+
+                // Lógica para "Próxima Clase"
+                const ahora = new Date();
+                const proximaAsignacion = (asignaciones || [])
+                    .filter(asig => {
+                        const claseInfo = (todasLasClases || []).find(c => c.id == asig.claseId);
+                        if (!claseInfo) return false;
+                        return asig.alumno === nombreCompleto && new Date(`${asig.dia}T${claseInfo.hora}`) >= ahora;
+                    })
+                    .sort((x, y) => new Date(x.dia) - new Date(y.dia))[0];
+
+                const proximaClaseTexto = proximaAsignacion ? new Date(proximaAsignacion.dia + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }) : '---';
+
 
                 const fila = tabla.insertRow();
                 const badgeColor = (a.estado || 'Activo') === 'Activo' ? '#d5f4e6; color:#27ae60' : '#fadbd8; color:#c0392b';
                 fila.innerHTML = `
-                <td>${a.nombre}</td><td>${a.apellido}</td><td>${ultimoProducto}</td>
+                <td>${a.nombre}</td><td>${a.apellido}</td>
+                <td>${proximaClaseTexto}</td><td>${ultimoProducto}</td>
                 <td style="text-align:center; font-size: 1.2em;">${alCorrienteHtml}</td>
                 <td style="text-align:center;"><span style="padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; background: ${badgeColor};">${a.estado || 'Activo'}</span></td>
                 <td class="actions-cell">
@@ -790,6 +781,36 @@
             html += `<hr style="border:0; border-top:1px solid #eee; margin:15px 0;">`;
 
             // 1. Progreso de Bonos y Clases Sueltas
+            // Nueva tabla de clases
+            const todasLasClases = await dataManager.get('clasesEscuela') || [];
+            const misAsignaciones = asignaciones
+                .filter(asig => asig.alumno === nombreCompleto)
+                .map(asig => {
+                    const claseInfo = todasLasClases.find(c => c.id == asig.claseId);
+                    const asistenciaInfo = asistencia.find(att => att.alumnoId === a.id && att.claseId == asig.claseId && att.fechaClase === asig.dia);
+                    return { ...asig, claseInfo, asistenciaInfo };
+                })
+                .sort((x, y) => new Date(y.dia) - new Date(x.dia));
+
+            html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">📚 Clases del Alumno</h4>`;
+            if (misAsignaciones.length > 0) {
+                html += `<table style="font-size: 0.85em; width:100%; border-collapse: collapse;">
+                    <thead><tr style="background:#3498db; color:white;"><th style="padding:8px;">Fecha</th><th style="padding:8px;">Asistencia</th><th style="padding:8px;">Caballo</th></tr></thead><tbody>`;
+                misAsignaciones.forEach(asig => {
+                    const fechaFmt = new Date(asig.dia + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+                    const asistio = asig.asistenciaInfo ? '✅ Sí' : (new Date(asig.dia) < new Date() ? '❌ No' : '🗓️ Reservada');
+                    const caballo = asig.asistenciaInfo ? asig.asistenciaInfo.caballo : '-';
+                    html += `<tr>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${fechaFmt} a las ${asig.claseInfo?.hora || '?'}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${asistio}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${caballo}</td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+            } else {
+                html += `<p style="color:#888; font-style:italic; text-align:center;">No está asignado a ninguna clase.</p>`;
+            }
+
             const hoy = new Date();
             const mesActual = hoy.getMonth();
             const anioActual = hoy.getFullYear();
@@ -810,7 +831,7 @@
                 .sort((a, b) => new Date(b.fechaCompra) - new Date(a.fechaCompra));
 
             if (bonosActivos.length > 0) {
-                html += `<h4 style="color:#3498db; margin-top: 0; margin-bottom: 10px;">📈 Progreso de Bono Activo</h4>`;
+                html += `<h4 style="color:#27ae60; margin-top: 20px; margin-bottom: 10px;">📈 Progreso de Bono Activo</h4>`;
                 const bono = bonosActivos[0]; // Mostramos solo el más antiguo con clases
                 const totalClases = bono.totalClases || 0;
                 const clasesUsadas = bono.clasesUsadas || 0;
@@ -818,7 +839,7 @@
                 const statusColor = clasesRestantes > 0 ? '#27ae60' : '#c0392b';
                 const progresoHtml = `<b>${clasesUsadas}</b> usadas / <b style="color:${statusColor};">${clasesRestantes}</b> restantes`;
 
-                html += `<table style="font-size: 0.85em; margin-top:10px; width:100%; border-collapse: collapse;">
+                html += `<table style="font-size: 0.85em; width:100%; border-collapse: collapse;">
                     <thead><tr style="background:#3498db; color:white;"><th style="padding:8px; text-align:left;">Bono Activo</th><th style="padding:8px; text-align:center;">Progreso</th></tr></thead>
                     <tbody><tr>
                         <td style="padding:8px; border-bottom:1px solid #eee;"><b>${bono.productoNombre}</b><br><small>Comprado: ${new Date(bono.fechaCompra + 'T12:00:00').toLocaleDateString('es-ES')}</small></td>
@@ -831,17 +852,16 @@
                 const clasesPendientes = totalClasesAsistidas - totalClasesPagadas;
 
                 if (clasesPendientes > 0) {
-                    const [servicios, bonos] = await Promise.all([dataManager.get('serviciosEscuela'), dataManager.get('bonosEscuela')]);
-                    const todosLosProductos = [...(servicios || []), ...(bonos || [])];
-                    const claseSuelta = todosLosProductos.find(p => p.nombre.toLowerCase().includes('clase suelta'));
+                    const clasesSueltas = await dataManager.get('clasesSueltasEscuela') || [];
+                    const claseSuelta = clasesSueltas.find(p => p.nombre.toLowerCase().includes('clase suelta'));
                     const precioClaseSuelta = claseSuelta ? parseFloat(claseSuelta.precio) : 20; // Precio por defecto si no se encuentra
                     const deuda = clasesPendientes * precioClaseSuelta;
 
                     html += `<div style="background:#fadbd8; color:#c0392b; padding:15px; border-radius:5px; text-align:center;">
                         <div style="font-weight:bold; font-size:1.1em;">⚠️ SIN BONO ACTIVO</div>
                         <p style="margin:10px 0;">Ha consumido <b>${clasesPendientes} clase(s) suelta(s)</b>.</p>
-                        <p style="font-size:1.2em; font-weight:bold; margin:5px 0;">Deuda total: <b>${deuda.toFixed(2)} €</b></p>
-                        <button onclick="abonarDeuda(${id}, ${clasesPendientes}, '${claseSuelta ? claseSuelta.nombre : 'Clase Suelta'}', ${precioClaseSuelta})" style="margin-top:15px; background-color:#27ae60; padding: 8px 15px; width:auto; font-size:14px;">Abonar ${clasesPendientes} Clase(s)</button>
+                        <p style="font-size:1.2em; font-weight:bold; margin:5px 0;">Deuda estimada: <b>${deuda.toFixed(2)} €</b></p>
+                        <button onclick="abonarDeuda(${id}, ${clasesPendientes}, ${claseSuelta ? claseSuelta.id : null}, '${claseSuelta ? claseSuelta.nombre : 'Clase Suelta'}', ${precioClaseSuelta})" style="margin-top:15px; background-color:#27ae60; padding: 8px 15px; width:auto; font-size:14px;">Abonar ${clasesPendientes} Clase(s)</button>
                     </div>`;
                 } else {
                     html += `<div style="background:#eafaf1; color:#229954; padding:10px; border-radius:5px; text-align:center; font-weight:bold;">
@@ -884,59 +904,26 @@
                 html += `<p style="color:#888; font-style:italic; text-align:center;">Este alumno no tiene un producto activo para seguimiento (bono o mensualidad).</p>`;
             } */
 
-            // 2. Clases Reservadas (futuras)
-            const misAsignacionesFuturas = asignaciones
-                .filter(asig => asig.alumno === nombreCompleto && asig.dia >= hoy)
-                .sort((x, y) => new Date(x.dia) - new Date(y.dia));
-
-            html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">🗓️ Clases Reservadas (${misAsignacionesFuturas.length})</h4>`;
-            if (misAsignacionesFuturas.length > 0) {
-                html += `<div style="font-size: 0.9em;">`;
-                misAsignacionesFuturas.forEach(asig => {
-                    const fechaFormateada = new Date(asig.dia + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' });
-                    html += `<div style="background:#f0f5fa; padding:5px 8px; margin-bottom:4px; border-radius:3px;">
-                        <b>${fechaFormateada}</b>
-                    </div>`;
-                });
-                html += `</div>`;
-            } else {
-                html += `<p style="color:#888; font-style:italic; text-align:center;">No tiene clases futuras reservadas.</p>`;
-            }
-
-            // 3. Historial de Asistencia (pasadas)
-            const misAsistencias = asistencia.filter(att => att.alumnoId == id && att.asistio).sort((x, y) => new Date(y.fechaClase) - new Date(x.fechaClase));
-            html += `<h4 style="color:#3498db; margin-top: 25px; margin-bottom: 10px;">✔️ Clases Realizadas (${misAsistencias.length})</h4>`;
-            if (misAsistencias.length > 0) {
-                html += `<div style="font-size: 0.9em;">`;
-                misAsistencias.forEach(att => {
-                    html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#f0f0f0; padding:5px 8px; margin-bottom:4px; border-radius:3px;">
-                        <span><b>${new Date(att.fechaClase + 'T12:00:00').toLocaleDateString('es-ES')}</b> <small style="color:#2980b9;">(${att.tipoClase || 'Clase'})</small> <small style="color:#d35400;">(🐴 ${att.caballo || '?'})</small></span>
-                        <button class="actions-btn btn-delete" style="font-size:10px; padding: 2px 6px;" onclick="eliminarAsistencia(${att.id}, ${a.id})">X</button>
-                    </div>`;
-                });
-                html += `</div>`;
-            } else {
-                html += `<p style="color:#888; font-style:italic; text-align:center;">Sin registros de asistencia.</p>`;
-            }
-
             document.getElementById('seguimientoDetalles').innerHTML = html;
             document.getElementById('modalSeguimiento').style.display = 'block';
         }
 
-        async function abonarDeuda(alumnoId, cantidad, productoNombre, precioUnitario) {
+        async function abonarDeuda(alumnoId, cantidad, productoId, productoNombre, precioUnitario) {
             if (!confirm(`¿Confirmas el pago de ${cantidad} clase(s) suelta(s) por un total de ${(cantidad * precioUnitario).toFixed(2)} €?`)) {
                 return;
             }
 
             let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
+            const fechaHoy = new Date().toISOString().split('T')[0];
 
             for (let i = 0; i < cantidad; i++) {
                 const nuevoPago = {
                     id: Date.now() + i,
                     alumnoId,
+                    productoId: productoId, // Guardamos el ID del producto "Clase Suelta"
                     productoNombre: productoNombre,
                     productoPrecio: precioUnitario.toFixed(2),
-                    fechaCompra: new Date().toISOString().split('T')[0],
+                    fechaCompra: fechaHoy,
                     tipo: 'Clase Suelta',
                     totalClases: 1,
                     clasesUsadas: 1 // Se crea y se consume en el mismo acto
@@ -984,37 +971,83 @@
             document.getElementById('nombreAlumnoProductos').textContent = `${alumno.nombre} ${alumno.apellido}`;
             document.getElementById('productoAlumnoId').value = alumnoId;
 
-            // Poblar dropdown de productos
-            const [bonos, servicios, otrosServicios] = await Promise.all([
-                dataManager.get('bonosEscuela'),
-                dataManager.get('serviciosEscuela'),
-                dataManager.get('otrosServiciosEscuela')
-            ]);
+            // Limpiar y preparar el modal
+            const tablaProductosDiv = document.getElementById('tablaProductosDisponibles');
+            const categoriaSelect = document.getElementById('categoriaProductoSelect');
+            categoriaSelect.value = '';
+            tablaProductosDiv.style.display = 'none';
+            tablaProductosDiv.innerHTML = '';
 
-            const selectProducto = document.getElementById('selectProducto');
-            selectProducto.innerHTML = '<option value="">-- Selecciona un producto --</option>';
+            // Listener para el cambio de categoría
+            categoriaSelect.onchange = async () => {
+                const categoria = categoriaSelect.value;
+                if (!categoria) {
+                    tablaProductosDiv.style.display = 'none';
+                    return;
+                }
 
-            const crearOpciones = (productos) => {
-                return productos.sort((a, b) => a.nombre.localeCompare(b.nombre)).map(p =>
-                    `<option value="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio}" data-tipo="${p.tipo || 'Otro'}" data-numclases="${p.numClases || '0'}">${p.nombre} (${p.precio} €)</option>`
-                ).join('');
+                tablaProductosDiv.innerHTML = 'Cargando...';
+                tablaProductosDiv.style.display = 'block';
+
+                let productos = [];
+                let tipoProducto = '';
+                let colorHeader = '#ddd';
+
+                if (categoria === 'bonos') {
+                    productos = await dataManager.get('bonosEscuela') || [];
+                    tipoProducto = 'Bono';
+                    colorHeader = '#d5f4e6';
+                } else if (categoria === 'clases') {
+                    productos = await dataManager.get('clasesSueltasEscuela') || [];
+                    tipoProducto = 'Clase Suelta';
+                    colorHeader = '#eaf2f8';
+                } else if (categoria === 'otros') {
+                    productos = await dataManager.get('otrosServiciosEscuela') || [];
+                    tipoProducto = 'Otro';
+                    colorHeader = '#fef5e7';
+                }
+
+                if (productos.length === 0) {
+                    tablaProductosDiv.innerHTML = `<p style="text-align:center; color:#888; padding: 20px;">No hay productos en esta categoría.</p>`;
+                    return;
+                }
+
+                let tablaHtml = `<table style="width:100%;"><thead><tr style="background-color:${colorHeader};"><th>Producto</th><th style="text-align:right;">Precio</th><th style="text-align:center;">Acción</th></tr></thead><tbody>`;
+                productos.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(p => {
+                    const datos = `data-id="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio}" data-tipo="${tipoProducto}" data-numclases="${p.numClases || '0'}"`;
+                    tablaHtml += `<tr><td>${p.nombre}</td><td style="text-align:right;">${p.precio} €</td><td style="text-align:center;"><button class="actions-btn btn-products" style="font-size:11px;" onclick="addProductoToAlumno(this)" ${datos}>Añadir</button></td></tr>`;
+                });
+                tablaHtml += `</tbody></table>`;
+                tablaProductosDiv.innerHTML = tablaHtml;
             };
-
-            if (bonos && bonos.length > 0) {
-                selectProducto.innerHTML += `<optgroup label="Bonos de Clases">${crearOpciones(bonos)}</optgroup>`;
-            }
-            if (servicios && servicios.length > 0) {
-                selectProducto.innerHTML += `<optgroup label="Clases y Servicios">${crearOpciones(servicios)}</optgroup>`;
-            }
-            if (otrosServicios && otrosServicios.length > 0) {
-                selectProducto.innerHTML += `<optgroup label="Otros Servicios">${crearOpciones(otrosServicios)}</optgroup>`;
-            }
-
-            // Poner fecha de hoy por defecto
-            fechaCompraProductoInput.value = new Date().toISOString().split('T')[0];
 
             await mostrarProductosDeAlumno(alumnoId);
             document.getElementById('modalProductos').style.display = 'block';
+        }
+
+        async function addProductoToAlumno(button) {
+            const alumnoId = parseInt(document.getElementById('productoAlumnoId').value);
+            const productoId = parseInt(button.dataset.id);
+            const productoNombre = button.dataset.nombre;
+            const productoTipo = button.dataset.tipo;
+            const productoNumClases = button.dataset.numclases;
+            const productoPrecio = button.dataset.precio;
+            const fechaCompra = new Date().toISOString().split('T')[0];
+
+            if (!confirm(`¿Añadir "${productoNombre}" por ${productoPrecio}€ al alumno?`)) return;
+
+            const nuevoPago = {
+                id: Date.now(), alumnoId, productoId, productoNombre, productoPrecio, fechaCompra,
+                tipo: productoTipo,
+                totalClases: productoTipo === 'Bono' || productoTipo === 'Clase Suelta' ? parseInt(productoNumClases) : null,
+                clasesUsadas: 0
+            };
+
+            let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
+            pagos.push(nuevoPago);
+            await dataManager.set('pagosAlumnosEscuela', pagos);
+
+            await mostrarProductosDeAlumno(alumnoId);
         }
 
         async function mostrarProductosDeAlumno(alumnoId) {

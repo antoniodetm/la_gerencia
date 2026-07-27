@@ -420,10 +420,10 @@
             }
 
             if (id) {
-                clases = clases.map(c => c.id === parseInt(id) ? { id: c.id, diaSemana, hora, duracion, maxAlumnos, nivel } : c);
+                clases = clases.map(c => c.id === parseInt(id) ? { ...c, diaSemana, hora, duracion, maxAlumnos, nivel, tipo: 'unDia' } : c);
                 alert("¡Horario modificado!");
             } else {
-                clases.push({ id: Date.now(), diaSemana, hora, duracion, maxAlumnos, nivel });
+                clases.push({ id: Date.now(), diaSemana, hora, duracion, maxAlumnos, nivel, tipo: 'unDia' });
                 alert("¡Clase agendada!");
             }
 
@@ -433,8 +433,13 @@
         });
 
         async function mostrarClases() {
-            const clases = await dataManager.get('clasesEscuela') || [];
+            const [clases, duraciones] = await Promise.all([
+                dataManager.get('clasesEscuela'),
+                dataManager.get('duracionesEscuela')
+            ]);
+            const duracionMap = new Map((duraciones || []).map(d => [String(d.valor), d.nombre]));
             tabla.innerHTML = '';
+
             if (clases.length === 0) {
                 tabla.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">No hay horarios programados.</td></tr>`;
                 return;
@@ -448,9 +453,10 @@
 
             clases.forEach(c => {
                 const fila = tabla.insertRow();
+                const duracionTexto = duracionMap.get(String(c.duracion)) || c.duracion;
                 const contenidoFila = `
                     <td><b>🗓️ ${c.diaSemana}</b> a las ⏰ ${c.hora} hs</td>
-                    <td>⏱️ ${c.duracion}</td>
+                    <td>⏱️ ${duracionTexto}</td>
                     <td>${c.nivel || '-'}</td>
                     <td>👥 ${c.maxAlumnos || '-'} alumnos</td>
                 `;

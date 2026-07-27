@@ -132,6 +132,7 @@
         <a href="gestion_campamento.html" class="nav-link">📝 Inscripciones</a>
         <a href="banco_campamento.html" class="nav-link">🏦 Banco</a>
         <a href="agenda_campamento.html" class="nav-link">🚐 Agenda Viajes</a>
+        <a href="bases_campamento.html" class="nav-link nav-active">⚙️ Bases Campamento</a>
     </div>
 
     <div class="container">
@@ -168,14 +169,15 @@
             e.preventDefault();
             const fecha = fechaInput.value;
             if (!fecha) return;
-            let fechas = await dataManager.get('fechasCampamento') || [];
-            if (fechas.includes(fecha)) {
+            let fechasObj = await dataManager.get('fechasCampamento') || [];
+            if (fechasObj.some(f => f.valor === fecha)) {
                 alert('Esa fecha ya ha sido añadida.');
                 return;
             }
-            fechas.push(fecha);
-            fechas.sort();
-            await dataManager.set('fechasCampamento', fechas);
+            // Guardar como objetos para ser consistente con dataManager
+            fechasObj.push({ id: fecha, valor: fecha });
+            fechasObj.sort((a, b) => a.valor.localeCompare(b.valor));
+            await dataManager.set('fechasCampamento', fechasObj);
             form.reset();
         });
 
@@ -185,17 +187,17 @@
                 tabla.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#888;">No hay fechas de inicio definidas.</td></tr>`;
                 return;
             }
-            fechas.forEach(fecha => {
-                const fechaFormateada = new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' });
+            fechas.forEach(fechaObj => {
+                const fechaFormateada = new Date(fechaObj.valor + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' });
                 const fila = tabla.insertRow();
-                fila.innerHTML = `<td><b>${fechaFormateada}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarFecha('${fecha}')">Eliminar</button></td>`;
+                fila.innerHTML = `<td><b>${fechaFormateada}</b></td><td style="text-align:center;"><button class="btn-delete" onclick="eliminarFecha('${fechaObj.id}')">Eliminar</button></td>`;
             });
         }
 
-        async function eliminarFecha(fecha) {
-            if (!confirm(`¿Seguro que quieres eliminar la fecha de inicio ${fecha}?`)) return;
+        async function eliminarFecha(fechaId) {
+            if (!confirm(`¿Seguro que quieres eliminar esta fecha de inicio?`)) return;
             let fechas = await dataManager.get('fechasCampamento') || [];
-            fechas = fechas.filter(f => f !== fecha);
+            fechas = fechas.filter(f => f.id !== fechaId);
             await dataManager.set('fechasCampamento', fechas);
         }
     </script>

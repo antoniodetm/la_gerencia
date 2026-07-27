@@ -182,12 +182,16 @@
 
 <body>
 
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h1
+            style="color: #4a3728; border-bottom: 2px solid #d4c5b9; padding-bottom: 10px; display: inline-block; margin-bottom: 0; font-size: 2.2em;">
+            CENTRO HÍPICO LA GERENCIA</h1>
+    </div>
+
     <div class="container">
         <h2>🏕️ Formulario de Inscripción a Campamento</h2>
         <p style="text-align: center; color: #666; margin-top: -15px; margin-bottom: 25px;">
             Rellena todos los campos para completar tu inscripción.
-            <a href="#" onclick="rellenarDatosDePrueba(); return false;"
-                style="font-size: 0.8em; vertical-align: middle; margin-left: 10px;">(Rellenar datos de prueba)</a>
         </p>
 
         <form id="alumnoForm">
@@ -367,42 +371,22 @@
         </div>
     </div>
 
+    <script src="data-manager.js?v=1.5"></script>
 
     <script>
         const form = document.getElementById('alumnoForm');
         const submitBtn = document.getElementById('submitBtn');
 
-        // Configuración de Firebase directamente en el código
-        const firebaseConfig = {
-            apiKey: "AIzaSyCEtMPhIhuDH2GDMo0HDs8bs9o1EGBOfYM",
-            authDomain: "la-gerencia-51fdf.firebaseapp.com",
-            projectId: "la-gerencia-51fdf",
-            storageBucket: "la-gerencia-51fdf.firebasestorage.app",
-            messagingSenderId: "331472649600",
-            appId: "1:331472649600:web:10030d6a03d1215f1d5565"
-        };
-
-        // Inicializar Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.firestore();
-
-        // Autenticación anónima para permitir escrituras
-        firebase.auth().signInAnonymously().catch((error) => {
-            console.error("Error en autenticación anónima:", error);
-        });
-
         async function poblarFechasInicio() {
             const select = document.getElementById('fechaInicioCampamento');
             try {
-                const doc = await db.collection('fechasCampamento').doc('_data').get();
-                if (doc.exists) {
-                    const fechas = doc.data().items || [];
+                // Usar dataManager que ya espera la autenticación
+                const fechas = await dataManager.get('fechasCampamento');
+                if (fechas) {
                     if (fechas.length > 0) {
-                        select.innerHTML = '<option value="">-- Selecciona una fecha --</option>' + fechas.map(fecha => {
-                            const fechaFormateada = new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' });
-                            return `<option value="${fecha}">${fechaFormateada}</option>`;
+                        select.innerHTML = '<option value="">-- Selecciona una fecha --</option>' + fechas.map(fechaObj => {
+                            const fechaFormateada = new Date(fechaObj.valor + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' });
+                            return `<option value="${fechaObj.valor}">${fechaFormateada}</option>`;
                         }).join('');
                     } else {
                         select.innerHTML = '<option value="">No hay fechas disponibles</option>';
@@ -542,12 +526,6 @@
             }
         }
 
-        window.onload = async function () {
-            console.log('🏕️ Página de inscripción de campamento cargada.');
-            setupEventListeners();
-            poblarFechasInicio();
-        };
-
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
 
@@ -616,8 +594,8 @@
             };
 
             try {
-                // Crear un nuevo documento
-                await db.collection('inscripcionesCampamento').add({
+                // Usar dataManager para añadir el documento
+                await dataManager.add('inscripcionesCampamento', {
                     ...alumnoData,
                     fechaInscripcion: new Date().toISOString()
                 });
@@ -634,6 +612,14 @@
         function cerrarModal() {
             document.getElementById('modalConfirmacion').style.display = 'none';
         }
+
+        // Único punto de entrada al cargar la página
+        window.onload = async function () {
+            await dataManager.initPromise; // Esperar a que Firebase esté listo y autenticado
+            console.log('🏕️ Página de inscripción de campamento cargada.');
+            setupEventListeners();
+            await poblarFechasInicio();
+        };
 
     </script>
 

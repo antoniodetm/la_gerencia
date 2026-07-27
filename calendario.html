@@ -150,15 +150,13 @@
                     return { domNodes: [document.createTextNode(arg.event.title)] };
                 },
                 eventClick: function (info) {
-                    if (info.view.type !== 'timeGridDay') {
-                        // Si no estamos en la vista de día, cambia a la vista de día para la fecha del evento
-                        calendar.changeView('timeGridDay', info.event.start);
-                    } else {
-                        // Si ya estamos en la vista de día, redirigir a la página de asignaciones
+                    // Si el evento es una clase real (no un fondo), redirige a las asignaciones
+                    if (info.event.extendedProps.tipoEvento === 'clase') {
                         const claseId = info.event.extendedProps.claseId;
                         const fecha = info.event.start.toISOString().split('T')[0]; // Formato YYYY-MM-DD
-                        if (info.event.extendedProps.tipoEvento === 'clase') window.location.href = `asignaciones.html?claseId=${claseId}&fecha=${fecha}`;
+                        window.location.href = `asignaciones.html?claseId=${claseId}&fecha=${fecha}`;
                     }
+                    // No hacer nada si se hace clic en un evento de fondo ('base')
                 }
             });
 
@@ -223,6 +221,24 @@
 
             const hoy = new Date().toISOString().split('T')[0];
             const eventos = [];
+
+            // --- 1. Añadir el HORARIO SEMANAL BASE como eventos recurrentes ---
+            (clases || []).forEach(clase => {
+                if (clase.tipo === 'unDia' && clase.diaSemana && clase.hora) {
+                    eventos.push({
+                        title: `HORARIO BASE\n${clase.nivel || 'Nivel Abierto'}`,
+                        daysOfWeek: [ordenDias[clase.diaSemana]],
+                        startTime: clase.hora,
+                        endTime: calcularHoraFin(clase.hora, clase.duracion),
+                        allDay: false,
+                        display: 'background', // Se muestra como un fondo
+                        backgroundColor: '#e0e0e0',
+                        borderColor: '#d0d0d0',
+                        extendedProps: { tipoEvento: 'base' }
+                    });
+                }
+            });
+
 
             // Agrupar asignaciones por clase y día
             const grupos = {};
@@ -327,18 +343,6 @@
                     backgroundColor: colorCaballo,
                     borderColor: colorCaballo,
                     extendedProps: { description: e.descripcion }
-                });
-            });
-
-            // --- Añadir eventos de TRABAJO de caballos (desde asistencia) ---
-            (asistencias || []).filter(e => e.caballo).forEach(e => {
-                const colorTrabajo = '#7f8c8d';
-                eventos.push({
-                    title: `🐴 Trabajo: ${e.caballo}`,
-                    start: e.fechaClase,
-                    allDay: true,
-                    backgroundColor: colorTrabajo,
-                    borderColor: colorTrabajo
                 });
             });
 
