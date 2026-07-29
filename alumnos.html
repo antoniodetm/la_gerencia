@@ -852,14 +852,14 @@
                     fechaCompra.getFullYear() === anioActual;
             });
 
-            // Si hay un bono este mes (activo o no), o si no hay bono pero tiene clases sueltas, mostrar las clases futuras reservadas
+            // --- SECCIÓN CLASES FUTURAS (SI TIENE BONO) ---
+            // Si hay un bono este mes (activo o no), mostrar las clases futuras reservadas en la sección de Bonos.
             if (bonoDelMes) {
                 const todasLasClases = await dataManager.get('clasesEscuela') || [];
                 const hoyStr = new Date().toISOString().split('T')[0];
                 const misAsignacionesFuturas = asignaciones
                     .filter(asig => {
                         if (asig.alumno !== nombreCompleto || asig.dia < hoyStr) return false;
-                        // Excluir si la clase es de hoy y ya ha sido marcada como asistida
                         return !(asistencia.some(att => att.alumnoId === a.id && att.claseId == asig.claseId && att.fechaClase === asig.dia && att.asistio));
                     })
                     .map(asig => ({ ...asig, claseInfo: todasLasClases.find(c => c.id == asig.claseId) }))
@@ -875,9 +875,8 @@
                     // Comprobar si tiene más clases reservadas que disponibles en el bono (activo o agotado)
                     const clasesRestantesEnBono = (bonoDelMes.totalClases || 0) - (bonoDelMes.clasesUsadas || 0);
                     const clasesExcedentes = misAsignacionesFuturas.length - clasesRestantesEnBono;
-
                     if (clasesExcedentes > 0) {
-                        const clasesRestantesTexto = Math.max(0, clasesRestantesEnBono); // Para no mostrar números negativos
+                        const clasesRestantesTexto = Math.max(0, clasesRestantesEnBono);
                         seccionBonos += `<div style="background:#fadbd8; color:#c0392b; padding:10px; border-radius:5px; text-align:center; margin-top:15px; font-weight:bold;">⚠️ ¡Atención! Tiene ${misAsignacionesFuturas.length} clases reservadas pero solo le quedan ${clasesRestantesTexto} en el bono.</div>`;
                     }
                 }
@@ -890,7 +889,7 @@
             html += seccionBonos;
 
             // --- SECCIÓN CLASES Y MENSUALIDADES ---
-            const pagosClases = misPagos.filter(p => p.tipo === 'Clase Suelta');
+            const pagosClases = misPagos.filter(p => p.tipo === 'Clase Suelta' || p.tipo === 'Bono');
             let seccionClases = '';
             if (pagosClases.length > 0) {
                 seccionClases += `<table style="font-size: 0.85em; width:100%; border-collapse: collapse;">
@@ -902,6 +901,61 @@
                     </tr>`;
                 });
                 seccionClases += `</tbody></table>`;
+            }
+
+            // --- SECCIÓN CLASES FUTURAS (SI TIENE CLASE SUELTA Y NO BONO) ---
+            const claseSueltaDelMes = misPagos.find(p => {
+                const fechaCompra = new Date(p.fechaCompra + 'T12:00:00');
+                return p.tipo === 'Clase Suelta' && fechaCompra.getMonth() === mesActual && fechaCompra.getFullYear() === anioActual;
+            });
+
+            // Mostrar solo si tiene clase suelta Y NO tiene un bono del mes (para no duplicar)
+            if (claseSueltaDelMes && !bonoDelMes) {
+                const todasLasClases = await dataManager.get('clasesEscuela') || [];
+                const hoyStr = new Date().toISOString().split('T')[0];
+                const misAsignacionesFuturas = asignaciones
+                    .filter(asig => asig.alumno === nombreCompleto && asig.dia >= hoyStr && !asistencia.some(att => att.alumnoId === a.id && att.claseId == asig.claseId && att.fechaClase === asig.dia && att.asistio))
+                    .map(asig => ({ ...asig, claseInfo: todasLasClases.find(c => c.id == asig.claseId) }))
+                    .sort((x, y) => new Date(x.dia) - new Date(y.dia));
+
+                if (misAsignacionesFuturas.length > 0) {
+                    seccionClases += `<h5 style="color:#8e44ad; margin-top: 15px; margin-bottom: 5px;">Clases Futuras Reservadas</h5>`;
+                    misAsignacionesFuturas.forEach(asig => { const fechaFmt = new Date(asig.dia + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }); seccionClases += `<div style="background:#f4ecf7; padding:5px 8px; margin-bottom:4px; border-radius:3px; color:#7d3c98; font-size:0.9em;"><b>${fechaFmt}</b> a las ${asig.claseInfo?.hora || '?'}</div>`; });
+                }
+            }
+
+            // --- ADVERTENCIA PARA PLANES SEMANALES ---
+            const pagoSemanal = misPagos.find(p =>
+                p.productoNombre.toLowerCase().includes('semana') &&
+                new Date(p.fechaCompra + 'T12:00:00').getMonth() === mesActual &&
+                new Date(p.fechaCompra + 'T12:00:00').getFullYear() === anioActual
+            );
+
+            if (pagoSemanal) {
+                const hoy = new Date();
+                const diaSemana = hoy.getDay(); // Domingo = 0, Lunes = 1, etc.
+                const primerDiaSemana = new Date(hoy);
+                primerDiaSemana.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1)); // Ajustar para que la semana empiece en Lunes
+                primerDiaSemana.setHours(0, 0, 0, 0);
+
+                const ultimoDiaSemana = new Date(primerDiaSemana);
+                ultimoDiaSemana.setDate(primerDiaSemana.getDate() + 6);
+                ultimoDiaSemana.setHours(23, 59, 59, 999);
+
+                const clasesAsistidasEstaSemana = asistencia.filter(att => {
+                    const fechaClase = new Date(att.fechaClase + 'T12:00:00');
+                    return att.alumnoId === a.id && att.asistio && fechaClase >= primerDiaSemana && fechaClase <= ultimoDiaSemana;
+                }).length;
+
+                const clasesReservadasEstaSemana = asignaciones.filter(asig => {
+                    const fechaAsig = new Date(asig.dia + 'T12:00:00');
+                    return asig.alumno === nombreCompleto && fechaAsig >= primerDiaSemana && fechaAsig <= ultimoDiaSemana;
+                }).length;
+
+                const clasesSemanalesContratadas = pagoSemanal.totalClases || 0;
+                if (clasesReservadasEstaSemana > clasesSemanalesContratadas) {
+                    seccionClases += `<div style="background:#fadbd8; color:#c0392b; padding:10px; border-radius:5px; text-align:center; margin-top:15px; font-weight:bold;">⚠️ ¡Atención! Tiene ${clasesReservadasEstaSemana} clases reservadas esta semana, pero su plan solo incluye ${clasesSemanalesContratadas}.</div>`;
+                }
             }
 
             // Lógica de deuda
