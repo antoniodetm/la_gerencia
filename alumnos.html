@@ -949,7 +949,10 @@
 
                 const clasesReservadasEstaSemana = asignaciones.filter(asig => {
                     const fechaAsig = new Date(asig.dia + 'T12:00:00');
-                    return asig.alumno === nombreCompleto && fechaAsig >= primerDiaSemana && fechaAsig <= ultimoDiaSemana;
+                    const yaAsistio = asistencia.some(att => att.alumnoId === a.id && att.claseId == asig.claseId && att.fechaClase === asig.dia && att.asistio);
+                    return asig.alumno === nombreCompleto &&
+                        fechaAsig >= primerDiaSemana && fechaAsig <= ultimoDiaSemana &&
+                        !yaAsistio; // Excluir si ya ha asistido
                 }).length;
 
                 const clasesSemanalesContratadas = pagoSemanal.totalClases || 0;
