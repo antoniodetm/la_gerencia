@@ -412,6 +412,7 @@
             (todosLosTiposClase || []).forEach(tipo => {
                 selectTipo.innerHTML += `<option value="${tipo.nombre}">${tipo.nombre}</option>`;
             });
+            selectTipo.onchange = actualizarOrdenCaballosEnModal; // Añadir listener para reordenar caballos al cambiar el tipo de clase
 
             // Poblar lista de alumnos asignados
             const alumnosAsignados = todasLasAsignaciones
@@ -425,6 +426,7 @@
                 const asistenciaPrevia = alumno ? todaLaAsistencia.find(att => att.alumnoId === alumno.id && att.claseId === claseId && att.fechaClase === fecha) : null;
 
                 modalListaAlumnos.appendChild(crearFilaAlumno(nombreAlumno, asistenciaPrevia));
+                // No es necesario llamar a actualizarOrdenCaballosEnModal aquí para cada alumno, se hará una vez al final.
             });
 
             // Poblar selector de alumnos extra
@@ -435,6 +437,8 @@
                 selectExtra.innerHTML += `<option value="${a.nombre} ${a.apellido}">${a.nombre} ${a.apellido}</option>`;
             });
 
+            // Llamar a la función para ordenar los caballos una vez que el modal se abre y los alumnos iniciales están cargados
+            actualizarOrdenCaballosEnModal();
             modal.style.display = 'block';
         }
 
@@ -445,12 +449,12 @@
 
             const isChecked = asistenciaPrevia ? 'checked disabled' : '';
             const isSelectDisabled = asistenciaPrevia ? 'disabled' : '';
-            const caballoSeleccionado = asistenciaPrevia ? asistenciaPrevia.caballo : '';
+            const caballoSeleccionado = asistenciaPrevia ? asistenciaPrevia.caballo : ''; // Mantener el caballo seleccionado si ya asistió
 
             let actionHtml = `
                 <select class="select-caballo" ${isSelectDisabled}>
                     <option value="">-- Caballo --</option>
-                    ${todosLosCaballos.map(c => `<option value="${c.nombre}" ${c.nombre === caballoSeleccionado ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+                    ${[...todosLosCaballos].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(c => `<option value="${c.nombre}" ${c.nombre === caballoSeleccionado ? 'selected' : ''}>${c.nombre}</option>`).join('')}
                 </select>
             `;
 
@@ -469,6 +473,43 @@
             return div;
         }
 
+        async function actualizarOrdenCaballosEnModal() {
+            const selectTipo = document.getElementById('selectTipoClase');
+            const selectedTipoClase = selectTipo.value;
+
+            let caballosOrdenados = [...todosLosCaballos].sort((a, b) => a.nombre.localeCompare(b.nombre)); // Orden alfabético por defecto
+
+            if (selectedTipoClase) {
+                // Calcular las clases trabajadas por cada caballo para el tipo de clase seleccionado
+                const caballosTrabajados = {};
+                todosLosCaballos.forEach(c => caballosTrabajados[c.nombre] = 0);
+
+                todaLaAsistencia.forEach(att => {
+                    // Solo contar si el registro de asistencia tiene un tipo de clase coincidente
+                    if (att.tipoClase === selectedTipoClase && att.caballo && caballosTrabajados.hasOwnProperty(att.caballo)) {
+                        caballosTrabajados[att.caballo]++;
+                    }
+                });
+
+                // Ordenar los caballos de menor a mayor según las clases trabajadas
+                caballosOrdenados.sort((a, b) => {
+                    const countA = caballosTrabajados[a.nombre] || 0;
+                    const countB = caballosTrabajados[b.nombre] || 0;
+                    return countA - countB;
+                });
+            }
+
+            const studentItems = document.querySelectorAll('#modalListaAlumnos .student-list-item');
+            studentItems.forEach(item => {
+                const selectCaballo = item.querySelector('.select-caballo');
+                if (selectCaballo && !selectCaballo.disabled) { // Solo actualizar si el desplegable no está deshabilitado (alumno no ha asistido aún)
+                    const currentSelectedHorse = selectCaballo.value; // Preservar la selección actual
+                    selectCaballo.innerHTML = '<option value="">-- Caballo --</option>' +
+                        caballosOrdenados.map(c => `<option value="${c.nombre}" ${c.nombre === currentSelectedHorse ? 'selected' : ''}>${c.nombre}</option>`).join('');
+                }
+            });
+        }
+
         function anadirAlumnoExtraALista() {
             const select = document.getElementById('selectAlumnoExtra');
             const nombreAlumno = select.value;
@@ -482,6 +523,7 @@
 
             document.getElementById('modalListaAlumnos').appendChild(crearFilaAlumno(nombreAlumno, null));
             select.remove(select.selectedIndex); // Quitar de la lista para no añadirlo de nuevo
+            actualizarOrdenCaballosEnModal(); // Reordenar los caballos para incluir el nuevo alumno
         }
 
         function cerrarModal() {
