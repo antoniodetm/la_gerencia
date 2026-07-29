@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in de Clases</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 10px;
+        }
+
+        .main-container {
+            max-width: 100%;
+        }
+
+        .header-controls {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .clase-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid #3498db;
+        }
+
+        .clase-info h4 {
+            margin: 0 0 5px 0;
+            color: #2c3e50;
+        }
+
+        .clase-info p {
+            margin: 0;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .clase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .alumnos-en-clase-lista {
+            margin-top: 10px;
+        }
+
+        .alumno-item-inline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .btn-quitar-inline {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 20px;
+            text-align: center;
+        }
+
+        .btn-checkin {
+            background-color: #27ae60;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .btn-checkin:hover {
+            background-color: #229954;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            overflow: auto;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 15px;
+            border-radius: 8px;
+            width: 95%;
+            max-width: 800px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #2980b9;
+        }
+
+        .modal-body {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .student-list-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .student-list-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+
+        .student-list-item .name {
+            flex-grow: 1;
+            font-weight: bold;
+        }
+
+        .student-list-item .select-caballo {
+            flex-basis: 100%;
+            margin-top: 8px;
+        }
+
+        .add-student-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        .modal-footer {
+            text-align: right;
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+
+        .btn-save {
+            background-color: #2980b9;
+            color: white;
+        }
+
+        .btn-close {
+            background-color: #7f8c8d;
+            color: white;
+            margin-right: 10px;
+        }
+
+        .no-records {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h1
+            style="color: #4a3728; border-bottom: 2px solid #d4c5b9; padding-bottom: 10px; display: inline-block; margin-bottom: 0; font-size: 1.8em;">
+            CHECK-IN DE CLASES</h1>
+    </div>
+
+    <div class="main-container">
+        <div class="header-controls">
+            <h2 style="margin-top:0; color:#2980b9;">🛂 Control de Asistencia</h2>
+            <p id="descripcionVista" style="color: #555; margin: -10px 0 10px 0;">A continuación se muestran las clases
+                con alumnos apuntados para los próximos 7 días.</p>
+            <label for="fechaControl">O busca una fecha específica:</label>
+            <input type="date" id="fechaControl" onchange="if(!this.value) cargarProximasClases(true)">
+        </div>
+
+        <div id="listaClasesDiarias">
+            <!-- Las clases del día se cargarán aquí -->
+        </div>
+    </div>
+
+    <!-- Modal para Pasar Lista -->
+    <div id="modalAsistencia" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTituloClase"></h3>
+                <p id="modalFechaClase" style="margin:5px 0 0 0; color:#555;"></p>
+                <div style="margin-top: 15px;">
+                    <label for="selectTipoClase" style="font-weight:bold;">Tipo de Clase:</label>
+                    <select id="selectTipoClase" required>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="student-list-section">
+                    <h4>Alumnos en la clase:</h4>
+                    <div id="modalListaAlumnos"></div>
+                </div>
+                <div class="add-student-section">
+                    <h4>Añadir Alumno Extra</h4>
+                    <label for="selectAlumnoExtra">Buscar alumno:</label>
+                    <select id="selectAlumnoExtra">
+                        <option value="">-- Selecciona --</option>
+                    </select>
+                    <button onclick="anadirAlumnoExtraALista()">Añadir a la lista</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-close" onclick="cerrarModal()">Cerrar</button>
+                <button class="btn-save" onclick="guardarAsistencia()">Guardar Asistencia</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="data-manager.js?v=1.5"></script>
+    <script>
+        const fechaControlInput = document.getElementById('fechaControl');
+        const listaClasesDiariasDiv = document.getElementById('listaClasesDiarias');
+        const modal = document.getElementById('modalAsistencia');
+        let todosLosAlumnos = [];
+        let todosLosCaballos = [];
+        let todasLasClases = [];
+        let todasLasAsignaciones = [];
+        let todaLaAsistencia = [];
+        let todosLosPagos = [];
+        let todosLosTiposClase = [];
+        let todosLosNivelesAlumno = [];
+        let claseActivaId = null;
+
+        async function cargarClasesDeFechaEspecifica(fecha) {
+            if (!fecha) return;
+
+            document.getElementById('descripcionVista').textContent = `Mostrando clases para el día ${new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' })}.`;
+
+            const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            const fechaObj = new Date(fecha + 'T12:00:00');
+            const diaSemanaNombre = dias[fechaObj.getDay()];
+
+            const clasesDelDia = (todasLasClases || []).filter(c => {
+                if (c.tipo === 'unDia') return c.diaSemana === diaSemanaNombre;
+                if (c.tipo === 'variosDias' && c.horarios) return Object.keys(c.horarios).includes(diaSemanaNombre);
+                return false;
+            });
+
+            const asignacionesDelDia = (todasLasAsignaciones || []).filter(a => a.dia === fecha);
+            await renderizarGruposDeClases(asignacionesDelDia, clasesDelDia, fecha);
+
+            // Si solo hay una clase para ese día, abrir el modal automáticamente.
+            const gruposRenderizados = listaClasesDiariasDiv.querySelectorAll('.clase-card');
+            if (gruposRenderizados.length === 1) {
+                const boton = gruposRenderizados[0].querySelector('.btn-checkin');
+                if (boton) boton.click();
+            }
+        }
+
+
+        async function cargarProximasClases(reset = false) {
+            if (reset) fechaControlInput.value = '';
+            document.getElementById('descripcionVista').textContent = 'A continuación se muestran las clases con alumnos apuntados para los próximos 7 días.';
+            const hoy = new Date(new Date().setHours(0, 0, 0, 0));
+            const limite = new Date(hoy); limite.setDate(hoy.getDate() + 7);
+            const asignacionesProximas = (todasLasAsignaciones || []).filter(a => new Date(a.dia) >= hoy && new Date(a.dia) < limite);
+            await renderizarGruposDeClases(asignacionesProximas);
+        }
+        async function renderizarGruposDeClases(asignaciones, clasesBase = [], fechaFiltro = null) {
+
+            // Agrupar por fecha y luego por clase
+            const grupos = {};
+            (asignaciones || []).forEach(a => {
+                const key = `${a.dia}-${a.claseId}`;
+                if (!grupos[key]) {
+                    const claseInfo = (todasLasClases || []).find(c => c.id == a.claseId);
+                    if (!claseInfo) return;
+
+                    grupos[key] = {
+                        clase: claseInfo,
+                        dia: a.dia,
+                        alumnos: []
+                    };
+                }
+                grupos[key].alumnos.push(a);
+            });
+
+            // Añadir clases del día que no tienen alumnos asignados todavía
+            if (clasesBase.length > 0 && fechaFiltro) {
+                clasesBase.forEach(clase => {
+                    const key = `${fechaFiltro}-${clase.id}`;
+                    if (!grupos[key]) {
+                        grupos[key] = {
+                            clase: clase,
+                            dia: fechaFiltro,
+                            alumnos: []
+                        };
+                    }
+                });
+            }
+
+            const gruposOrdenados = Object.values(grupos).sort((a, b) => new Date(a.dia + 'T' + a.clase.hora) - new Date(b.dia + 'T' + b.clase.hora));
+
+            listaClasesDiariasDiv.innerHTML = '';
+            if (gruposOrdenados.length === 0) {
+                const mensaje = fechaFiltro
+                    ? 'No hay clases programadas para este día de la semana.'
+                    : 'No se encontraron clases con alumnos para la selección actual.';
+                listaClasesDiariasDiv.innerHTML = `<p class="no-records">${mensaje}</p>`;
+                return;
+            }
+
+            gruposOrdenados.forEach(grupo => {
+                const { clase, dia, alumnos } = grupo;
+                const card = document.createElement('div');
+                card.className = 'clase-card';
+                const fechaFormateada = new Date(dia + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+
+                let alumnosHtml = '<div class="alumnos-en-clase-lista">';
+                if (alumnos.length > 0) {
+                    alumnosHtml += alumnos.map(asignacion =>
+                        `<div class="alumno-item-inline">
+                            <span>${asignacion.alumno}</span>
+                            <button class="btn-quitar-inline" onclick="quitarAlumnoDeClase(${asignacion.id}, '${dia}')">X</button>
+                        </div>`
+                    ).join('');
+                } else {
+                    alumnosHtml += '<p style="font-size:0.85em; color:#888; text-align:center; margin:5px 0;">Sin alumnos asignados.</p>';
+                }
+                alumnosHtml += '</div>';
+
+                card.innerHTML = `
+                    <div class="clase-header">
+                        <div class="clase-info">
+                            <h4>${clase.hora}hs</h4>
+                            <p>${fechaFormateada} (${alumnos.length} de ${clase.maxAlumnos} alumnos)</p>
+                        </div>
+                        <button class="btn-checkin" onclick="abrirModal(${clase.id}, '${dia}')">Pasar Lista</button>
+                    </div>
+                    ${alumnosHtml}
+                `;
+                listaClasesDiariasDiv.appendChild(card);
+            });
+        }
+
+        async function abrirModal(claseId, fecha) {
+            claseActivaId = claseId;
+            fechaControlInput.value = fecha; // Guardamos la fecha activa
+            const clase = todasLasClases.find(c => c.id === claseId);
+            if (!clase) return;
+
+            // Poblar cabecera del modal
+            const fechaObj = new Date(fecha + 'T12:00:00');
+
+            document.getElementById('modalTituloClase').textContent = `Clase de las ${clase.hora}hs`;
+            document.getElementById('modalFechaClase').textContent = fechaObj.toLocaleDateString('es-ES', { dateStyle: 'full' });
+
+            // Poblar selector de Tipo de Clase
+            const selectTipo = document.getElementById('selectTipoClase');
+            selectTipo.innerHTML = '<option value="">-- Selecciona Tipo --</option>';
+            (todosLosTiposClase || []).forEach(tipo => {
+                selectTipo.innerHTML += `<option value="${tipo.nombre}">${tipo.nombre}</option>`;
+            });
+
+            // Poblar lista de alumnos asignados
+            const alumnosAsignados = todasLasAsignaciones
+                .filter(a => a.claseId == claseId && a.dia === fecha)
+                .map(a => a.alumno);
+
+            const modalListaAlumnos = document.getElementById('modalListaAlumnos');
+            modalListaAlumnos.innerHTML = '';
+            alumnosAsignados.forEach(nombreAlumno => {
+                const alumno = todosLosAlumnos.find(a => `${a.nombre} ${a.apellido}` === nombreAlumno);
+                const asistenciaPrevia = alumno ? todaLaAsistencia.find(att => att.alumnoId === alumno.id && att.claseId === claseId && att.fechaClase === fecha) : null;
+
+                modalListaAlumnos.appendChild(crearFilaAlumno(nombreAlumno, asistenciaPrevia));
+            });
+
+            // Poblar selector de alumnos extra
+            const selectExtra = document.getElementById('selectAlumnoExtra');
+            const alumnosActivos = todosLosAlumnos.filter(a => a.estado === 'Activo' && !alumnosAsignados.includes(`${a.nombre} ${a.apellido}`));
+            selectExtra.innerHTML = '<option value="">-- Selecciona para añadir --</option>';
+            alumnosActivos.forEach(a => {
+                selectExtra.innerHTML += `<option value="${a.nombre} ${a.apellido}">${a.nombre} ${a.apellido}</option>`;
+            });
+
+            modal.style.display = 'block';
+        }
+
+        function crearFilaAlumno(nombreAlumno, asistenciaPrevia = null) {
+            const div = document.createElement('div');
+            div.className = 'student-list-item';
+            div.setAttribute('data-nombre-alumno', nombreAlumno);
+
+            const isChecked = asistenciaPrevia ? 'checked disabled' : '';
+            const isSelectDisabled = asistenciaPrevia ? 'disabled' : '';
+            const caballoSeleccionado = asistenciaPrevia ? asistenciaPrevia.caballo : '';
+
+            let actionHtml = `
+                <select class="select-caballo" ${isSelectDisabled}>
+                    <option value="">-- Caballo --</option>
+                    ${todosLosCaballos.map(c => `<option value="${c.nombre}" ${c.nombre === caballoSeleccionado ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+                </select>
+            `;
+
+            if (asistenciaPrevia) {
+                actionHtml = `
+                    <span style="flex-grow:1; text-align:right; color:#27ae60; font-weight:bold;">Asistió (🐴 ${asistenciaPrevia.caballo})</span>
+                    <button class="btn-quitar-inline" style="background-color:#c0392b;" onclick="eliminarAsistencia(${asistenciaPrevia.id})">X</button>
+                `;
+            }
+
+            div.innerHTML = `
+                <input type="checkbox" class="att-check" ${isChecked}>
+                <span class="name">${nombreAlumno}</span>
+                ${actionHtml}
+            `;
+            return div;
+        }
+
+        function anadirAlumnoExtraALista() {
+            const select = document.getElementById('selectAlumnoExtra');
+            const nombreAlumno = select.value;
+            if (!nombreAlumno) return;
+
+            // Evitar duplicados
+            if (document.querySelector(`.student-list-item[data-nombre-alumno="${nombreAlumno}"]`)) {
+                alert('Este alumno ya está en la lista.');
+                return;
+            }
+
+            document.getElementById('modalListaAlumnos').appendChild(crearFilaAlumno(nombreAlumno, null));
+            select.remove(select.selectedIndex); // Quitar de la lista para no añadirlo de nuevo
+        }
+
+        function cerrarModal() {
+            modal.style.display = 'none';
+            claseActivaId = null;
+        }
+
+        async function quitarAlumnoDeClase(asignacionId, fechaClase) {
+            if (new Date(fechaClase) < new Date(new Date().toISOString().split('T')[0])) {
+                alert("No se puede quitar un alumno de una clase que ya ha pasado.");
+                return;
+            }
+            if (!confirm('¿Quitar a este alumno de esta clase específica? Esta acción no se puede deshacer.')) return;
+            const asignacionesActualizadas = (todasLasAsignaciones || []).filter(a => a.id !== asignacionId);
+            await dataManager.set('asignacionesEscuela', asignacionesActualizadas);
+            alert('Alumno quitado de la clase.');
+        }
+
+        async function eliminarAsistencia(asistenciaId) {
+            if (!confirm('¿Eliminar este registro de asistencia? Se devolverá 1 clase al bono correspondiente si es posible.')) return;
+
+            const asistenciaAEliminar = todaLaAsistencia.find(a => a.id === asistenciaId);
+            if (!asistenciaAEliminar) return;
+
+            const alumno = todosLosAlumnos.find(a => a.id === asistenciaAEliminar.alumnoId);
+            if (!alumno) {
+                alert("Error: No se encontró al alumno para devolver la clase.");
+                return;
+            }
+
+            // Devolver la clase al bono
+            // Buscamos el pago (bono o clase suelta) que se usó para esta clase.
+            // La lógica asume que se descuenta del bono más antiguo, así que devolvemos al bono más reciente que tenga clases usadas.
+            const pagoCorrespondiente = todosLosPagos
+                .filter(p => p.alumnoId === alumno.id && (p.tipo === 'Bono' || p.tipo === 'Clase Suelta') && (p.clasesUsadas || 0) > 0)
+                .sort((a, b) => new Date(b.fechaCompra) - new Date(a.fechaCompra))[0]; // El más reciente con clases usadas
+
+            if (pagoCorrespondiente) {
+                pagoCorrespondiente.clasesUsadas = Math.max(0, (pagoCorrespondiente.clasesUsadas || 0) - 1);
+                await dataManager.set('pagosAlumnosEscuela', todosLosPagos);
+            }
+
+            // Eliminar el registro de asistencia
+            todaLaAsistencia = todaLaAsistencia.filter(a => a.id !== asistenciaId);
+            await dataManager.set('attendanceEscuela', todaLaAsistencia);
+
+            // Recargar el modal para reflejar los cambios
+            await abrirModal(asistenciaAEliminar.claseId, asistenciaAEliminar.fechaClase);
+        }
+
+        async function guardarAsistencia() {
+            if (!claseActivaId) return;
+
+            const fecha = fechaControlInput.value;
+            const tipoClase = document.getElementById('selectTipoClase').value;
+
+            if (!tipoClase) {
+                alert('Por favor, selecciona el Tipo de la clase antes de guardar.');
+                return;
+            }
+
+            const clase = todasLasClases.find(c => c.id === claseActivaId);
+            if (!clase) {
+                alert("Error: No se pudo encontrar la información de la clase.");
+                return;
+            }
+
+            const mensajesAlerta = [];
+
+            const filasAlumnos = document.querySelectorAll('#modalListaAlumnos .student-list-item');
+
+            for (const fila of filasAlumnos) {
+                const nombreAlumno = fila.dataset.nombreAlumno;
+                const alumno = todosLosAlumnos.find(a => `${a.nombre} ${a.apellido}` === nombreAlumno);
+                const asistio = fila.querySelector('.att-check').checked;
+                const caballo = fila.querySelector('.select-caballo').value;
+
+                // Si la casilla está deshabilitada, significa que la asistencia ya se guardó. Saltamos este alumno.
+                if (fila.querySelector('.att-check').disabled) {
+                    continue;
+                }
+
+                if (!asistio) continue;
+
+                if (!caballo) {
+                    mensajesAlerta.push(`- ⚠️ Falta asignar caballo a ${nombreAlumno}. No se guardó su asistencia.`);
+                    continue;
+                }
+
+                if (!alumno) {
+                    mensajesAlerta.push(`- ❓ No se encontró la ficha del alumno ${nombreAlumno}.`);
+                    continue;
+                }
+
+                // Doble verificación para evitar duplicados si algo falla en la UI
+                const yaAsistio = todaLaAsistencia.some(att => att.alumnoId === alumno.id && att.claseId === claseActivaId && att.fechaClase === fecha);
+                if (yaAsistio) {
+                    console.warn(`Intento de registrar asistencia duplicada para ${nombreAlumno}. Omitido.`);
+                    continue;
+                }
+
+                // 1. Registrar asistencia
+                const registroAsistencia = {
+                    id: Date.now() + Math.random(),
+                    alumno: nombreAlumno,
+                    alumnoId: alumno.id,
+                    fechaClase: fecha,
+                    claseId: claseActivaId,
+                    caballo: caballo,
+                    tipoClase: tipoClase, // Tipo de clase seleccionado en el modal
+                    nivel: clase.nivel, // Nivel definido en la clase original
+                    asistio: true
+                };
+                todaLaAsistencia.push(registroAsistencia);
+
+                // 2. Descontar clase de un bono/clase suelta
+                // Se busca cualquier producto (bono, clase suelta, etc.) que tenga clases disponibles.
+                const productosConClases = todosLosPagos
+                    .filter(p => {
+                        // El producto debe tener un total de clases definido y clases restantes.
+                        return p.alumnoId === alumno.id && p.totalClases && (p.totalClases - (p.clasesUsadas || 0)) > 0;
+                    })
+                    .sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra)); // Usar el más antiguo primero
+
+                if (productosConClases.length > 0) {
+                    const bonoIdADescontar = productosConClases[0].id;
+                    // Encontrar el bono original en el array principal para modificarlo
+                    const bonoOriginal = todosLosPagos.find(p => p.id === bonoIdADescontar);
+                    if (bonoOriginal) {
+                        bonoOriginal.clasesUsadas = (bonoOriginal.clasesUsadas || 0) + 1;
+                        mensajesAlerta.push(`- ✅ ${nombreAlumno}: Asistencia OK. Se descuenta 1 clase de "${bonoOriginal.productoNombre}" (${bonoOriginal.tipo}).`);
+                    }
+                } else {
+                    mensajesAlerta.push(`- 🚫 ${nombreAlumno}: Asistencia OK, pero ¡SIN CLASES DISPONIBLES! No se pudo descontar la clase.`);
+                }
+            }
+
+            // Guardar los cambios en la base de datos
+            await dataManager.set('attendanceEscuela', todaLaAsistencia);
+            await dataManager.set('pagosAlumnosEscuela', todosLosPagos);
+
+            const mensajeFinal = mensajesAlerta.length > 0 ?
+                `Resumen de la operación:\n\n${mensajesAlerta.join('\n')}` :
+                'No se marcaron asistencias.';
+            alert(mensajeFinal);
+            cerrarModal();
+        }
+
+        // Único punto de entrada al cargar la página
+        window.onload = async () => {
+            await dataManager.initPromise; // Esperar a que DataManager esté listo
+
+            // Cargar todos los datos una vez y luego escuchar cambios
+            [
+                todosLosAlumnos,
+                todosLosCaballos,
+                todasLasClases,
+                todasLasAsignaciones,
+                todaLaAsistencia,
+                todosLosPagos,
+                todosLosTiposClase,
+                todosLosNivelesAlumno
+            ] = await Promise.all([
+                dataManager.get('alumnosEscuela'),
+                dataManager.get('caballosEscuela'),
+                dataManager.get('clasesEscuela'),
+                dataManager.get('asignacionesEscuela'),
+                dataManager.get('attendanceEscuela'),
+                dataManager.get('pagosAlumnosEscuela'),
+                dataManager.get('tiposClasesEscuela'),
+                dataManager.get('nivelesEscuela')
+            ]);
+
+            await cargarProximasClases();
+            fechaControlInput.addEventListener('change', () => cargarClasesDeFechaEspecifica(fechaControlInput.value));
+
+            // Listeners para actualizaciones en tiempo real que afectan a la vista
+            dataManager.onSnapshot('clasesEscuela', async (data) => { todasLasClases = data || []; await cargarProximasClases(); });
+            dataManager.onSnapshot('asignacionesEscuela', async (data) => { todasLasAsignaciones = data || []; await cargarProximasClases(); });
+            dataManager.onSnapshot('attendanceEscuela', (data) => { todaLaAsistencia = data || []; }); // Actualizar en segundo plano
+        };
+    </script>
+</body>
+
+</html>
