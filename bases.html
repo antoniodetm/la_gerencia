@@ -350,6 +350,41 @@
             </table>
         </div>
 
+        <!-- COLUMNA 9: CURSOS -->
+        <div class="container" style="border-top: 5px solid #9b59b6;">
+            <h2 style="color: #9b59b6; border-bottom: 2px solid #d7bde2;">📚 Cursos</h2>
+            <form id="cursoForm">
+                <input type="hidden" id="cursoId">
+                <div class="form-group">
+                    <label for="nombreCurso">Nombre del Curso:</label>
+                    <input type="text" id="nombreCurso" required placeholder="Ej. Curso de Verano...">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="precioCurso">Precio (€):</label>
+                        <input type="number" id="precioCurso" required step="0.01" placeholder="Ej. 300">
+                    </div>
+                    <div class="form-group">
+                        <label for="duracionCurso">Duración (días):</label>
+                        <input type="number" id="duracionCurso" required min="1" placeholder="Ej. 30">
+                    </div>
+                </div>
+                <button type="submit" id="btnSubmitCurso" style="background-color: #9b59b6;">Añadir Curso</button>
+            </form>
+            <table id="tablaCursos" style="margin-top: 25px;">
+                <thead>
+                    <tr>
+                        <th style="background-color: #9b59b6;">Curso</th>
+                        <th style="background-color: #9b59b6; text-align: center;">Duración</th>
+                        <th style="background-color: #9b59b6; text-align: right;">Precio</th>
+                        <th style="width: 150px; text-align: center; background-color: #9b59b6;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+
         <!-- COLUMNA 5: ESPECIALIDADES DE PROFESORES -->
         <div class="container" style="border-top: 5px solid #16a085;">
             <h2 style="color: #16a085; border-bottom: 2px solid #a3e4d7;">🎓 Especialidades de Profesores</h2>
@@ -439,6 +474,14 @@
         const otroServicioIdInput = document.getElementById('otroServicioId');
         const tablaOtrosServicios = document.getElementById('tablaOtrosServicios').getElementsByTagName('tbody')[0];
 
+        // Cursos
+        const formCurso = document.getElementById('cursoForm');
+        const nombreCursoInput = document.getElementById('nombreCurso');
+        const precioCursoInput = document.getElementById('precioCurso');
+        const duracionCursoInput = document.getElementById('duracionCurso');
+        const cursoIdInput = document.getElementById('cursoId');
+        const tablaCursos = document.getElementById('tablaCursos').getElementsByTagName('tbody')[0];
+
         // Alumnos
         const formNivel = document.getElementById('nivelForm');
         const nombreNivelInput = document.getElementById('nombreNivel');
@@ -497,6 +540,7 @@
         let ultimaDataDuraciones = JSON.stringify([]);
         let ultimaDataGastosCampamento = JSON.stringify([]);
         let ultimaDataOtrosServicios = JSON.stringify([]);
+        let ultimaDataCursos = JSON.stringify([]);
 
         window.onload = async function () {
             await dataManager.initPromise;
@@ -538,6 +582,10 @@
 
                 dataManager.onSnapshot('otrosServiciosEscuela', (data) => {
                     mostrarOtrosServicios(data);
+                });
+
+                dataManager.onSnapshot('cursosEscuela', (data) => {
+                    mostrarCursos(data);
                 });
             }
         };
@@ -679,6 +727,28 @@
                 await dataManager.add('otrosServiciosEscuela', { id: Date.now(), nombre, precio: precio.toFixed(2) });
             }
             restablecerFormularioOtroServicio();
+        });
+
+        // Formulario Cursos
+        formCurso.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const id = cursoIdInput.value;
+            const nombre = nombreCursoInput.value.trim();
+            const precio = parseFloat(precioCursoInput.value);
+            const duracion = parseInt(duracionCursoInput.value);
+
+            if (!nombre || isNaN(precio) || isNaN(duracion)) {
+                alert('Por favor, completa todos los campos del curso.');
+                return;
+            }
+
+            if (id) {
+                await dataManager.update('cursosEscuela', id, { nombre, precio: precio.toFixed(2) });
+                alert('Curso actualizado.');
+            } else {
+                await dataManager.add('cursosEscuela', { id: Date.now(), nombre, precio: precio.toFixed(2), duracion });
+            }
+            restablecerFormularioCurso();
         });
 
         async function mostrarNiveles(niveles) {
@@ -832,6 +902,28 @@
             });
         }
 
+        async function mostrarCursos(cursos) {
+            if (!cursos) cursos = await dataManager.get('cursosEscuela') || [];
+            tablaCursos.innerHTML = '';
+            if (cursos.length === 0) {
+                tablaCursos.innerHTML = `<tr><td colspan="4" class="no-records">No hay cursos definidos.</td></tr>`;
+                return;
+            }
+            cursos.forEach(c => {
+                const fila = tablaCursos.insertRow();
+                fila.innerHTML = `
+                    <td><b>${c.nombre}</b></td>
+                    <td style="text-align:center;">${c.duracion || '0'} días</td>
+                    <td style="text-align:right;">${c.precio || '0.00'} €</td>
+                    <td style="text-align:center; display:flex; gap:5px;">
+                        <button class="btn-delete" style="flex:1; background-color:#f39c12;" onclick="cargarCursoParaEditar(${c.id})">Editar</button>
+                        <button class="btn-delete" style="flex:1;" onclick="eliminarCurso(${c.id})">Eliminar</button>
+                    </td>
+                `;
+            });
+        }
+
+
         async function cargarBonoParaEditar(id) {
             const bonos = await dataManager.get('bonosEscuela') || [];
             const bono = bonos.find(p => p.id === id);
@@ -899,6 +991,25 @@
             otroServicioIdInput.value = '';
             document.getElementById('btnSubmitOtroServicio').textContent = 'Añadir Servicio';
         }
+
+        async function cargarCursoParaEditar(id) {
+            const cursos = await dataManager.get('cursosEscuela') || [];
+            const curso = cursos.find(s => s.id === id);
+            if (curso) {
+                cursoIdInput.value = curso.id;
+                nombreCursoInput.value = curso.nombre;
+                precioCursoInput.value = curso.precio;
+                duracionCursoInput.value = curso.duracion || '';
+                document.getElementById('btnSubmitCurso').textContent = 'Actualizar Curso';
+            }
+        }
+
+        function restablecerFormularioCurso() {
+            formCurso.reset();
+            cursoIdInput.value = '';
+            document.getElementById('btnSubmitCurso').textContent = 'Añadir Curso';
+        }
+
         async function eliminarNivel(id) {
             if (confirm('¿Deseas eliminar este nivel de clase?')) {
                 await dataManager.delete('nivelesEscuela', id);
@@ -954,6 +1065,13 @@
             if (confirm('¿Deseas eliminar este servicio?')) {
                 await dataManager.delete('otrosServiciosEscuela', id);
                 restablecerFormularioOtroServicio();
+            }
+        }
+
+        async function eliminarCurso(id) {
+            if (confirm('¿Deseas eliminar este curso?')) {
+                await dataManager.delete('cursosEscuela', id);
+                restablecerFormularioCurso();
             }
         }
     </script>

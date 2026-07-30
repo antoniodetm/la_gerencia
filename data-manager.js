@@ -275,7 +275,7 @@ class DataManager {
             'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela', 'asignacionesEscuela',
             'nivelesEscuela', 'tiposClasesEscuela', 'bonosEscuela', 'clasesSueltasEscuela',
             'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
-            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela',
+            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela', 'cursosEscuela',
             'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela',
             'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento'
         ];
@@ -350,7 +350,7 @@ class DataManager {
             'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela', 'asignacionesEscuela',
             'nivelesEscuela', 'tiposClasesEscuela', 'bonosEscuela', 'clasesSueltasEscuela',
             'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
-            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela',
+            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela', 'cursosEscuela',
             'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela',
             'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento'
         ];

@@ -399,6 +399,7 @@
                     <option value="">-- Elige una categoría --</option>
                     <option value="bonos">Bonos de Clases</option>
                     <option value="clases">Clases</option>
+                    <option value="cursos">Cursos</option>
                     <option value="otros">Otros Servicios</option>
                 </select>
             </div>
@@ -588,58 +589,49 @@
                 const ultimoProducto = misPagos.length > 0 ? misPagos[0].productoNombre : '---';
 
                 // Lógica para "Al Corriente"
-                const hoyStr = new Date().toISOString().split('T')[0];
                 let alCorrienteHtml = '<span title="Sin producto activo y sin deuda">⚪</span>'; // Por defecto, gris si no hay bono ni deuda.
 
                 const hoy = new Date();
-                // Considera cualquier producto con clases restantes como "activo"
-                const productosActivos = misPagos.filter(p => p.totalClases && (p.totalClases - (p.clasesUsadas || 0)) > 0);
-
-                // --- NUEVA LÓGICA DE CÁLCULO DE DEUDA ---
-                let clasesDeuda = 0;
                 const mesActual = hoy.getMonth();
                 const anioActual = hoy.getFullYear();
-                // Unificamos la lógica: cualquier producto (Bono o Clase Suelta) que contenga "semana" en su nombre
-                // y haya sido comprado en el mes actual, se considera un plan semanal.
-                const pagoSemanal = misPagos.find(p =>
-                    p.productoNombre.toLowerCase().includes('semana') &&
-                    new Date(p.fechaCompra + 'T12:00:00').getMonth() === mesActual &&
-                    new Date(p.fechaCompra + 'T12:00:00').getFullYear() === anioActual);
 
-                if (pagoSemanal) {
-                    // Lógica para alumnos con plan semanal
-                    const diaSemana = hoy.getDay();
-                    const primerDiaSemana = new Date(hoy);
-                    primerDiaSemana.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1));
-                    primerDiaSemana.setHours(0, 0, 0, 0);
+                // --- NUEVA LÓGICA DE PAGO MENSUAL ---
+                // 1. Identificar todos los productos mensuales únicos que el alumno ha contratado alguna vez.
+                const productosMensualesUnicos = [...new Set(misPagos
+                    .filter(p => p.tipo === 'Clase Suelta' || p.tipo === 'Otro')
+                    .map(p => p.productoNombre))];
 
-                    const ultimoDiaSemana = new Date(primerDiaSemana);
-                    ultimoDiaSemana.setDate(primerDiaSemana.getDate() + 6);
-                    ultimoDiaSemana.setHours(23, 59, 59, 999);
+                if (productosMensualesUnicos.length > 0) {
+                    // 2. Verificar si TODOS los productos mensuales únicos han sido pagados en el mes actual.
+                    const haPagadoTodoEsteMes = productosMensualesUnicos.every(nombreProducto => {
+                        return misPagos.some(p => p.productoNombre === nombreProducto && new Date(p.fechaCompra + 'T12:00:00').getMonth() === mesActual && new Date(p.fechaCompra + 'T12:00:00').getFullYear() === anioActual);
+                    });
 
-                    const clasesEstaSemana = asistencia.filter(att => att.alumnoId === a.id && att.asistio && new Date(att.fechaClase + 'T12:00:00') >= primerDiaSemana && new Date(att.fechaClase + 'T12:00:00') <= ultimoDiaSemana).length;
-                    const clasesSemanalesContratadas = pagoSemanal.totalClases;
-                    clasesDeuda = Math.max(0, clasesEstaSemana - clasesSemanalesContratadas);
+                    if (haPagadoTodoEsteMes) {
+                        alCorrienteHtml = '<span title="Todos los pagos mensuales están al día.">✅</span>';
+                    } else {
+                        alCorrienteHtml = '<span title="Tiene pagos mensuales pendientes para este mes." style="color: #c0392b;">❌</span>';
+                    }
                 } else {
-                    // Lógica para alumnos con bonos o clases sueltas
-                    const totalClasesAsistidas = asistencia.filter(att => att.alumnoId === a.id && att.asistio).length;
-                    const totalClasesPagadas = misPagos.reduce((sum, p) => sum + (p.clasesUsadas || 0), 0);
-                    clasesDeuda = Math.max(0, totalClasesAsistidas - totalClasesPagadas);
-                }
+                    // 3. Si no tiene productos de tipo mensual, se aplica la lógica de bonos.
+                    const tieneBonoConClases = misPagos.some(p => p.tipo === 'Bono' && (p.totalClases - (p.clasesUsadas || 0)) > 0);
+                    // 4. Si no tiene bonos, se comprueba si tiene un curso activo (pago único, no caducado).
+                    const tieneCursoActivo = misPagos.some(p => {
+                        if (p.tipo !== 'Curso' || !p.duracion) return false;
+                        const fechaCompra = new Date(p.fechaCompra + 'T12:00:00');
+                        const fechaCaducidad = new Date(fechaCompra);
+                        fechaCaducidad.setDate(fechaCompra.getDate() + p.duracion);
+                        return fechaCaducidad >= hoy;
+                    });
 
-                // --- Renderizado del estado ---
-                if (clasesDeuda > 0) {
-                    const claseSuelta = (clasesSueltas || []).find(p => p.nombre.toLowerCase().includes('clase suelta'));
-                    const precioClaseSuelta = claseSuelta ? parseFloat(claseSuelta.precio) : 20; // Precio por defecto
-                    const deudaTotal = clasesDeuda * precioClaseSuelta;
-                    alCorrienteHtml = `<span title="${clasesDeuda} clase(s) pendiente(s) de pago. Deuda: ${deudaTotal.toFixed(2)}€" style="color: #c0392b;">❌</span>`;
-                } else { // Si no hay deuda y no tiene bono activo...
-                    const tieneClasesRestantes = productosActivos.length > 0;
-                    alCorrienteHtml = tieneClasesRestantes
-                        ? '<span title="Al corriente de pago y con producto activo.">✅</span>'
-                        : '<span title="Sin producto activo (bono/clase). Necesita adquirir uno para dar clases." style="color: #f39c12;">⚠️</span>';
+                    if (tieneBonoConClases) {
+                        alCorrienteHtml = '<span title="Tiene un bono con clases disponibles.">✅</span>';
+                    } else if (tieneCursoActivo) { // Si no tiene bono pero sí un curso activo
+                        alCorrienteHtml = '<span title="Tiene un curso activo (no incluye clases).">🎓</span>';
+                    } else {
+                        alCorrienteHtml = '<span title="Sin producto activo (mensualidad, bono o curso). Necesita adquirir uno." style="color: #f39c12;">⚠️</span>';
+                    }
                 }
-
                 // Lógica para "Próxima Clase"
                 const ahora = new Date();
                 const proximaAsignacion = (asignaciones || [])
@@ -987,23 +979,83 @@
             html += seccionClases;
 
             // --- SECCIÓN OTROS SERVICIOS ---
-            const otrosServiciosPagados = misPagos.filter(p => p.tipo === 'Otro');
+            // 1. Obtener una lista de todos los "Otros Servicios" únicos que el alumno ha contratado alguna vez.
+            const serviciosUnicosContratados = [...new Set(misPagos.filter(p => p.tipo === 'Otro').map(p => p.productoNombre))];
+
             let seccionOtros = '';
-            if (otrosServiciosPagados.length > 0) {
+            if (serviciosUnicosContratados.length > 0) {
                 seccionOtros += `<table style="font-size: 0.85em; width:100%; border-collapse: collapse;">
-                    <thead><tr style="background:#f39c12; color:white;"><th style="padding:8px;">Servicio</th><th style="padding:8px; text-align:center;">Fecha Compra</th></tr></thead><tbody>`;
-                otrosServiciosPagados.forEach(pago => {
+                    <thead><tr style="background:#f39c12; color:white;">
+                        <th style="padding:8px;">Servicio Mensual</th>
+                        <th style="padding:8px; text-align:center;">Estado este mes</th>
+                    </tr></thead><tbody>`;
+
+                serviciosUnicosContratados.forEach(nombreServicio => {
+                    // 2. Para cada servicio, comprobar si se ha pagado en el mes actual.
+                    const haPagadoEsteMes = misPagos.some(p =>
+                        p.productoNombre === nombreServicio &&
+                        new Date(p.fechaCompra + 'T12:00:00').getMonth() === mesActual &&
+                        new Date(p.fechaCompra + 'T12:00:00').getFullYear() === anioActual
+                    );
+
+                    const estadoHtml = haPagadoEsteMes
+                        ? '<span title="Pagado este mes." style="color: #27ae60; font-weight: bold;">✅ Al día</span>'
+                        : '<span title="Pago de este mes pendiente." style="color: #c0392b; font-weight: bold;">❌ Pendiente</span>';
+
                     seccionOtros += `<tr>
-                        <td style="padding:8px; border-bottom:1px solid #eee;">${pago.productoNombre}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:center;">${new Date(pago.fechaCompra + 'T12:00:00').toLocaleDateString('es-ES')}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;"><b>${nombreServicio}</b></td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:center;">${estadoHtml}</td>
                     </tr>`;
                 });
                 seccionOtros += `</tbody></table>`;
             } else {
                 seccionOtros = `<p style="color:#888; font-style:italic; text-align:center;">No ha contratado otros servicios.</p>`;
             }
+
             html += `<h4 style="color:#f39c12; margin-top: 20px; margin-bottom: 10px;">🛎️ Otros Servicios</h4>`;
             html += seccionOtros;
+
+            // --- SECCIÓN CURSOS ---
+            const cursosComprados = misPagos.filter(p => p.tipo === 'Curso');
+            let seccionCursos = '';
+            if (cursosComprados.length > 0) {
+                seccionCursos += `<table style="font-size: 0.85em; width:100%; border-collapse: collapse;">
+                    <thead><tr style="background:#9b59b6; color:white;">
+                        <th style="padding:8px;">Curso</th>
+                        <th style="padding:8px; text-align:center;">Fecha Compra</th>
+                        <th style="padding:8px; text-align:center;">Fecha Caducidad</th>
+                    </tr></thead><tbody>`;
+
+                cursosComprados.forEach(pago => {
+                    const fechaCompra = new Date(pago.fechaCompra + 'T12:00:00');
+                    const duracion = pago.duracion;
+                    let caducidadHtml = '---';
+                    let estadoCursoStyle = '';
+
+                    if (duracion && duracion > 0) {
+                        const fechaCaducidad = new Date(fechaCompra);
+                        fechaCaducidad.setDate(fechaCompra.getDate() + duracion);
+                        const hoy = new Date();
+                        hoy.setHours(0, 0, 0, 0);
+
+                        caducidadHtml = fechaCaducidad.toLocaleDateString('es-ES');
+                        if (fechaCaducidad < hoy) {
+                            estadoCursoStyle = `style="color: #c0392b; text-decoration: line-through;" title="Curso expirado"`;
+                        }
+                    }
+
+                    seccionCursos += `<tr ${estadoCursoStyle}>
+                        <td style="padding:8px; border-bottom:1px solid #eee;"><b>${pago.productoNombre}</b></td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:center;">${fechaCompra.toLocaleDateString('es-ES')}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:center;">${caducidadHtml}</td>
+                    </tr>`;
+                });
+                seccionCursos += `</tbody></table>`;
+            } else {
+                seccionCursos = `<p style="color:#888; font-style:italic; text-align:center;">No ha comprado ningún curso.</p>`;
+            }
+            html += `<h4 style="color:#9b59b6; margin-top: 20px; margin-bottom: 10px;">📚 Cursos Comprados</h4>`;
+            html += seccionCursos;
 
             document.getElementById('seguimientoDetalles').innerHTML = html;
             document.getElementById('modalSeguimiento').style.display = 'block';
@@ -1086,6 +1138,10 @@
                     productos = await dataManager.get('clasesSueltasEscuela') || [];
                     tipoProducto = 'Clase Suelta';
                     colorHeader = '#eaf2f8';
+                } else if (categoria === 'cursos') {
+                    productos = await dataManager.get('cursosEscuela') || [];
+                    tipoProducto = 'Curso';
+                    colorHeader = '#f4ecf7';
                 } else if (categoria === 'otros') {
                     productos = await dataManager.get('otrosServiciosEscuela') || [];
                     tipoProducto = 'Otro';
@@ -1099,7 +1155,7 @@
 
                 let tablaHtml = `<table style="width:100%;"><thead><tr style="background-color:${colorHeader};"><th>Producto</th><th style="text-align:right;">Precio</th><th style="text-align:center;">Acción</th></tr></thead><tbody>`;
                 productos.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(p => {
-                    const datos = `data-id="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio}" data-tipo="${tipoProducto}" data-numclases="${p.numClases || '0'}"`;
+                    const datos = `data-id="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio}" data-tipo="${tipoProducto}" data-numclases="${p.numClases || '0'}" data-duracion="${p.duracion || '0'}"`;
                     tablaHtml += `<tr><td>${p.nombre}</td><td style="text-align:right;">${p.precio} €</td><td style="text-align:center;"><button class="actions-btn btn-products" style="font-size:11px;" onclick="addProductoToAlumno(this)" ${datos}>Añadir</button></td></tr>`;
                 });
                 tablaHtml += `</tbody></table>`;
@@ -1124,8 +1180,9 @@
             const nuevoPago = {
                 id: Date.now(), alumnoId, productoId, productoNombre, productoPrecio, fechaCompra,
                 tipo: productoTipo,
-                totalClases: productoTipo === 'Bono' || productoTipo === 'Clase Suelta' ? parseInt(productoNumClases) : null,
-                clasesUsadas: 0
+                totalClases: (productoTipo === 'Bono' || productoTipo === 'Clase Suelta') ? parseInt(productoNumClases) : null,
+                clasesUsadas: 0,
+                duracion: productoTipo === 'Curso' ? parseInt(button.dataset.duracion) : null
             };
 
             let pagos = await dataManager.get('pagosAlumnosEscuela') || [];
