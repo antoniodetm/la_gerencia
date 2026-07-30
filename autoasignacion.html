@@ -290,7 +290,6 @@
             }, 3000);
         }
 
-
         async function poblarDesplegables() {
             await poblarAlumnos();
             await poblarClasesParaAlumno();
@@ -394,12 +393,12 @@
                 return;
             }
 
-            const [todosLosAlumnos, todasLasClases] = await Promise.all([
+            const [todosLosAlumnos, todasLasClases, asignacionesActuales] = await Promise.all([
                 dataManager.get('alumnosEscuela'),
-                dataManager.get('clasesEscuela')
+                dataManager.get('clasesEscuela'),
+                dataManager.get('asignacionesEscuela')
             ]);
             const claseSeleccionada = todasLasClases.find(c => c.id == claseId);
-            const alumnoSeleccionado = todosLosAlumnos.find(a => `${a.nombre} ${a.apellido}` === alumnoName);
 
             if (!claseSeleccionada) {
                 alert("Error: La clase seleccionada no se ha encontrado.");
@@ -407,6 +406,8 @@
             }
 
             // Comprobación de nivel
+            const alumnoSeleccionado = todosLosAlumnos.find(a => `${a.nombre} ${a.apellido}` === alumnoName);
+
             if (claseSeleccionada.nivel && alumnoSeleccionado && alumnoSeleccionado.nivel !== claseSeleccionada.nivel) {
                 alert(`❌ No puedes apuntarte a esta clase. Tu nivel es "${alumnoSeleccionado.nivel}" y la clase requiere nivel "${claseSeleccionada.nivel}".`);
                 return;
@@ -429,10 +430,8 @@
             }
             // ---- FIN de la comprobación de DNI ----
 
-            let asignaciones = await dataManager.get('asignacionesEscuela') || [];
-
             // Contar alumnos para esa clase y día específicos
-            const alumnosEnClase = asignaciones.filter(a => a.claseId == claseId && a.dia === dia).length;
+            const alumnosEnClase = asignacionesActuales.filter(a => a.claseId == claseId && a.dia === dia).length;
 
             // Comprobar si la clase está llena
             if (claseSeleccionada.maxAlumnos && alumnosEnClase >= claseSeleccionada.maxAlumnos) {
@@ -440,13 +439,14 @@
                 return;
             }
 
-            if (asignaciones.some(a => a.claseId == claseId && a.alumno === alumnoName && a.dia === dia)) {
+            if (asignacionesActuales.some(a => a.claseId == claseId && a.alumno === alumnoName && a.dia === dia)) {
                 alert("⚠️ Ya estás apuntado en esta clase para este día.");
                 return;
             }
-            asignaciones.push({ id: Date.now(), claseId: parseInt(claseId), alumno: alumnoName, dia: dia });
-            await dataManager.set('asignacionesEscuela', asignaciones);
-            alert(`✅ ¡Te has apuntado correctamente a la clase del ${new Date(dia + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' })}!`);
+            asignacionesActuales.push({ id: Date.now(), claseId: parseInt(claseId), alumno: alumnoName, dia: dia });
+            await dataManager.set('asignacionesEscuela', asignacionesActuales);
+            const fechaFormateada = new Date(dia + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' });
+            alert(`✅ ¡Te has apuntado correctamente a la clase del ${fechaFormateada}!`);
             form.reset();
             actualizarSelectorFecha();
         }
@@ -497,6 +497,7 @@
         }
 
         async function eliminarAsignacion(id) {
+            const asignaciones = await dataManager.get('asignacionesEscuela') || [];
             const alumnoLogueado = alumnoSelect.value;
             if (!alumnoLogueado) {
                 alert("Por favor, selecciona tu nombre primero para poder borrarte.");
@@ -504,6 +505,7 @@
             }
 
             const todosLosAlumnos = await dataManager.get('alumnosEscuela') || [];
+            const todasLasClases = await dataManager.get('clasesEscuela') || [];
             const infoAlumno = todosLosAlumnos.find(a => `${a.nombre} ${a.apellido}` === alumnoLogueado);
 
             if (!infoAlumno || !infoAlumno.dni) {
@@ -511,12 +513,14 @@
                 return;
             }
 
+            const asignacion = asignaciones.find(a => a.id === id);
+            if (!asignacion) return;
+
             const dniIntroducido = prompt("Para confirmar que quieres borrarte de esta clase, por favor, introduce tu DNI (o el del tutor si eres menor):");
 
             if (dniIntroducido && dniIntroducido.trim().toUpperCase() === infoAlumno.dni.toUpperCase()) {
-                let asignaciones = await dataManager.get('asignacionesEscuela') || [];
-                asignaciones = asignaciones.filter(a => a.id !== id);
-                await dataManager.set('asignacionesEscuela', asignaciones);
+                let asignacionesActualizadas = asignaciones.filter(a => a.id !== id);
+                await dataManager.set('asignacionesEscuela', asignacionesActualizadas);
                 alert("✅ Te has borrado de la clase correctamente.");
             } else if (dniIntroducido !== null) { // Si no es null, es que ha escrito algo pero es incorrecto
                 alert("❌ DNI incorrecto. No se ha podido realizar la operación.");

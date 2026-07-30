@@ -330,6 +330,10 @@
                     <input type="tel" id="telefono" required placeholder="Ej. 600123456">
                 </div>
                 <div class="form-group">
+                    <label for="email" id="emailLabel">Email:</label>
+                    <input type="email" id="email" placeholder="email@ejemplo.com">
+                </div>
+                <div class="form-group">
                     <label for="estado">Estado para Asignación:</label>
                     <select id="estado" required>
                         <option value="Activo">✅ Activo (Elegible)</option>
@@ -427,6 +431,8 @@
         const telefonoLabel = document.getElementById('telefonoLabel');
         const dniInput = document.getElementById('dni');
         const telefonoInput = document.getElementById('telefono');
+        const emailLabel = document.getElementById('emailLabel');
+        const emailInput = document.getElementById('email');
 
         // Elementos del modal de productos
 
@@ -437,12 +443,14 @@
                 tutorNombreInput.required = true;
                 dniLabel.textContent = 'DNI del Tutor:';
                 telefonoLabel.textContent = 'Teléfono del Tutor:';
+                emailLabel.textContent = 'Email del Tutor:';
                 dniInput.placeholder = 'Ej. DNI del Tutor';
                 telefonoInput.placeholder = 'Ej. Teléfono del Tutor';
             } else {
                 tutorRow.style.display = 'none';
                 tutorNombreInput.required = false;
                 tutorNombreInput.value = '';
+                emailLabel.textContent = 'Email:';
                 dniLabel.textContent = 'DNI:';
                 telefonoLabel.textContent = 'Teléfono:';
                 dniInput.placeholder = 'Ej. 12345678A';
@@ -511,6 +519,7 @@
             const telefono = document.getElementById('telefono').value.trim();
             const notaMedica = document.getElementById('notaMedica').value.trim();
             const notaAlimentaria = document.getElementById('notaAlimentaria').value.trim();
+            const email = document.getElementById('email').value.trim();
             const tutorNombre = (edad < 18) ? tutorNombreInput.value.trim() : '';
             const nombreCompleto = `${nombre} ${apellido}`;
 
@@ -520,7 +529,7 @@
                 const alumnoAnterior = alumnos.find(a => a.id === parseInt(id));
                 const nombreAnterior = `${alumnoAnterior.nombre} ${alumnoAnterior.apellido}`;
 
-                alumnos = alumnos.map(a => a.id === parseInt(id) ? { id: a.id, dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre } : a);
+                alumnos = alumnos.map(a => a.id === parseInt(id) ? { id: a.id, dni, nombre, apellido, edad, nivel, telefono, email, notaMedica, notaAlimentaria, estado, tutorNombre } : a);
 
                 // Actualizar referencias en asignaciones
                 if (nombreAnterior !== nombreCompleto) {
@@ -531,7 +540,7 @@
 
                 alert("¡Alumno actualizado!");
             } else {
-                alumnos.push({ id: Date.now(), dni, nombre, apellido, edad, nivel, telefono, notaMedica, notaAlimentaria, estado, tutorNombre });
+                alumnos.push({ id: Date.now(), dni, nombre, apellido, edad, nivel, telefono, email, notaMedica, notaAlimentaria, estado, tutorNombre });
                 alert("¡Alumno guardado!");
             }
 
@@ -676,6 +685,7 @@
                 document.getElementById('nivel').value = a.nivel;
                 document.getElementById('estado').value = a.estado || 'Activo';
                 document.getElementById('telefono').value = a.telefono;
+                document.getElementById('email').value = a.email || '';
                 document.getElementById('notaMedica').value = a.notaMedica || '';
                 document.getElementById('notaAlimentaria').value = a.notaAlimentaria || '';
                 tutorNombreInput.value = a.tutorNombre || '';
@@ -727,6 +737,7 @@
                 <p><strong>Nivel:</strong> ${a.nivel}</p>
                 <p><strong>Estado:</strong> ${a.estado || 'Activo'}</p>
                 <p><strong>Teléfono:</strong> ${a.telefono} ${esMenor ? '(Tutor)' : ''}</p>
+                <p><strong>Email:</strong> ${a.email || '-'} ${esMenor ? '(Tutor)' : ''}</p>
                 <p><strong>Nota Médica:</strong> ${a.notaMedica || '-'}</p>
                 <p><strong>Nota Alimentaria:</strong> ${a.notaAlimentaria || '-'}</p>
             `;
