@@ -377,11 +377,13 @@
             const filterMonthContainer = document.getElementById('filterMonth').parentElement;
             filterMonthContainer.style.display = isAnnualView ? 'none' : 'block';
 
-            const [pagosEscuela, gastosHipica, conceptosGasto, trabajadores] = await Promise.all([
+            const [pagosEscuela, gastosHipica, conceptosGasto, trabajadores, alumnosEscuela, inscripcionesCampamento] = await Promise.all([
                 dataManager.get('pagosAlumnosEscuela'),
                 dataManager.get('gastosHipica'),
                 dataManager.get('conceptosGasto'),
-                dataManager.get('trabajadores')
+                dataManager.get('trabajadores'),
+                dataManager.get('alumnosEscuela'),
+                dataManager.get('inscripcionesCampamento')
             ]);
 
             // --- Resetear y preparar tablas y totales ---
@@ -485,10 +487,23 @@
             // Ordenar y renderizar ingresos
             ingresosDelPeriodo.sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra));
             ingresosDelPeriodo.forEach(ingreso => {
+                let nombreAlumno = 'N/A';
+                if (ingreso.tipo === 'Campamento') {
+                    const inscripcion = (inscripcionesCampamento || []).find(i => i.id === ingreso.alumnoId);
+                    if (inscripcion) {
+                        nombreAlumno = `${inscripcion.nombre} ${inscripcion.apellido}`;
+                    }
+                } else {
+                    const alumno = (alumnosEscuela || []).find(a => a.id === ingreso.alumnoId);
+                    if (alumno) {
+                        nombreAlumno = `${alumno.nombre} ${alumno.apellido}`;
+                    }
+                }
+
                 const row = tablaIngresosBody.insertRow();
                 row.innerHTML = `
                     <td>${new Date(ingreso.fechaCompra + 'T12:00:00').toLocaleDateString('es-ES')}</td>
-                    <td>${ingreso.productoNombre}</td>
+                    <td><b>${ingreso.productoNombre}</b><br><small style="color: #555;">👤 ${nombreAlumno}</small></td>
                     <td>${parseFloat(ingreso.productoPrecio).toFixed(2)} €</td>
                 `;
             });

@@ -240,6 +240,14 @@ class DataManager {
                     fechaInscripcion: '2024-05-10T11:30:00.000Z', reservaPagada: false
                 }
             ],
+            conceptosGasto: [
+                { id: 1, nombre: 'Factura de luz', tipo: 'Mensual' },
+                { id: 2, nombre: 'Compra de pienso', tipo: 'Esporádico' },
+                { id: 3, nombre: 'Nómina de Ana', tipo: 'Nómina Fija' }
+            ],
+            gastosHipica: [
+                { id: 1, concepto: 'Factura de luz', importe: 250.75, fecha: '2023-10-05', tipo: 'Mensual' }
+            ],
             alimentacionCaballosEscuela: [],
             vacunasCaballosEscuela: [],
             desparasitacionCaballosEscuela: [],
@@ -276,7 +284,7 @@ class DataManager {
             'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela', 'asignacionesEscuela',
             'nivelesEscuela', 'tiposClasesEscuela', 'bonosEscuela', 'clasesSueltasEscuela',
             'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
-            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela', 'cursosEscuela', 'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela', 'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento',
+            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela', 'cursosEscuela', 'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela', 'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento', 'conceptosGasto',
             'gastosHipica',
             'preciosCampamento',
             'bancoCampamento'
@@ -352,7 +360,7 @@ class DataManager {
             'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela', 'asignacionesEscuela',
             'nivelesEscuela', 'tiposClasesEscuela', 'bonosEscuela', 'clasesSueltasEscuela',
             'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
-            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela', 'cursosEscuela', 'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela', 'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento',
+            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela', 'cursosEscuela', 'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela', 'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento', 'conceptosGasto',
             'gastosHipica',
             'preciosCampamento',
             'bancoCampamento'
