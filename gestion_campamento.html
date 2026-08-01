@@ -217,7 +217,6 @@
     <div class="container">
         <h2>🏕️ Gestión de Inscripciones al Campamento
             <span style="font-size: 0.6em; vertical-align: middle; margin-left: 10px;">
-                <a href="#" onclick="rellenarDatosDePrueba(); return false;">(Rellenar prueba)</a>
                 <a href="#" id="cancelEditBtn" onclick="restablecerFormulario(); return false;"
                     style="display:none; margin-left: 10px; color: #c0392b;">(Cancelar Edición)</a>
             </span>
@@ -292,13 +291,7 @@
                 <div class="form-group">
                     <label for="semanasCampamento">¿Cuántas semanas de campamento?</label>
                     <select id="semanasCampamento" required>
-                        <option value="">-- Selecciona una opción --</option>
-                        <option value="1">1 Semana</option>
-                        <option value="2">2 Semanas</option>
-                        <option value="3">3 Semanas</option>
-                        <option value="4">4 Semanas</option>
-                        <option value="5">5 Semanas</option>
-                        <option value="6">6 Semanas</option>
+                        <!-- Opciones se cargarán dinámicamente -->
                     </select>
                 </div>
                 <div class="form-group">
@@ -417,57 +410,6 @@
         const submitBtn = document.getElementById('submitBtn');
         const inscripcionIdInput = document.getElementById('inscripcionId');
 
-        // Configuración de Firebase directamente en el código
-
-        function rellenarDatosDePrueba() {
-            // Datos del Niño/a
-            document.getElementById('nombre').value = 'Sofía';
-            document.getElementById('apellido').value = 'García López';
-            document.getElementById('fechaNacimiento').value = '2010-05-15'; // Menor de edad
-            document.getElementById('dni').value = '98765432B';
-            document.getElementById('direccion').value = 'Calle de la Alegría, 45';
-            document.getElementById('poblacion').value = 'Alcobendas';
-            document.getElementById('provincia').value = 'Madrid';
-            document.getElementById('cp').value = '28100';
-            document.getElementById('numLicencia').value = 'M-12345';
-            document.getElementById('numSegSocial').value = '28/1234567890/01';
-            document.getElementById('otrosSeguros').value = 'Adeslas Póliza 987654';
-
-            // Disparar el evento change para que se muestre la sección del tutor
-            document.getElementById('fechaNacimiento').dispatchEvent(new Event('change'));
-
-            // Datos del Tutor/a (se mostrarán al ser menor de edad)
-            setTimeout(() => { // Usar un timeout para dar tiempo a que la sección del tutor aparezca
-                document.getElementById('tutorNombre').value = 'Carlos';
-                document.getElementById('tutorApellidos').value = 'García Sanz';
-                document.getElementById('tutorDni').value = '12345678A';
-                document.getElementById('telefono').value = '611223344';
-                document.getElementById('email').value = 'carlos.garcia@email.com';
-            }, 100);
-
-            // Otros Datos de Interés
-            document.getElementById('tiempoMontando').value = '4 años';
-            document.getElementById('horasSemana').value = '4 horas';
-            document.getElementById('clubAnterior').value = 'Club Hípico El Pinar';
-            document.getElementById('participadoConcursos').value = 'Sí';
-            document.getElementById('participadoConcursos').dispatchEvent(new Event('change'));
-            document.getElementById('categoriaConcurso').value = 'Ponis C';
-            document.getElementById('caballoPropio').value = 'No';
-            document.getElementById('caballoPropio').dispatchEvent(new Event('change'));
-            document.getElementById('comoNosConociste').value = 'Por recomendación de un amigo.';
-            document.getElementById('enfermedadesObservaciones').value = 'Alergia leve al polen, no necesita medicación.';
-
-            // Recogida
-            document.getElementById('necesitaRecogida').value = 'Sí';
-            document.getElementById('necesitaRecogida').dispatchEvent(new Event('change'));
-            document.getElementById('fechaRecogida').value = '2024-07-01';
-            document.getElementById('horaRecogida').value = '10:00';
-            document.getElementById('lugarRecogida').value = 'Aeropuerto Madrid-Barajas T4, llegadas';
-            document.getElementById('fechaSalida').value = '2024-07-15';
-            document.getElementById('horaSalida').value = '16:30';
-            document.getElementById('lugarSalida').value = 'Estación de Atocha, llegadas AVE';
-        }
-
         function setupEventListeners() {
             document.getElementById('fechaNacimiento').addEventListener('change', actualizarCamposTutor);
 
@@ -547,6 +489,23 @@
             select.innerHTML = '<option value="">-- Selecciona una fecha --</option>' + fechas.map(fechaObj => {
                 const fechaFormateada = new Date(fechaObj.valor + 'T12:00:00').toLocaleDateString('es-ES', { dateStyle: 'long' });
                 return `<option value="${fechaObj.valor}">${fechaFormateada}</option>`;
+            }).join('');
+        }
+
+        async function poblarSemanasCampamento() {
+            const select = document.getElementById('semanasCampamento');
+            const precios = await dataManager.get('preciosCampamento') || [];
+
+            if (precios.length === 0) {
+                select.innerHTML = '<option value="">⚠️ Define precios en "Bases del Campamento"</option>';
+                return;
+            }
+
+            // Ordenar por duración
+            precios.sort((a, b) => a.duracionSemanas - b.duracionSemanas);
+
+            select.innerHTML = '<option value="">-- Selecciona una opción --</option>' + precios.map(paquete => {
+                return `<option value="${paquete.duracionSemanas}">${paquete.nombre}</option>`;
             }).join('');
         }
 
@@ -714,14 +673,59 @@
         }
 
         async function actualizarPagoReserva(id, pagado) {
+            const inscripciones = await dataManager.get('inscripcionesCampamento') || [];
+            const inscripcion = inscripciones.find(i => i.id === id);
+            if (!inscripcion) {
+                alert('Error: No se encontró la inscripción.');
+                return;
+            }
+
             try {
-                await dataManager.db.collection('inscripcionesCampamento').doc(id).update({ // dataManager.db es correcto aquí
+                // Actualizar el estado de la reserva en la inscripción
+                await dataManager.update('inscripcionesCampamento', id, {
                     reservaPagada: pagado
                 });
-                console.log(`Estado de pago de reserva actualizado para ${id} a ${pagado}`);
+
+                if (pagado) {
+                    // Si se marca como pagado, crear el ingreso
+                    const preciosCampamento = await dataManager.get('preciosCampamento') || [];
+                    const semanas = parseInt(inscripcion.semanasCampamento);
+                    const paquetePrecio = preciosCampamento.find(p => p.duracionSemanas === semanas);
+
+                    if (!paquetePrecio) {
+                        alert(`⚠️ No se encontró un paquete de precios para ${semanas} semana(s). El ingreso no se ha podido registrar. Por favor, defina el precio en "Bases del Campamento".`);
+                        return;
+                    }
+
+                    const nuevoPago = {
+                        id: `camp-${id}-${Date.now()}`, // ID único para el pago
+                        alumnoId: id, // Usamos el ID de la inscripción
+                        productoId: paquetePrecio.id,
+                        productoNombre: `Camp: ${paquetePrecio.nombre} (${inscripcion.nombre} ${inscripcion.apellido})`,
+                        productoPrecio: paquetePrecio.precio,
+                        fechaCompra: new Date().toISOString().split('T')[0],
+                        tipo: 'Campamento'
+                    };
+
+                    await dataManager.add('pagosAlumnosEscuela', nuevoPago);
+                    alert(`✅ Reserva marcada como pagada. Se ha registrado un ingreso de ${paquetePrecio.precio}€.`);
+                } else {
+                    // Si se desmarca, opcionalmente se podría buscar y eliminar el ingreso.
+                    // Buscamos un pago que coincida con el ID de la inscripción y el tipo 'Campamento'.
+                    // Usamos get para asegurar que tenemos los datos más frescos antes de borrar.
+                    const todosLosPagos = await dataManager.get('pagosAlumnosEscuela') || [];
+                    const pagoAEliminar = todosLosPagos.find(p => p.alumnoId === id && p.tipo === 'Campamento');
+                    if (pagoAEliminar) {
+                        await dataManager.delete('pagosAlumnosEscuela', pagoAEliminar.id);
+                        alert('Reserva desmarcada como pagada. El ingreso asociado ha sido eliminado de las finanzas.');
+                    } else {
+                        alert('Reserva desmarcada como pagada. No se encontró un ingreso asociado para eliminar.');
+                    }
+                }
             } catch (error) {
-                console.error("Error al actualizar el pago de la reserva: ", error);
-                alert("Hubo un error al actualizar el estado del pago.");
+                console.error("Error al actualizar el pago de la reserva o registrar el ingreso: ", error);
+                alert("Hubo un error al procesar la operación.");
+                this.checked = !pagado; // Revertir el estado del checkbox si hay un error
             }
         }
 
@@ -830,10 +834,13 @@
             await dataManager.initPromise;
             console.log('🏕️ Página de gestión de campamento cargada.');
             setupEventListeners();
+            await poblarSemanasCampamento();
             await poblarFechasInicio();
             // Cargar datos iniciales y luego escuchar cambios
             await mostrarInscripciones();
             dataManager.onSnapshot('inscripcionesCampamento', mostrarInscripciones);
+            dataManager.onSnapshot('pagosAlumnosEscuela', mostrarInscripciones); // Para actualizar el estado de pago
+            dataManager.onSnapshot('preciosCampamento', poblarSemanasCampamento);
         };
     </script>
 

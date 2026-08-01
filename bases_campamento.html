@@ -71,7 +71,8 @@
             font-weight: bold;
         }
 
-        input {
+        input,
+        select {
             width: 100%;
             padding: 10px;
             border: 1px solid #ccc;
@@ -155,6 +156,39 @@
         </table>
     </div>
 
+    <div class="container">
+        <h2>💰 Precios y Duraciones</h2>
+        <form id="precioCampamentoForm">
+            <input type="hidden" id="precioCampamentoId">
+            <div class="form-group">
+                <label for="nombrePrecio">Nombre del Paquete:</label>
+                <input type="text" id="nombrePrecio" required placeholder="Ej. Campamento 1 Semana">
+            </div>
+            <div class="form-row" style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label for="duracionSemanas">Duración (semanas):</label>
+                    <input type="number" id="duracionSemanas" required min="1" placeholder="Ej. 1">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="precioCampamento">Precio (€):</label>
+                    <input type="number" id="precioCampamento" required step="0.01" placeholder="Ej. 450.00">
+                </div>
+            </div>
+            <button type="submit" id="btnSubmitPrecio">Añadir Paquete</button>
+        </form>
+        <table id="tablaPreciosCampamento" style="margin-top: 25px;">
+            <thead>
+                <tr>
+                    <th>Paquete</th>
+                    <th style="text-align: center;">Semanas</th>
+                    <th style="text-align: right;">Precio</th>
+                    <th style="width: 150px; text-align: center;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
     <script>
         const form = document.getElementById('fechaCampamentoForm');
         const tabla = document.getElementById('tablaFechasCampamento').querySelector('tbody');
@@ -162,10 +196,20 @@
 
         window.onload = async () => {
             await dataManager.initPromise;
+            // Fechas de inicio
             dataManager.onSnapshot('fechasCampamento', mostrarFechas);
+
+            // Precios y duraciones
+            dataManager.onSnapshot('preciosCampamento', mostrarPrecios);
+
+            // Listeners de formularios
+            form.addEventListener('submit', guardarFecha);
+            formPrecio.addEventListener('submit', guardarPrecio);
         };
 
-        form.addEventListener('submit', async (e) => {
+        // --- GESTIÓN DE FECHAS DE INICIO ---
+
+        async function guardarFecha(e) {
             e.preventDefault();
             const fecha = fechaInput.value;
             if (!fecha) return;
@@ -179,7 +223,7 @@
             fechasObj.sort((a, b) => a.valor.localeCompare(b.valor));
             await dataManager.set('fechasCampamento', fechasObj);
             form.reset();
-        });
+        }
 
         function mostrarFechas(fechas) {
             tabla.innerHTML = '';
@@ -199,6 +243,84 @@
             let fechas = await dataManager.get('fechasCampamento') || [];
             fechas = fechas.filter(f => f.id !== fechaId);
             await dataManager.set('fechasCampamento', fechas);
+        }
+
+        // --- GESTIÓN DE PRECIOS Y DURACIONES ---
+
+        const formPrecio = document.getElementById('precioCampamentoForm');
+        const tablaPrecios = document.getElementById('tablaPreciosCampamento').querySelector('tbody');
+        const precioIdInput = document.getElementById('precioCampamentoId');
+        const nombrePrecioInput = document.getElementById('nombrePrecio');
+        const duracionSemanasInput = document.getElementById('duracionSemanas');
+        const precioCampamentoInput = document.getElementById('precioCampamento');
+        const btnSubmitPrecio = document.getElementById('btnSubmitPrecio');
+
+        async function guardarPrecio(e) {
+            e.preventDefault();
+            const id = precioIdInput.value;
+            const nombre = nombrePrecioInput.value.trim();
+            const duracionSemanas = parseInt(duracionSemanasInput.value);
+            const precio = parseFloat(precioCampamentoInput.value);
+
+            if (!nombre || isNaN(duracionSemanas) || isNaN(precio)) {
+                alert('Por favor, completa todos los campos del paquete.');
+                return;
+            }
+
+            const paquete = { nombre, duracionSemanas, precio: precio.toFixed(2) };
+
+            if (id) {
+                await dataManager.update('preciosCampamento', id, paquete);
+                alert('Paquete actualizado.');
+            } else {
+                await dataManager.add('preciosCampamento', { id: Date.now(), ...paquete });
+            }
+            restablecerFormularioPrecio();
+        }
+
+        function mostrarPrecios(precios) {
+            tablaPrecios.innerHTML = '';
+            if (!precios || precios.length === 0) {
+                tablaPrecios.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">No hay paquetes de precios definidos.</td></tr>`;
+                return;
+            }
+            precios.sort((a, b) => a.duracionSemanas - b.duracionSemanas).forEach(p => {
+                const fila = tablaPrecios.insertRow();
+                fila.innerHTML = `
+                    <td><b>${p.nombre}</b></td>
+                    <td style="text-align: center;">${p.duracionSemanas}</td>
+                    <td style="text-align: right;">${p.precio} €</td>
+                    <td style="text-align:center; display:flex; gap:5px;">
+                        <button class="btn-delete" style="flex:1; background-color:#f39c12;" onclick="cargarPrecioParaEditar('${p.id}')">Editar</button>
+                        <button class="btn-delete" style="flex:1;" onclick="eliminarPrecio('${p.id}')">Eliminar</button>
+                    </td>
+                `;
+            });
+        }
+
+        async function cargarPrecioParaEditar(id) {
+            const precios = await dataManager.get('preciosCampamento') || [];
+            const paquete = precios.find(p => p.id == id);
+            if (paquete) {
+                precioIdInput.value = paquete.id;
+                nombrePrecioInput.value = paquete.nombre;
+                duracionSemanasInput.value = paquete.duracionSemanas;
+                precioCampamentoInput.value = paquete.precio;
+                btnSubmitPrecio.textContent = 'Actualizar Paquete';
+            }
+        }
+
+        function restablecerFormularioPrecio() {
+            formPrecio.reset();
+            precioIdInput.value = '';
+            btnSubmitPrecio.textContent = 'Añadir Paquete';
+        }
+
+        async function eliminarPrecio(id) {
+            if (confirm('¿Seguro que quieres eliminar este paquete de precios?')) {
+                await dataManager.delete('preciosCampamento', id);
+                restablecerFormularioPrecio();
+            }
         }
     </script>
 </body>

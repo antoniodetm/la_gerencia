@@ -105,6 +105,7 @@ class DataManager {
         if (this.useFirebase && this.db) {
             try {
                 return this.db.collection(collection).onSnapshot((snapshot) => {
+                    // Se eliminan las condiciones para asegurar que el callback siempre se ejecute con los datos más recientes.
                     const items = [];
                     snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
                     callback(items);
@@ -275,9 +276,10 @@ class DataManager {
             'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela', 'asignacionesEscuela',
             'nivelesEscuela', 'tiposClasesEscuela', 'bonosEscuela', 'clasesSueltasEscuela',
             'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
-            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela', 'cursosEscuela',
-            'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela',
-            'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento'
+            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela', 'cursosEscuela', 'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela', 'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento',
+            'gastosHipica',
+            'preciosCampamento',
+            'bancoCampamento'
         ];
 
         const backup = {};
@@ -350,9 +352,10 @@ class DataManager {
             'alumnosEscuela', 'caballosEscuela', 'profesoresEscuela', 'clasesEscuela', 'asignacionesEscuela',
             'nivelesEscuela', 'tiposClasesEscuela', 'bonosEscuela', 'clasesSueltasEscuela',
             'pagosAlumnosEscuela', 'attendanceEscuela', 'especialidadesProfesoresEscuela',
-            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela', 'cursosEscuela',
-            'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela',
-            'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento'
+            'alimentacionCaballosEscuela', 'vacunasCaballosEscuela', 'desparasitacionCaballosEscuela', 'inscripcionesCampamento', 'agendaCaballosEscuela', 'cursosEscuela', 'herrajesCaballosEscuela', 'formacionesEscuela', 'otrosServiciosEscuela', 'duracionesEscuela', 'conceptosGastoCampamento', 'fechasCampamento',
+            'gastosHipica',
+            'preciosCampamento',
+            'bancoCampamento'
         ];
 
         try {

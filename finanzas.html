@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Económica - La Gerencia</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            text-align: center;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            display: inline-block;
+            text-decoration: none;
+            margin: 0 15px;
+            color: #555;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .nav-link:hover {
+            background-color: #f0ede5;
+            color: #000;
+        }
+
+        .nav-active {
+            background-color: #16a085;
+            color: white !important;
+        }
+
+
+        .container {
+            max-width: 1200px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 30px auto;
+        }
+
+        h2,
+        h3 {
+            color: #4a3728;
+            border-bottom: 2px solid #d4c5b9;
+            padding-bottom: 8px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #eee;
+        }
+
+        .summary-card h4 {
+            margin-top: 0;
+            color: #555;
+        }
+
+        .summary-card .amount {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .ingresos {
+            color: #27ae60;
+        }
+
+        .gastos {
+            color: #c0392b;
+        }
+
+        .balance {
+            color: #2980b9;
+        }
+
+        .nominas {
+            color: #8e44ad;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4a3728;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #5c674e;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-delete {
+            background-color: #c0392b;
+            padding: 5px 8px;
+            font-size: 12px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
+        <a href="finanzas.html" class="nav-link nav-active">💰 Finanzas</a>
+        <a href="gastos.html" class="nav-link">💸 Gestión de Gastos</a>
+        <a href="trabajadores.html" class="nav-link">👥 Trabajadores</a>
+        <!-- Añadir más enlaces relevantes si es necesario -->
+    </div>
+
+    <div class="container">
+        <h2>📊 Resumen Financiero</h2>
+        <div class="filters">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="filterMonth">Mes</label>
+                <select id="filterMonth"></select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="filterYear">Año</label>
+                <select id="filterYear"></select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; padding-top: 20px;">
+                <input type="checkbox" id="annualViewCheckbox" style="width: auto; margin-right: 10px;">
+                <label for="annualViewCheckbox" style="margin-bottom: 0;">Ver resumen anual</label>
+            </div>
+        </div>
+
+        <div id="monthlyExpenseAlerts" class="alert-container" style="display:none;">
+            <h3>⚠️ Gastos Mensuales Pendientes</h3>
+            <ul id="pendingExpenseList"></ul>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <h4>Ingresos Totales</h4>
+                <p id="totalIngresos" class="amount ingresos">0.00 €</p>
+            </div>
+            <div class="summary-card">
+                <h4>Gastos Totales</h4>
+                <p id="totalGastos" class="amount gastos">0.00 €</p>
+            </div>
+            <div class="summary-card">
+                <h4>Balance</h4>
+                <p id="balance" class="amount balance">0.00 €</p>
+            </div>
+            <div class="summary-card">
+                <h4>Total Nóminas</h4>
+                <p id="totalNominas" class="amount nominas">0.00 €</p>
+            </div>
+        </div>
+
+        <div class="details-grid">
+            <div class="ingresos-section">
+                <h3>✅ Ingresos</h3>
+                <table id="tablaIngresos">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Importe</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="gastos-section">
+                <h3>❌ Gastos Generales</h3>
+                <button onclick="location.href='gastos.html'"
+                    style="margin-bottom: 10px; background-color: #5c674e;">Gestionar Conceptos</button>
+                <button onclick="borrarGastosDelMes()" style="margin-bottom: 10px; background-color: #e67e22;">Borrar
+                    Gastos del Mes</button>
+                <button onclick="borrarTodosLosGastos()" style="margin-bottom: 10px; background-color: #c0392b;">Borrar
+                    Todos los Gastos</button>
+                <table id="tablaGastos">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Importe</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="nominas-section">
+                <h3>👥 Nóminas</h3>
+                <button onclick="location.href='trabajadores.html'"
+                    style="margin-bottom: 10px; background-color: #8e44ad;">Gestionar Trabajadores</button>
+                <div id="payrollAlerts" class="alert-container" style="display:none;">
+                    <h3>🔔 Recordatorio de Nóminas Fijas</h3>
+                    <ul id="pendingPayrollList"></ul>
+                </div>
+                <table id="tablaNominas">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Importe</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>💸 Registrar Nuevo Gasto</h2>
+        <form id="formGasto" style="border: 2px solid #5c674e; padding: 20px; border-radius: 8px;">
+            <input type="hidden" id="gastoId">
+            <div class="form-group">
+                <label for="gastoConcepto">Concepto</label>
+                <select id="gastoConcepto" required>
+                    <option value="">Cargando conceptos...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="gastoImporte">Importe (€)</label>
+                <input type="number" id="gastoImporte" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="gastoFecha">Fecha</label>
+                <input type="date" id="gastoFecha" required>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" id="btnSubmitGasto" style="flex: 2;">Añadir Gasto</button>
+                <button type="button" onclick="restablecerFormularioGasto()"
+                    style="flex: 1; background-color: #7f8c8d;">Cancelar Edición</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="data-manager.js?v=1.6"></script>
+    <script>
+        const filterMonth = document.getElementById('filterMonth');
+        const filterYear = document.getElementById('filterYear');
+
+        window.onload = async () => {
+            await dataManager.initPromise;
+
+            const annualViewCheckbox = document.getElementById('annualViewCheckbox');
+            setupFilters();
+            await renderFinancialData();
+            await poblarSelectConceptos();
+
+            filterMonth.addEventListener('change', renderFinancialData);
+            filterYear.addEventListener('change', renderFinancialData);
+            annualViewCheckbox.addEventListener('change', renderFinancialData);
+
+            dataManager.onSnapshot('conceptosGasto', poblarSelectConceptos);
+            dataManager.onSnapshot('pagosAlumnosEscuela', async () => {
+                await setupFilters(); // Re-calcular años si hay nuevos ingresos
+                await renderFinancialData();
+            });
+            dataManager.onSnapshot('gastosHipica', async () => {
+                await setupFilters(); // Re-calcular años si hay nuevos gastos
+                await renderFinancialData();
+            });
+        };
+
+        async function setupFilters() {
+            const hoy = new Date();
+            const currentMonth = hoy.getMonth();
+            const currentYear = hoy.getFullYear();
+
+            const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            filterMonth.innerHTML = meses.map((mes, index) => `<option value="${index}" ${index === currentMonth ? 'selected' : ''}>${mes}</option>`).join('');
+
+            // Obtener todos los años con datos
+            const pagos = await dataManager.get('pagosAlumnosEscuela') || [];
+            const gastos = await dataManager.get('gastosHipica') || [];
+            const yearsWithData = new Set([currentYear]);
+            pagos.forEach(p => yearsWithData.add(new Date(p.fechaCompra + 'T12:00:00').getFullYear()));
+            gastos.forEach(g => yearsWithData.add(new Date(g.fecha + 'T12:00:00').getFullYear()));
+
+            let yearOptions = '';
+            const sortedYears = Array.from(yearsWithData).sort((a, b) => b - a);
+            sortedYears.forEach(year => {
+                yearOptions += `<option value="${year}" ${year === currentYear ? 'selected' : ''}>${year}</option>`;
+            });
+            filterYear.innerHTML = yearOptions;
+        }
+
+        async function renderFinancialData() {
+            const selectedMonth = parseInt(filterMonth.value);
+            const selectedYear = parseInt(filterYear.value);
+            const isAnnualView = document.getElementById('annualViewCheckbox').checked;
+
+            filterMonth.disabled = isAnnualView;
+            const filterMonthContainer = document.getElementById('filterMonth').parentElement;
+            filterMonthContainer.style.display = isAnnualView ? 'none' : 'block';
+
+            const [pagosEscuela, gastosHipica, conceptosGasto, trabajadores] = await Promise.all([
+                dataManager.get('pagosAlumnosEscuela'),
+                dataManager.get('gastosHipica'),
+                dataManager.get('conceptosGasto'),
+                dataManager.get('trabajadores')
+            ]);
+
+            // --- Resetear y preparar tablas y totales ---
+            const tablaIngresosBody = document.getElementById('tablaIngresos').querySelector('tbody');
+            const tablaGastosBody = document.getElementById('tablaGastos').querySelector('tbody');
+            const tablaNominasBody = document.getElementById('tablaNominas').querySelector('tbody');
+            tablaIngresosBody.innerHTML = '';
+            tablaGastosBody.innerHTML = '';
+            tablaNominasBody.innerHTML = '';
+
+            // --- PROCESAR INGRESOS Y GASTOS ---
+            let totalIngresos = 0;
+            let totalGastos = 0;
+            let totalNominas = 0;
+
+            const ingresosDelPeriodo = (pagosEscuela || []).filter(pago => {
+                const fecha = new Date(pago.fechaCompra + 'T12:00:00'); // Corregido para evitar problemas de zona horaria
+                return fecha.getFullYear() === selectedYear && (isAnnualView || fecha.getMonth() === selectedMonth);
+            });
+
+            if (!isAnnualView) {
+                const hoy = new Date();
+                const esMesActual = selectedMonth === hoy.getMonth() && selectedYear === hoy.getFullYear();
+
+                // --- PROCESAR Y CREAR AUTOMÁTICAMENTE GASTOS MENSUALES PENDIENTES ---
+                const conceptosMensuales = (conceptosGasto || []).filter(c => c.tipo === 'Mensual');
+                let newExpensesAdded = false;
+
+                for (const concept of conceptosMensuales) {
+                    // Comprobar si ya existe CUALQUIER registro (pagado o no) para este concepto en el mes actual.
+                    const expenseExistsThisMonth = (gastosHipica || []).some(gasto => {
+                        const gastoDate = new Date(gasto.fecha + 'T12:00:00');
+                        return gasto.concepto === concept.nombre &&
+                            gastoDate.getMonth() === selectedMonth &&
+                            gastoDate.getFullYear() === selectedYear;
+                    });
+
+                    if (!expenseExistsThisMonth && esMesActual) {
+                        const newExpense = {
+                            id: Date.now() + Math.random(), // ID único
+                            concepto: concept.nombre,
+                            importe: 0,
+                            fecha: new Date(selectedYear, selectedMonth, 2).toISOString().split('T')[0], // Usar día 2 para evitar problemas de zona horaria
+                            tipo: 'Mensual'
+                        };
+                        await dataManager.add('gastosHipica', newExpense);
+                        newExpensesAdded = true;
+                    }
+                }
+
+                // --- PROCESAR Y CREAR AUTOMÁTICAMENTE NÓMINAS FIJAS PENDIENTES ---
+                const trabajadoresFijos = (trabajadores || []).filter(t => t.tipo === 'Fijo');
+                let newPayrollsAdded = false;
+
+                for (const trabajador of trabajadoresFijos) {
+                    // Comprobar si ya existe CUALQUIER nómina (pagada o no) para este trabajador en el mes actual.
+                    const payrollExistsThisMonth = (gastosHipica || []).some(gasto => {
+                        const gastoDate = new Date(gasto.fecha + 'T12:00:00');
+                        const isPayrollType = gasto.tipo === 'Nómina' || gasto.tipo === 'Nómina Fija';
+                        return isPayrollType && gasto.concepto.toLowerCase().includes(trabajador.nombre.toLowerCase()) &&
+                            gastoDate.getMonth() === selectedMonth &&
+                            gastoDate.getFullYear() === selectedYear;
+                    });
+
+                    if (!payrollExistsThisMonth && esMesActual) {
+                        let payrollConcept = (conceptosGasto || []).find(c => c.tipo === 'Nómina Fija' && c.nombre.toLowerCase().includes(trabajador.nombre.toLowerCase()));
+                        // Si el concepto de nómina no existe, lo creamos sobre la marcha.
+                        if (!payrollConcept) {
+                            const nuevoConcepto = { id: Date.now() + Math.random(), nombre: `Nómina ${trabajador.nombre}`, tipo: 'Nómina Fija' };
+                            await dataManager.add('conceptosGasto', nuevoConcepto);
+                            payrollConcept = nuevoConcepto; // Usamos el concepto recién creado
+                        }
+
+                        if (payrollConcept) {
+                            const newPayroll = {
+                                id: Date.now() + Math.random(), // ID único
+                                concepto: payrollConcept.nombre,
+                                importe: 0,
+                                fecha: new Date(selectedYear, selectedMonth, 2).toISOString().split('T')[0], // Usar día 2 para evitar problemas de zona horaria
+                                tipo: 'Nómina Fija'
+                            };
+                            await dataManager.add('gastosHipica', newPayroll);
+                            newPayrollsAdded = true;
+                        }
+                    }
+                }
+
+                // Si se añadieron gastos o nóminas, se recargará la vista a través del snapshot.
+                // Esto evita renderizar con datos viejos.
+                if (newExpensesAdded || newPayrollsAdded) return;
+            }
+
+            // --- PROCESAR INGRESOS ---
+            ingresosDelPeriodo.forEach(pago => {
+                const importe = parseFloat(pago.productoPrecio);
+                if (!isNaN(importe)) {
+                    totalIngresos += importe;
+                }
+            });
+
+            // Ordenar y renderizar ingresos
+            ingresosDelPeriodo.sort((a, b) => new Date(a.fechaCompra) - new Date(b.fechaCompra));
+            ingresosDelPeriodo.forEach(ingreso => {
+                const row = tablaIngresosBody.insertRow();
+                row.innerHTML = `
+                    <td>${new Date(ingreso.fechaCompra + 'T12:00:00').toLocaleDateString('es-ES')}</td>
+                    <td>${ingreso.productoNombre}</td>
+                    <td>${parseFloat(ingreso.productoPrecio).toFixed(2)} €</td>
+                `;
+            });
+
+            if (tablaIngresosBody.rows.length === 0) {
+                tablaIngresosBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">No hay ingresos en el período seleccionado.</td></tr>`;
+            }
+
+
+            // --- PROCESAR GASTOS ---
+            const todosLosGastos = [];
+            const todasLasNominas = [];
+            (gastosHipica || []).forEach(gasto => {
+                const fecha = new Date(gasto.fecha + 'T12:00:00');
+                if (fecha.getFullYear() === selectedYear && (isAnnualView || fecha.getMonth() === selectedMonth)) {
+                    const importe = parseFloat(gasto.importe);
+                    if (!isNaN(importe)) {
+                        const itemGasto = { id: gasto.id, fecha: gasto.fecha, concepto: gasto.concepto, importe: importe };
+                        if (gasto.tipo === 'Nómina' || gasto.tipo === 'Nómina Fija') {
+                            todasLasNominas.push(itemGasto);
+                            totalNominas += importe;
+                        } else {
+                            todosLosGastos.push(itemGasto);
+                            totalGastos += importe;
+                        }
+                    }
+                }
+            });
+
+            // El total de gastos para el balance debe incluir las nóminas
+            const gastosTotalesParaBalance = totalGastos + totalNominas;
+
+            // Ordenar y renderizar gastos
+            todosLosGastos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            todosLosGastos.forEach(gasto => {
+                const row = tablaGastosBody.insertRow();
+                row.innerHTML = `
+                    <td>${new Date(gasto.fecha + 'T12:00:00').toLocaleDateString('es-ES')}</td>
+                    <td>${gasto.concepto}</td>
+                    <td>${gasto.importe.toFixed(2)} €</td>
+                    <td><button class="btn-edit" style="background-color:#f39c12; padding: 5px 8px; font-size: 12px;" onclick="cargarGastoParaEditar('${gasto.id}')">Editar</button> <button class="btn-delete" onclick="eliminarGasto('${gasto.id}')">X</button></td>
+                `;
+            });
+
+            if (tablaGastosBody.rows.length === 0) {
+                tablaGastosBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">No hay gastos en el período seleccionado.</td></tr>`;
+            }
+
+            // Ordenar y renderizar nóminas
+            todasLasNominas.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            todasLasNominas.forEach(nomina => {
+                const row = tablaNominasBody.insertRow();
+                row.innerHTML = `
+                    <td>${new Date(nomina.fecha + 'T12:00:00').toLocaleDateString('es-ES')}</td>
+                    <td>${nomina.concepto}</td>
+                    <td>${nomina.importe.toFixed(2)} €</td>
+                    <td><button class="btn-edit" style="background-color:#f39c12; padding: 5px 8px; font-size: 12px;" onclick="cargarGastoParaEditar('${nomina.id}')">Editar</button> <button class="btn-delete" onclick="eliminarGasto('${nomina.id}')">X</button></td>
+                `;
+            });
+
+            if (tablaNominasBody.rows.length === 0) {
+                tablaNominasBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">No hay nóminas en el período seleccionado.</td></tr>`;
+            }
+
+
+            // --- ACTUALIZAR RESUMEN ---
+            document.getElementById('totalIngresos').textContent = `${totalIngresos.toFixed(2)} €`;
+            document.getElementById('totalGastos').textContent = `${totalGastos.toFixed(2)} €`;
+            document.getElementById('totalNominas').textContent = `${totalNominas.toFixed(2)} €`;
+
+            const balance = totalIngresos - gastosTotalesParaBalance;
+            const balanceElem = document.getElementById('balance');
+            balanceElem.textContent = `${balance.toFixed(2)} €`;
+            balanceElem.className = 'amount'; // Reset
+            if (balance >= 0) {
+                balanceElem.classList.add('balance', 'ingresos');
+            } else {
+                balanceElem.classList.add('balance', 'gastos');
+            }
+        }
+
+        async function borrarTodosLosGastos() {
+            if (!confirm('⚠️ ¿ESTÁS SEGURO? Vas a borrar TODOS los gastos y nóminas registrados. Esta acción es irreversible.')) {
+                return;
+            }
+            if (!confirm('ÚLTIMO AVISO: ¿Realmente quieres borrar todos los gastos y nóminas?')) {
+                return;
+            }
+
+            await dataManager.set('gastosHipica', []);
+            alert('🗑️ ¡Todos los gastos y nóminas han sido eliminados!');
+        }
+
+        async function borrarGastosDelMes() {
+            const selectedMonth = parseInt(filterMonth.value);
+            const selectedYear = parseInt(filterYear.value);
+            const isAnnualView = document.getElementById('annualViewCheckbox').checked;
+
+            if (isAnnualView) {
+                alert('Esta función solo está disponible para la vista mensual. Por favor, desmarca la opción "Ver resumen anual".');
+                return;
+            }
+
+            const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const monthName = meses[selectedMonth];
+
+            if (!confirm(`⚠️ ¿Estás seguro de que quieres borrar TODOS los gastos generales (no nóminas) de ${monthName} de ${selectedYear}? Esta acción es irreversible.`)) {
+                return;
+            }
+
+            try {
+                // 1. Crear las fechas de inicio y fin del mes seleccionado.
+                // Usamos UTC para evitar problemas con la zona horaria del cliente.
+                // El día 2 es para evitar problemas con el día 1 a las 00:00 que puede retroceder al mes anterior.
+                const startDate = new Date(Date.UTC(selectedYear, selectedMonth, 1));
+                // El final del mes es el día 0 del mes siguiente.
+                const endDate = new Date(Date.UTC(selectedYear, selectedMonth + 1, 1));
+
+                // 2. Realizar una consulta a Firebase para obtener solo los documentos de ese mes.
+                const querySnapshot = await dataManager.db.collection('gastosHipica')
+                    .where('fecha', '>=', startDate.toISOString().split('T')[0])
+                    .where('fecha', '<', endDate.toISOString().split('T')[0])
+                    .get();
+
+                // 3. Crear un batch para borrar los documentos encontrados.
+                const batch = dataManager.db.batch();
+                let count = 0;
+
+                querySnapshot.forEach(doc => {
+                    const gasto = doc.data();
+                    // 4. Filtrar para no borrar las nóminas.
+                    if (gasto.tipo !== 'Nómina' && gasto.tipo !== 'Nómina Fija') {
+                        batch.delete(doc.ref);
+                        count++;
+                    }
+                });
+
+                if (count > 0) await batch.commit();
+
+            } catch (error) {
+                console.error("Error al borrar los gastos del mes:", error);
+                alert("Hubo un error al intentar borrar los gastos. Revisa la consola para más detalles.");
+                return;
+            }
+            alert(`🗑️ ¡Todos los gastos generales de ${monthName} de ${selectedYear} han sido eliminados!`);
+        }
+
+        async function eliminarGasto(gastoId) {
+            if (confirm('¿Estás seguro de que quieres eliminar este gasto?')) {
+                try {
+                    await dataManager.delete('gastosHipica', gastoId);
+                    alert('Gasto eliminado.');
+                } catch (error) {
+                    console.error("Error al eliminar el gasto:", error);
+                    alert("Hubo un error al eliminar el gasto.");
+                }
+            }
+        }
+
+        async function cargarGastoParaEditar(gastoId) {
+            const gasto = (await dataManager.get('gastosHipica')).find(g => g.id == gastoId);
+            if (gasto) {
+                document.getElementById('gastoId').value = gasto.id;
+                document.getElementById('gastoConcepto').value = gasto.concepto;
+                document.getElementById('gastoImporte').value = gasto.importe;
+                document.getElementById('gastoFecha').value = gasto.fecha;
+                document.getElementById('btnSubmitGasto').textContent = 'Actualizar Gasto';
+                window.scrollTo({ top: document.getElementById('formGasto').offsetTop, behavior: 'smooth' });
+            }
+        }
+
+        function restablecerFormularioGasto() {
+            document.getElementById('formGasto').reset();
+            document.getElementById('gastoId').value = '';
+            document.getElementById('gastoFecha').value = '';
+            document.getElementById('btnSubmitGasto').textContent = 'Añadir Gasto';
+        }
+
+
+        async function poblarSelectConceptos() {
+            const selectConceptoGasto = document.getElementById('gastoConcepto');
+            const conceptos = await dataManager.get('conceptosGasto') || [];
+            const valorActual = selectConceptoGasto.value;
+            selectConceptoGasto.innerHTML = '<option value="">-- Selecciona un concepto --</option>';
+            conceptos.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(c => {
+                selectConceptoGasto.innerHTML += `<option value="${c.nombre}" data-tipo="${c.tipo}">${c.nombre} (${c.tipo})</option>`;
+            });
+            selectConceptoGasto.value = valorActual;
+            if (conceptos.length === 0) {
+                selectConceptoGasto.innerHTML = '<option value="">⚠️ Define conceptos en "Conceptos de Gasto"</option>';
+            }
+        }
+
+        // --- GESTIÓN DE GASTOS ---
+        const formGasto = document.getElementById('formGasto');
+        formGasto.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const gastoId = document.getElementById('gastoId').value;
+            const selectConceptoGasto = document.getElementById('gastoConcepto');
+            const selectedOption = selectConceptoGasto.options[selectConceptoGasto.selectedIndex];
+            const concepto = selectedOption.value;
+            const tipo = selectedOption.dataset.tipo;
+            const importe = parseFloat(document.getElementById('gastoImporte').value);
+            const fecha = document.getElementById('gastoFecha').value;
+
+            if (!concepto || isNaN(importe) || !fecha || !tipo) {
+                alert('Por favor, rellena todos los campos del gasto.');
+                return;
+            }
+
+            const gastoData = { concepto, importe, fecha, tipo };
+
+            try {
+                if (gastoId) {
+                    await dataManager.update('gastosHipica', gastoId, gastoData);
+                    alert('Gasto actualizado correctamente.');
+                } else {
+                    await dataManager.add('gastosHipica', { id: Date.now(), ...gastoData });
+                    alert('Gasto registrado correctamente.');
+                }
+                restablecerFormularioGasto();
+            } catch (error) {
+                console.error("Error al guardar el gasto:", error);
+                alert("Hubo un error al registrar el gasto.");
+            }
+        });
+
+    </script>
+
+</body>
+
+</html>

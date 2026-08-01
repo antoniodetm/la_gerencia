@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conceptos de Gasto</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script src="data-manager.js?v=1.6"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f1ea;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .nav-bar {
+            text-align: center;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin: 0 15px;
+            color: #555;
+            font-weight: bold;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .nav-link:hover {
+            background-color: #f0ede5;
+            color: #000;
+        }
+
+        .container {
+            max-width: 700px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin: 0 auto 30px auto;
+        }
+
+        h2,
+        h3 {
+            color: #c0392b;
+            border-bottom: 2px solid #f5d3d0;
+            padding-bottom: 8px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #c0392b;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #a93226;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4a3728;
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #c0392b;
+            padding: 5px 8px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav-bar">
+        <a href="inicio.html" class="nav-link">🏠 Inicio</a>
+        <a href="finanzas.html" class="nav-link">💰 Finanzas</a>
+        <a href="gastos.html" class="nav-link" style="background-color: #c0392b; color: white;">⚙️ Conceptos de
+            Gasto</a>
+        <a href="trabajadores.html" class="nav-link">👥 Trabajadores</a>
+    </div>
+
+    <div class="container">
+        <h2>⚙️ Definir Conceptos de Gasto</h2>
+        <form id="formConceptoGasto">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="conceptoNombre">Nombre del Concepto</label>
+                    <input type="text" id="conceptoNombre" placeholder="Ej. Factura de luz, Nómina de Ana" required>
+                </div>
+                <div class="form-group">
+                    <label for="conceptoTipo">Tipo</label>
+                    <select id="conceptoTipo" required>
+                        <option value="Esporádico">Esporádico</option>
+                        <option value="Mensual">Mensual</option>
+                        <option value="Nómina Fija">Nómina Fija (genera alerta)</option>
+                        <option value="Nómina">Nómina (Esporádica)</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit">Añadir Concepto</button>
+        </form>
+        <table id="tablaConceptos">
+            <thead>
+                <tr>
+                    <th>Concepto</th>
+                    <th>Tipo</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        window.onload = async () => {
+            await dataManager.initPromise;
+
+            // --- Lógica para Conceptos de Gasto ---
+            const formConcepto = document.getElementById('formConceptoGasto');
+            const tablaConceptosBody = document.getElementById('tablaConceptos').querySelector('tbody');
+
+            async function renderConceptos() {
+                const conceptos = await dataManager.get('conceptosGasto') || [];
+                tablaConceptosBody.innerHTML = '';
+                conceptos.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(c => {
+                    const row = tablaConceptosBody.insertRow();
+                    row.innerHTML = `
+                        <td>${c.nombre}</td>
+                        <td>${c.tipo}</td>
+                        <td><button class="btn-delete" onclick="eliminarConcepto('${c.id}')">X</button></td>
+                    `;
+                });
+            }
+
+            formConcepto.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const nombre = document.getElementById('conceptoNombre').value;
+                const tipo = document.getElementById('conceptoTipo').value;
+                if (!nombre || !tipo) return;
+
+                await dataManager.add('conceptosGasto', { id: Date.now(), nombre, tipo });
+                formConcepto.reset();
+            });
+
+            window.eliminarConcepto = async (id) => {
+                if (confirm('¿Eliminar este concepto de gasto?')) {
+                    await dataManager.delete('conceptosGasto', id);
+                }
+            };
+
+            // Carga inicial y listeners
+            await renderConceptos();
+            dataManager.onSnapshot('conceptosGasto', renderConceptos);
+        };
+    </script>
+
+</body>
+
+</html>
